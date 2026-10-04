@@ -1,6 +1,6 @@
 import React from 'react';
 import { PageShell } from '../components/ui/PageShell.tsx';
-import { SCHEDULE_PREVIEW, EVENT_DATA } from '../data/content.ts';
+import { SCHEDULE_PREVIEW } from '../data/content.ts';
 import { Clock, Calendar } from 'lucide-react';
 
 export const SchedulePage: React.FC = () => {
@@ -13,11 +13,11 @@ export const SchedulePage: React.FC = () => {
     >
       <div className="space-y-10">
         {/* Notice Card */}
-        <div className="rounded-lg border border-amber-400/20 bg-amber-400/5 p-4 sm:p-5 flex items-start gap-3">
-          <Calendar className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+        <div className="rounded-[3px] border border-[#FED7AA] bg-[#FFF7ED] p-4 sm:p-5 flex items-start gap-3">
+          <Calendar className="w-5 h-5 text-[#E8590C] shrink-0 mt-0.5" />
           <div className="text-sm">
-            <span className="font-semibold text-amber-300">Schedule in Curation: </span>
-            <span className="text-slate-300">
+            <span className="font-semibold text-[#9A3412]">Schedule in Curation: </span>
+            <span className="text-[#52525B]">
               The finalized hour-by-hour agenda, confirmed session speakers, and hall allocations are being scheduled. The track structure below outlines the two-day itinerary flow.
             </span>
           </div>
@@ -26,30 +26,30 @@ export const SchedulePage: React.FC = () => {
         {/* 2-Day Previews */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {SCHEDULE_PREVIEW.map((day) => (
-            <div key={day.dayNumber} className="rounded-xl border border-slate-800 bg-slate-900/40 p-6 sm:p-7 space-y-6">
-              <div className="border-b border-slate-800 pb-4">
-                <div className="flex items-center justify-between text-xs text-amber-400 font-mono">
+            <div key={day.dayNumber} className="rounded-[3px] border border-[#E4E0D7] bg-white p-6 sm:p-7 space-y-6 shadow-xs">
+              <div className="border-b border-[#E4E0D7] pb-4">
+                <div className="flex items-center justify-between text-xs text-[#E8590C] font-mono">
                   <span>DAY 0{day.dayNumber}</span>
-                  <span className="text-slate-500 font-sans">{day.status}</span>
+                  <span className="text-[#71717A] font-sans">{day.status}</span>
                 </div>
-                <h2 className="mt-2 text-xl font-bold text-white font-display">
+                <h2 className="mt-2 type-h3 text-[#18181B] font-display">
                   {day.dayTitle}
                 </h2>
               </div>
 
               <div className="space-y-4">
                 {day.tracks.map((track, i) => (
-                  <div key={track.id} className="rounded-lg border border-slate-800/80 bg-slate-950/40 p-4 space-y-1">
-                    <div className="flex items-center gap-2 text-xs text-slate-400">
-                      <Clock className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Track {i + 1}</span>
+                  <div key={track.id} className="rounded-[3px] border border-[#E4E0D7] bg-[#FBF9F5] p-4 space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-[#71717A]">
+                      <Clock className="w-3.5 h-3.5 text-[#E8590C]" />
+                      <span className="font-semibold text-[#18181B]">Track {i + 1}</span>
                       <span aria-hidden="true">·</span>
-                      <span className="text-slate-500">Details Announcing Soon</span>
+                      <span className="text-[#71717A]">Details Announcing Soon</span>
                     </div>
-                    <h3 className="text-base font-semibold text-slate-100 font-display">
+                    <h3 className="type-h4 text-[#18181B] font-display">
                       {track.title}
                     </h3>
-                    <p className="text-xs text-slate-400 leading-relaxed">
+                    <p className="text-xs text-[#52525B] leading-relaxed">
                       {track.description}
                     </p>
                   </div>

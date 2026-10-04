@@ -12,7 +12,7 @@ export const Layout: React.FC = () => {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#080c14] text-slate-100 selection:bg-amber-400 selection:text-slate-950 font-sans">
+    <div className="min-h-screen flex flex-col bg-[#FBF9F5] text-[#18181B] selection:bg-[#E8590C] selection:text-white font-sans">
       <Header />
       <main id="main-content" className="flex-1 focus:outline-none">
         <Outlet />
