@@ -248,6 +248,7 @@ export const createPartnerEnquiry = async (
     email: input.email.trim().toLowerCase(),
     phone: input.phone?.trim() || '',
     message: input.message?.trim() || '',
+    status: 'new',
     createdAt: nowIso,
   };
 

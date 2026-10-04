@@ -33,9 +33,10 @@
         "email": { "type": "string", "format": "email", "description": "Contact email" },
         "phone": { "type": "string", "description": "Contact phone number" },
         "message": { "type": "string", "description": "Partnership inquiry message" },
+        "status": { "type": "string", "description": "Partnership inquiry status (e.g. new)" },
         "createdAt": { "type": "string", "description": "ISO timestamp of enquiry" }
       },
-      "required": ["company", "contactName", "email", "createdAt"]
+      "required": ["company", "contactName", "email", "status", "createdAt"]
     }
   },
   "firestore": {
