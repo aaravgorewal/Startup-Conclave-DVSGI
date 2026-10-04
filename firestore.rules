@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: Verify if user is signed in and their email is in the designated admin list
+    // Helper: Verify if user is authenticated and their email is in the designated admin roster
     function isAdmin() {
       return request.auth != null
         && request.auth.token.email != null
@@ -31,6 +31,18 @@ service cloud.firestore {
         && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
     }
 
+    // Helper: Validate pitch data creation payload
+    function isValidPitch(data) {
+      return data.startupName is string && data.startupName.size() > 0 && data.startupName.size() <= 150
+        && data.startupPitch is string && data.startupPitch.size() > 0 && data.startupPitch.size() <= 1000
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
+        && (!('status' in data) || data.status == 'applied' || data.status == 'registered' || data.status == 'new')
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 25))
+        && (!('id' in data) || (data.id is string && data.id.size() <= 50))
+        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+    }
+
     // Helper: Validate partner inquiry creation payload
     function isValidPartnerEnquiry(data) {
       return data.company is string && data.company.size() > 0 && data.company.size() <= 150
@@ -43,7 +55,7 @@ service cloud.firestore {
         && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
     }
 
-    // 1. Registrations Collection
+    // 1. Registrations Collection (including Pitch applications with wantsToPitch: true)
     match /registrations/{registrationId} {
       // Public users can only CREATE with validated fields and status fixed to 'registered'
       allow create: if isValidRegistration(request.resource.data);
@@ -52,7 +64,24 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // 2. Partner Enquiries Collection
+    // 2. Pitch Data Collections
+    match /pitches/{pitchId} {
+      // Public users can only CREATE with validated pitch fields
+      allow create: if isValidPitch(request.resource.data);
+
+      // Only signed-in users whose email is in the admin list may READ, UPDATE or DELETE
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /pitchApplications/{pitchId} {
+      // Public users can only CREATE with validated pitch fields
+      allow create: if isValidPitch(request.resource.data);
+
+      // Only signed-in users whose email is in the admin list may READ, UPDATE or DELETE
+      allow read, update, delete: if isAdmin();
+    }
+
+    // 3. Partner Enquiries Collection
     match /partnerEnquiries/{enquiryId} {
       // Public users can only CREATE with validated fields and status fixed to 'new'
       allow create: if isValidPartnerEnquiry(request.resource.data);

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   User,
@@ -70,11 +69,10 @@ export const AdminPage: React.FC = () => {
   // Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [authEmail, setAuthEmail] = useState('aaravgorewal@gmail.com');
+  const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [authSubmitting, setAuthSubmitting] = useState(false);
-  const [isNewAdminSetup, setIsNewAdminSetup] = useState(false);
 
   // Active Navigation Tab
   const [activeTab, setActiveTab] = useState<'registrations' | 'pitch' | 'partners' | 'settings'>('registrations');
@@ -145,38 +143,28 @@ export const AdminPage: React.FC = () => {
     setAuthError('');
 
     const emailTrim = authEmail.trim().toLowerCase();
-    if (!ADMIN_EMAILS.includes(emailTrim)) {
-      setAuthError(`Access denied: "${emailTrim}" is not in the authorized ADMIN_EMAILS roster.`);
+    if (!emailTrim || !authPassword) {
+      setAuthError('Invalid credentials');
       return;
     }
 
-    if (!authPassword || authPassword.length < 6) {
-      setAuthError('Password must be at least 6 characters.');
+    if (!ADMIN_EMAILS.includes(emailTrim)) {
+      setAuthError('Invalid credentials');
       return;
     }
 
     setAuthSubmitting(true);
 
     try {
-      if (isNewAdminSetup) {
-        const cred = await createUserWithEmailAndPassword(auth, emailTrim, authPassword);
+      const cred = await signInWithEmailAndPassword(auth, emailTrim, authPassword);
+      if (cred.user && ADMIN_EMAILS.includes(cred.user.email?.toLowerCase() || '')) {
         setCurrentUser(cred.user);
       } else {
-        const cred = await signInWithEmailAndPassword(auth, emailTrim, authPassword);
-        setCurrentUser(cred.user);
+        await signOut(auth);
+        setAuthError('Invalid credentials');
       }
-    } catch (err: any) {
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        // Auto-switch to create credentials if user doesn't exist yet
-        try {
-          const cred = await createUserWithEmailAndPassword(auth, emailTrim, authPassword);
-          setCurrentUser(cred.user);
-        } catch (createErr: any) {
-          setAuthError(createErr.message || 'Authentication error.');
-        }
-      } else {
-        setAuthError(err.message || 'Authentication error. Please check credentials.');
-      }
+    } catch {
+      setAuthError('Invalid credentials');
     } finally {
       setAuthSubmitting(false);
     }
@@ -428,12 +416,9 @@ export const AdminPage: React.FC = () => {
                 required
                 value={authEmail}
                 onChange={(e) => setAuthEmail(e.target.value)}
-                placeholder="aaravgorewal@gmail.com"
+                placeholder="name@domain.com"
                 className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white"
               />
-              <span className="text-[10px] font-mono text-[#111111]/60 block">
-                Allowed: {ADMIN_EMAILS.join(', ')}
-              </span>
             </div>
 
             <div className="space-y-1">
@@ -448,27 +433,19 @@ export const AdminPage: React.FC = () => {
               />
             </div>
 
-            <div className="pt-2 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setIsNewAdminSetup(!isNewAdminSetup)}
-                className="text-[11px] font-mono text-[#FF6B1A] hover:underline"
-              >
-                {isNewAdminSetup ? 'Switch to Sign In' : 'First Time Setup?'}
-              </button>
-
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={authSubmitting}
-                className="brutal-btn bg-[#FF6B1A] text-white px-5 py-2 font-display font-bold text-xs uppercase cursor-pointer"
+                className="w-full brutal-btn bg-[#FF6B1A] text-white px-5 py-2.5 font-display font-bold text-xs uppercase cursor-pointer flex items-center justify-center min-h-[44px]"
               >
-                {authSubmitting ? 'Authenticating...' : isNewAdminSetup ? 'Register Admin' : 'Sign In'}
+                {authSubmitting ? 'Authenticating...' : 'Sign In'}
               </button>
             </div>
           </form>
 
           <div className="pt-3 border-t-2 border-[#111111] text-[11px] font-mono text-[#111111]/60 text-center">
-            Zero-Trust Firebase Authentication · DVSIET Meerut
+            Startup Conclave 1.0 · DVSIET Meerut
           </div>
         </div>
       </div>

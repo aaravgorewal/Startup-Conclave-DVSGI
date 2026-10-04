@@ -1384,7 +1384,7 @@ export const SinglePage: React.FC = () => {
                       setPhone(val);
                       if (errors.phone) setErrors({ ...errors, phone: '' });
                     }}
-                    placeholder="9876543210"
+                    placeholder=".........."
                     className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white font-mono min-h-[46px] text-base"
                   />
                   {errors.phone && <p className="text-xs text-red-600 font-bold">{errors.phone}</p>}
@@ -1782,7 +1782,7 @@ export const SinglePage: React.FC = () => {
                       type="tel"
                       value={partnerData.phone}
                       onChange={(e) => setPartnerData({ ...partnerData, phone: e.target.value })}
-                      placeholder="+91 98765 43210"
+                      placeholder="+91 ..... ....."
                       className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
                     />
                   </div>
