@@ -17,8 +17,6 @@ import {
   Handshake,
   Check,
   Lock,
-  Mic,
-  User,
 } from 'lucide-react';
 import { CONFIG } from '../../config.ts';
 import {
@@ -1052,111 +1050,40 @@ export const SinglePage: React.FC = () => {
       <section id="speakers" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
         
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-              {CONFIG.speakersInvestors.sectionNum}
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-              Curated Lineup
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 font-mono text-xs font-bold text-[#111111] bg-white border-2 border-[#111111] px-3 py-1.5 shadow-[2px_2px_0px_#111111]">
-            <CheckCircle2 className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-            <span>{CONFIG.speakersInvestors.promise}</span>
-          </div>
+        <div className="flex items-center gap-3 mb-6">
+          <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+            {CONFIG.speakersInvestors.sectionNum}
+          </span>
+          <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+            Lineup
+          </span>
         </div>
 
-        {/* Section Intro Box */}
-        <div className="p-6 sm:p-8 bg-white brutal-border brutal-shadow mb-8 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="bg-[#FF6B1A] text-white font-mono text-xs font-black px-3 py-1 border-2 border-[#111111] -rotate-1">
+        {/* Bold Coming Soon Block */}
+        <div className="p-7 sm:p-12 bg-white brutal-border brutal-shadow-lg space-y-5 text-left">
+          <div className="inline-block">
+            <span className="bg-[#FF6B1A] text-white font-mono text-xs font-black px-3.5 py-1 border-2 border-[#111111] -rotate-1 uppercase tracking-wider inline-block">
               {CONFIG.speakersInvestors.badge}
-            </span>
-            <span className="font-mono text-xs text-[#111111]/70">
-              6 Featured Experts · Live on Stage
             </span>
           </div>
 
-          <h2 className="font-display font-black text-2xl sm:text-4xl text-[#111111]">
+          <h2 className="font-display font-black text-3xl sm:text-5xl text-[#111111] leading-tight tracking-tight">
             {CONFIG.speakersInvestors.headline}
           </h2>
 
-          <p className="text-base font-sans text-[#111111]/85 max-w-3xl font-medium leading-relaxed">
+          <p className="text-base sm:text-lg font-sans text-[#111111]/85 max-w-2xl font-medium leading-relaxed">
             {CONFIG.speakersInvestors.description}
           </p>
-        </div>
 
-        {/* Speakers Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {CONFIG.speakersInvestors.featuredSpeakers.map((speaker) => (
-            <div
-              key={speaker.id}
-              className="bg-white brutal-border brutal-shadow hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0px_#111111] transition-all p-5 flex flex-col justify-between space-y-4 group"
+          <div className="pt-2 border-t-2 border-[#111111]">
+            <a
+              href={`mailto:${CONFIG.contact.email}?subject=Speaking%20Inquiry%20-%20Startup%20Conclave%201.0`}
+              className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
             >
-              {/* Photo Placeholder Frame */}
-              <div
-                className="w-full h-44 sm:h-48 border-2 border-[#111111] relative overflow-hidden flex flex-col items-center justify-center p-4 transition-colors"
-                style={{ backgroundColor: speaker.bgColor }}
-              >
-                {/* Corner Technical Stamp */}
-                <div className="absolute top-2 left-2 bg-white border border-[#111111] px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-[#111111]">
-                  {speaker.stage}
-                </div>
-
-                <div className="absolute top-2 right-2 flex items-center gap-1 font-mono text-[10px] bg-[#111111] text-white px-1.5 py-0.5 font-bold uppercase">
-                  <Mic className="w-3 h-3 text-[#FFD400]" />
-                  <span>Speaker</span>
-                </div>
-
-                {/* Vector Avatar Silhouette / Photo Placeholder */}
-                <div className="w-20 h-20 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center relative group-hover:scale-105 transition-transform">
-                  <span className="font-display font-black text-2xl text-[#111111] tracking-tight">
-                    {speaker.initials}
-                  </span>
-                  <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-[#FF6B1A] border border-[#111111] flex items-center justify-center">
-                    <User className="w-3.5 h-3.5 text-white" />
-                  </div>
-                </div>
-
-                {/* Bottom Tag Ribbon */}
-                <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[11px] font-mono font-bold">
-                  <span className="bg-white/90 border border-[#111111] px-2 py-0.5 text-[#111111]">
-                    #{speaker.tag}
-                  </span>
-                  <span className="text-[10px] text-[#111111]/70 bg-white/70 px-1 border border-[#111111]/40">
-                    CONFIRMED
-                  </span>
-                </div>
-              </div>
-
-              {/* Speaker Info & Expertise Description */}
-              <div className="space-y-2 pt-1 flex-1">
-                <div>
-                  <h3 className="font-display font-black text-xl text-[#111111] group-hover:text-[#FF6B1A] transition-colors leading-snug">
-                    {speaker.name}
-                  </h3>
-                  <p className="font-mono text-xs font-bold text-[#FF6B1A] mt-0.5 uppercase tracking-wide">
-                    {speaker.title}
-                  </p>
-                </div>
-
-                <p className="text-sm font-sans text-[#111111]/85 font-medium leading-relaxed pt-1">
-                  {speaker.expertise}
-                </p>
-              </div>
-
-              {/* Card Footer */}
-              <div className="pt-3 border-t-2 border-[#111111] flex items-center justify-between font-mono text-xs text-[#111111]/75">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 bg-[#FF6B1A] rounded-full inline-block" />
-                  <span>In-Person Session</span>
-                </span>
-                <span className="font-bold text-[#111111]">DVSIET Campus</span>
-              </div>
-            </div>
-          ))}
+              <span>Interested in speaking? Contact us ({CONFIG.contact.email})</span>
+              <span aria-hidden="true">→</span>
+            </a>
+          </div>
         </div>
       </section>
 
