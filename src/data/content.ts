@@ -187,6 +187,44 @@ export const SPEAKERS_STATUS = {
   calloutLink: "/contact"
 };
 
+export type SpeakerCategory =
+  | 'Founders'
+  | 'Investors'
+  | 'Industry'
+  | 'Government & Ecosystem'
+  | 'Academic'
+  | 'Mentors';
+
+export type SpeakerStatus = 'confirmed' | 'invited' | 'hidden';
+
+export interface SpeakerItem {
+  id: string;
+  name: string;
+  role: string;
+  organisation: string;
+  category: SpeakerCategory;
+  linkedSession?: string;
+  photo?: string;
+  linkedin?: string;
+  status: SpeakerStatus;
+  bio?: string;
+}
+
+export const SPEAKERS: SpeakerItem[] = [
+  // 1 clearly-labelled DEMO item hidden by default (only "confirmed" or "invited" display)
+  {
+    id: "demo-speaker-01",
+    name: "Aakash Verma (Demo Sample)",
+    role: "Founding Partner & Venture Scout",
+    organisation: "Grassroots Capital Partners",
+    category: "Investors",
+    linkedSession: 'Investor Keynote: "How Investors Think"',
+    linkedin: "https://linkedin.com",
+    status: "hidden", // Strictly hidden by default as instructed
+    bio: "Sample demo speaker showing layout readiness for when official confirmations occur."
+  }
+];
+
 export const INVESTORS_STATUS = {
   title: "Investors & Jury: Coming Soon",
   badge: "Venture & Angel Jury",
@@ -197,6 +235,31 @@ export const INVESTORS_STATUS = {
     "Academic Incubation Heads & Ecosystem Enablers"
   ]
 };
+
+export type InvestorRole = 'Investor' | 'Jury' | 'Investor & Jury';
+export type InvestorStatus = 'confirmed' | 'invited' | 'hidden';
+
+export interface InvestorItem {
+  id: string;
+  name: string;
+  fund: string;
+  role: InvestorRole;
+  status: InvestorStatus;
+  focus?: string;
+  linkedin?: string;
+}
+
+export const INVESTORS: InvestorItem[] = [
+  // 1 clearly-labelled DEMO item hidden by default (shown only when status is confirmed)
+  {
+    id: "demo-investor-01",
+    name: "Rohan Singhal (Demo Sample)",
+    fund: "Regional Seed Ventures",
+    role: "Jury",
+    status: "hidden", // Strictly hidden by default as instructed
+    focus: "Pre-seed & Early Consumer Tech"
+  }
+];
 
 export const STARTUPS_STATUS = {
   title: "Startup Showcase 1.0",
@@ -267,3 +330,214 @@ export const FAQS: FaqItem[] = [
     answer: "DVSIET is conveniently situated on the NH-58 Bypass Road, Partapur, Meerut. It is accessible via the Delhi-Meerut Expressway, Rapid Rail Transit System (RRTS/Namo Bharat), and Meerut City railway station."
   }
 ];
+
+export type SessionType =
+  | 'Keynote'
+  | 'Fireside'
+  | 'Panel'
+  | 'Workshop'
+  | 'Networking'
+  | 'Ceremony'
+  | 'Pitch';
+
+export interface SessionItem {
+  id: string;
+  day: 1 | 2;
+  time: string;
+  title: string;
+  type: SessionType;
+  description: string;
+  speakerSlot?: string;
+  location?: string;
+}
+
+export const SESSIONS: SessionItem[] = [
+  // ==========================================
+  // DAY 1: "Build & Connect"
+  // ==========================================
+  {
+    id: "d1-01",
+    day: 1,
+    time: "09:00 AM – 10:00 AM (TBA)",
+    title: "Registration & Networking",
+    type: "Networking",
+    description: "Delegate credential check-in, registration badge pickup, morning welcome refreshments, and open ecosystem mingling across the central atrium.",
+    speakerSlot: "",
+    location: "Main Reception & Central Atrium"
+  },
+  {
+    id: "d1-02",
+    day: 1,
+    time: "10:00 AM – 10:45 AM (TBA)",
+    title: "Inauguration Ceremony",
+    type: "Ceremony",
+    description: "Welcome address, traditional lamp lighting ceremony, institutional vision address by DVSIET leadership, chief guest address, distinguished guest introductions, and official conclave launch.",
+    speakerSlot: "DVSIET Leadership, Chief Guest & Dignitaries (TBA)",
+    location: "Central Auditorium"
+  },
+  {
+    id: "d1-03",
+    day: 1,
+    time: "10:45 AM – 11:30 AM (TBA)",
+    title: 'Keynote: "Building the Next Generation of Startups"',
+    type: "Keynote",
+    description: "A visionary opening address addressing contemporary technological inflection points, finding early product-market fit, and building enduring enterprises from regional campuses.",
+    speakerSlot: "",
+    location: "Central Auditorium"
+  },
+  {
+    id: "d1-04",
+    day: 1,
+    time: "11:30 AM – 12:15 PM (TBA)",
+    title: 'Founder Fireside Chat: "From College Idea to Startup"',
+    type: "Fireside",
+    description: "An unscripted, candid fireside conversation breaking down how student founders navigated initial campus prototypes, found early believers, and turned side-projects into funded ventures.",
+    speakerSlot: "",
+    location: "Central Auditorium"
+  },
+  {
+    id: "d1-05",
+    day: 1,
+    time: "12:15 PM – 01:15 PM (TBA)",
+    title: 'Panel: "India\'s Startup Ecosystem: What\'s Next?"',
+    type: "Panel",
+    description: "Industry leaders, startup founders, and ecosystem builders discuss the rise of Tier-2 and Tier-3 innovation corridors, national market expansion, and shifting venture landscapes.",
+    speakerSlot: "",
+    location: "Central Auditorium"
+  },
+  {
+    id: "d1-06",
+    day: 1,
+    time: "01:15 PM – 02:15 PM (TBA)",
+    title: "Lunch & Networking",
+    type: "Networking",
+    description: "Structured networking lunch break bringing together student delegates, registered founders, mentors, venture observers, and faculty.",
+    speakerSlot: "",
+    location: "Campus Lawn & Dining Pavilion"
+  },
+  {
+    id: "d1-07",
+    day: 1,
+    time: "02:15 PM – 03:15 PM (TBA)",
+    title: 'Workshop: "Building Your First MVP"',
+    type: "Workshop",
+    description: "A pragmatic technical masterclass focused on rapid MVP scoping, customer discovery loops, no-code/low-code architectural stacks, and validating hypotheses before writing excess code.",
+    speakerSlot: "",
+    location: "Technical Seminar Complex Hall A"
+  },
+  {
+    id: "d1-08",
+    day: 1,
+    time: "03:15 PM – 04:00 PM (TBA)",
+    title: 'Panel: "AI, Technology & the Future of Entrepreneurship"',
+    type: "Panel",
+    description: "Engineering and founder experts analyze applied AI integrations, defensive moats, software distribution velocity, and hardware innovations driving modern ventures.",
+    speakerSlot: "",
+    location: "Central Auditorium"
+  },
+  {
+    id: "d1-09",
+    day: 1,
+    time: "04:00 PM – 04:45 PM (TBA)",
+    title: "Founder Stories: Lessons from the Trenches",
+    type: "Fireside",
+    description: "Direct lightning accounts from 3–4 early-stage founders sharing practical real-world triumphs, early hiring mistakes, customer acquisition pivots, and resilience tactics.",
+    speakerSlot: "3–4 Startup Founders (TBA)",
+    location: "Central Auditorium"
+  },
+  {
+    id: "d1-10",
+    day: 1,
+    time: "04:45 PM – 05:30 PM (TBA)",
+    title: "Startup Showcase & Exhibition Walkthrough",
+    type: "Workshop",
+    description: "Curated open-floor walkthrough of student and regional startup exhibition booths. Interactive product trials, live prototype demonstrations, and feedback exchanges.",
+    speakerSlot: "Exhibitor Teams (TBA)",
+    location: "Startup Exhibition Corridor"
+  },
+  {
+    id: "d1-11",
+    day: 1,
+    time: "05:30 PM – 06:15 PM (TBA)",
+    title: "Ecosystem Networking Session",
+    type: "Networking",
+    description: "Facilitated cluster networking connecting founders, technical developers, designers, potential co-founders, and institutional enablers.",
+    speakerSlot: "",
+    location: "Innovation Lounge"
+  },
+  {
+    id: "d1-12",
+    day: 1,
+    time: "06:15 PM – 06:30 PM (TBA)",
+    title: "Day 1 Closing & Day 2 Briefing",
+    type: "Ceremony",
+    description: "Summary recap of Day 1 learnings, official announcement of Pitch Arena Stage 02 finalists, and schedule briefing for Day 2.",
+    speakerSlot: "Organising Committee (TBA)",
+    location: "Central Auditorium"
+  },
+
+  // ==========================================
+  // DAY 2: "Pitch & Scale"
+  // ==========================================
+  {
+    id: "d2-01",
+    day: 2,
+    time: "09:30 AM – 10:30 AM (TBA)",
+    title: 'Investor Keynote: "How Investors Think"',
+    type: "Keynote",
+    description: "An insider breakdown from seasoned venture capitalists on investment theses, founder evaluation criteria, dilution economics, and red flags during early fund raises.",
+    speakerSlot: "",
+    location: "Central Auditorium"
+  },
+  {
+    id: "d2-02",
+    day: 2,
+    time: "10:30 AM – 11:30 AM (TBA)",
+    title: 'Investor Panel: "VC vs Angel Investment: How Startups Get Funded"',
+    type: "Panel",
+    description: "Venture capitalists and angel syndicates dissect the differences between early angels vs institutional venture funds, term sheets, convertible notes, and funding lifecycles.",
+    speakerSlot: "",
+    location: "Central Auditorium"
+  },
+  {
+    id: "d2-03",
+    day: 2,
+    time: "11:30 AM – 12:30 PM (TBA)",
+    title: 'Session: "What Makes a Startup Investable?"',
+    type: "Workshop",
+    description: "In-depth interactive breakdown across the 7 critical investment pillars: addressable market size, defensible product moats, measurable traction, unit revenue, team chemistry, business model, and long-term scalability.",
+    speakerSlot: "",
+    location: "Central Auditorium"
+  },
+  {
+    id: "d2-04",
+    day: 2,
+    time: "12:30 PM – 01:45 PM (TBA)",
+    title: "Startup Mentorship & Pitch Clinics",
+    type: "Workshop",
+    description: "Dedicated round-table mentorship pods where shortlisted startup teams receive hands-on pitch deck reviews, financial model stress-testing, and narrative coaching prior to the mainstage rounds.",
+    speakerSlot: "Mentors & Angel Advisors (TBA)",
+    location: "Mentorship Pods & Seminar Hall B"
+  },
+  {
+    id: "d2-05",
+    day: 2,
+    time: "02:30 PM – 05:00 PM (TBA)",
+    title: "Startup Pitch Arena 1.0 (Live Final Rounds)",
+    type: "Pitch",
+    description: "The flagship conclave competition: vetted early-stage startups present their 5-minute pitches on the mainstage, followed by 3 minutes of rigorous scrutiny from the accredited venture jury.",
+    speakerSlot: "Shortlisted Startups & Venture Jury (TBA)",
+    location: "Central Auditorium Mainstage"
+  },
+  {
+    id: "d2-06",
+    day: 2,
+    time: "05:15 PM – 06:15 PM (TBA)",
+    title: "Closing Ceremony & Awards Presentation",
+    type: "Ceremony",
+    description: "Valedictory address, announcement of Pitch Arena 1.0 winners, cash grant distribution, mementos to ecosystem partners and jury, institutional vote of thanks, and conclave conclusion.",
+    speakerSlot: "DVSIET Leadership, Venture Jury & Guests (TBA)",
+    location: "Central Auditorium"
+  }
+];
+
