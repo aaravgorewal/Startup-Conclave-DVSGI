@@ -1080,10 +1080,41 @@ export const SinglePage: React.FC = () => {
               href={`mailto:${CONFIG.contact.email}?subject=Speaking%20Inquiry%20-%20Startup%20Conclave%201.0`}
               className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
             >
-              <span>Interested in speaking? Contact us ({CONFIG.contact.email})</span>
+              <span>Interested in speaking? Contact us</span>
               <span aria-hidden="true">→</span>
             </a>
           </div>
+
+          {/* If speakers array in src/config.ts is non-empty, only items with status "confirmed" may render */}
+          {(() => {
+            const confirmedSpeakers = (CONFIG.speakersInvestors.speakers || []).filter(
+              (s) => s.status === 'confirmed'
+            );
+            if (confirmedSpeakers.length === 0) return null;
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 border-t-2 border-[#111111]">
+                {confirmedSpeakers.map((speaker) => (
+                  <div
+                    key={speaker.id}
+                    className="p-5 bg-white brutal-border brutal-shadow space-y-2 text-left"
+                  >
+                    <h3 className="font-display font-black text-xl text-[#111111]">
+                      {speaker.name}
+                    </h3>
+                    <p className="font-mono text-xs font-bold text-[#FF6B1A] uppercase tracking-wide">
+                      {speaker.title}
+                    </p>
+                    {speaker.bio && (
+                      <p className="text-sm font-sans text-[#111111]/85 font-medium leading-relaxed">
+                        {speaker.bio}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </section>
 

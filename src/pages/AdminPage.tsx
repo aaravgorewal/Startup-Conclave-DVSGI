@@ -74,6 +74,25 @@ export const AdminPage: React.FC = () => {
   const [authError, setAuthError] = useState('');
   const [authSubmitting, setAuthSubmitting] = useState(false);
 
+  // Client-Side Rate-Limiting & Lockout State (5 failed attempts -> 60s lockout)
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  // Countdown timer for lockout
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutSeconds]);
+
   // Active Navigation Tab
   const [activeTab, setActiveTab] = useState<'registrations' | 'pitch' | 'partners' | 'settings'>('registrations');
 
@@ -110,9 +129,17 @@ export const AdminPage: React.FC = () => {
 
   // Monitor Firebase Auth State
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user && ADMIN_EMAILS.includes(user.email || '')) {
-        setCurrentUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userEmail = user.email?.toLowerCase() || '';
+        if (ADMIN_EMAILS.includes(userEmail)) {
+          setCurrentUser(user);
+        } else {
+          // If signed in user is not in the admin list, sign out immediately and show "Access denied"
+          await signOut(auth);
+          setCurrentUser(null);
+          setAuthError('Access denied');
+        }
       } else {
         setCurrentUser(null);
       }
@@ -137,19 +164,31 @@ export const AdminPage: React.FC = () => {
     }
   }, [currentUser]);
 
+  // Record failed login attempt and trigger 60s lockout if >= 5 attempts
+  const registerFailedAttempt = () => {
+    const next = failedAttempts + 1;
+    if (next >= 5) {
+      setFailedAttempts(0);
+      setLockoutSeconds(60);
+      setAuthError('Too many failed attempts. Form locked for 60 seconds.');
+    } else {
+      setFailedAttempts(next);
+      setAuthError('Invalid credentials');
+    }
+  };
+
   // Auth Submit Handler
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockoutSeconds > 0) {
+      setAuthError(`Too many failed attempts. Form locked for ${lockoutSeconds}s.`);
+      return;
+    }
     setAuthError('');
 
     const emailTrim = authEmail.trim().toLowerCase();
     if (!emailTrim || !authPassword) {
-      setAuthError('Invalid credentials');
-      return;
-    }
-
-    if (!ADMIN_EMAILS.includes(emailTrim)) {
-      setAuthError('Invalid credentials');
+      registerFailedAttempt();
       return;
     }
 
@@ -157,14 +196,21 @@ export const AdminPage: React.FC = () => {
 
     try {
       const cred = await signInWithEmailAndPassword(auth, emailTrim, authPassword);
-      if (cred.user && ADMIN_EMAILS.includes(cred.user.email?.toLowerCase() || '')) {
+      const signedInEmail = cred.user.email?.toLowerCase() || '';
+      
+      // Verify email is in the admin roster
+      if (ADMIN_EMAILS.includes(signedInEmail)) {
         setCurrentUser(cred.user);
+        setFailedAttempts(0);
+        setLockoutSeconds(0);
       } else {
+        // After login, if the email is not in the admin list, sign out immediately and show "Access denied"
         await signOut(auth);
-        setAuthError('Invalid credentials');
+        setCurrentUser(null);
+        setAuthError('Access denied');
       }
     } catch {
-      setAuthError('Invalid credentials');
+      registerFailedAttempt();
     } finally {
       setAuthSubmitting(false);
     }
@@ -414,10 +460,11 @@ export const AdminPage: React.FC = () => {
               <input
                 type="email"
                 required
+                disabled={lockoutSeconds > 0 || authSubmitting}
                 value={authEmail}
                 onChange={(e) => setAuthEmail(e.target.value)}
                 placeholder="name@domain.com"
-                className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white"
+                className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
@@ -426,20 +473,25 @@ export const AdminPage: React.FC = () => {
               <input
                 type="password"
                 required
+                disabled={lockoutSeconds > 0 || authSubmitting}
                 value={authPassword}
                 onChange={(e) => setAuthPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white"
+                className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
 
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={authSubmitting}
-                className="w-full brutal-btn bg-[#FF6B1A] text-white px-5 py-2.5 font-display font-bold text-xs uppercase cursor-pointer flex items-center justify-center min-h-[44px]"
+                disabled={lockoutSeconds > 0 || authSubmitting}
+                className="w-full brutal-btn bg-[#FF6B1A] text-white px-5 py-2.5 font-display font-bold text-xs uppercase cursor-pointer flex items-center justify-center min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {authSubmitting ? 'Authenticating...' : 'Sign In'}
+                {lockoutSeconds > 0
+                  ? `Locked (${lockoutSeconds}s)`
+                  : authSubmitting
+                  ? 'Authenticating...'
+                  : 'Sign In'}
               </button>
             </div>
           </form>

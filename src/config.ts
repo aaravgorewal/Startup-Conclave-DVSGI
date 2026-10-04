@@ -7,6 +7,15 @@ export const ADMIN_EMAILS: string[] = [
   'conclave@dvsiet.ac.in',
 ];
 
+export interface SpeakerItem {
+  id: string;
+  name: string;
+  title: string;
+  bio?: string;
+  photoUrl?: string;
+  status: 'confirmed' | 'pending' | string;
+}
+
 export const CONFIG = {
   event: {
     name: "Startup Conclave 1.0",
@@ -124,6 +133,7 @@ export const CONFIG = {
     headline: "Speakers, Investors & Jury: Coming Soon",
     badge: "ANNOUNCING SOON",
     description: "We will announce our lineup once confirmations are in.",
+    speakers: [] as SpeakerItem[],
   },
 
   partners: {
