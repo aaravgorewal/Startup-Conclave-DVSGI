@@ -1,0 +1,6 @@
+{
+  "name": "Startup Conclave 1.0",
+  "description": "A 2-day in-person startup, entrepreneurship and innovation conclave at DVSIET Meerut. Where Ideas Meet Capital. Where Innovation Meets Opportunity.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
