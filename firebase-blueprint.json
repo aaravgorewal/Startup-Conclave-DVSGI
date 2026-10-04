@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "Registration": {
+      "title": "Registration",
+      "description": "Attendee registration for Startup Conclave 1.0",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique registration ID (e.g. SC1-00042)" },
+        "name": { "type": "string", "description": "Full name of the attendee" },
+        "email": { "type": "string", "format": "email", "description": "Email address" },
+        "phone": { "type": "string", "description": "10-digit WhatsApp/phone number" },
+        "college": { "type": "string", "description": "College or organisation name" },
+        "course": { "type": "string", "description": "Course name (for students)" },
+        "year": { "type": "string", "description": "Academic year (for students)" },
+        "role": { "type": "string", "description": "Role: Student, Founder, Professional, Other" },
+        "city": { "type": "string", "description": "City of residence" },
+        "wantsToPitch": { "type": "boolean", "description": "Whether attendee wants to pitch in the Pitch Arena" },
+        "startupName": { "type": "string", "description": "Name of startup if wantsToPitch is true" },
+        "startupPitch": { "type": "string", "description": "One-line pitch of startup if wantsToPitch is true" },
+        "status": { "type": "string", "description": "Registration status (e.g. registered)" },
+        "createdAt": { "type": "string", "description": "ISO timestamp of registration" }
+      },
+      "required": ["id", "name", "email", "phone", "college", "role", "status", "createdAt"]
+    },
+    "PartnerEnquiry": {
+      "title": "PartnerEnquiry",
+      "description": "Partnership inquiry from company or organisation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique inquiry ID" },
+        "company": { "type": "string", "description": "Company name" },
+        "contactName": { "type": "string", "description": "Contact person name" },
+        "email": { "type": "string", "format": "email", "description": "Contact email" },
+        "phone": { "type": "string", "description": "Contact phone number" },
+        "message": { "type": "string", "description": "Partnership inquiry message" },
+        "createdAt": { "type": "string", "description": "ISO timestamp of enquiry" }
+      },
+      "required": ["company", "contactName", "email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/registrations/{registrationId}": {
+      "schema": "Registration",
+      "description": "Attendee registrations submitted by visitors"
+    },
+    "/partnerEnquiries/{enquiryId}": {
+      "schema": "PartnerEnquiry",
+      "description": "Partnership enquiries submitted by organizations"
+    }
+  }
+}
