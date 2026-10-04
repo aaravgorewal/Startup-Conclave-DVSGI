@@ -657,7 +657,7 @@ export const SinglePage: React.FC = () => {
               onClick={() => handleNavClick('register')}
               className="w-full text-left py-2 px-3 bg-white brutal-border font-black text-[#FF6B1A] min-h-[44px] flex items-center justify-between shadow-[2px_2px_0px_#111111] cursor-pointer"
             >
-              <span>07 • Register Free</span>
+              <span>07 • Register</span>
               <span className="text-xs">↗</span>
             </button>
             <button
@@ -716,23 +716,23 @@ export const SinglePage: React.FC = () => {
             </p>
 
             {/* Quick Info Strip */}
-            <div className="p-3.5 sm:p-4 bg-white brutal-border brutal-shadow-sm inline-flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-sm font-bold text-[#111111] w-full sm:w-auto">
-              <span className="flex items-center gap-2">
+            <div className="p-3 sm:p-3.5 lg:p-4 bg-white brutal-border brutal-shadow-sm flex flex-wrap lg:flex-nowrap items-center gap-x-3 sm:gap-x-4 lg:gap-x-3.5 gap-y-2.5 font-mono text-xs sm:text-sm font-bold text-[#111111] w-full max-w-full">
+              <span className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
                 <Calendar className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                Date: {CONFIG.event.date}
+                <span>Date: {CONFIG.event.date}</span>
               </span>
               <span className="text-[#111111]/30 hidden sm:inline">|</span>
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
                 <MapPin className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                {CONFIG.event.venue}
+                <span>{CONFIG.event.venue}</span>
               </span>
               <span className="text-[#111111]/30 hidden sm:inline">|</span>
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
                 <Clock className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                {CONFIG.event.duration}
+                <span>{CONFIG.event.duration}</span>
               </span>
               <span className="text-[#111111]/30 hidden sm:inline">|</span>
-              <span className="bg-[#FFD400] px-2.5 py-1 border border-[#111111] text-xs uppercase font-black">
+              <span className="bg-[#FFD400] px-2.5 py-1 border border-[#111111] text-xs uppercase font-black shrink-0 whitespace-nowrap">
                 {CONFIG.event.mode}
               </span>
             </div>
@@ -1307,7 +1307,7 @@ export const SinglePage: React.FC = () => {
             
             <div className="border-b-2 border-[#111111] pb-4 space-y-1">
               <h2 className="font-display font-black text-2xl sm:text-4xl text-[#111111]">
-                Register Free for Startup Conclave 1.0
+                Register for Startup Conclave 1.0
               </h2>
               {/* 1-Line Intro */}
               <p className="text-sm sm:text-base font-sans text-[#111111]/80 font-medium">
@@ -1554,7 +1554,7 @@ export const SinglePage: React.FC = () => {
                     <span>Registering...</span>
                   ) : (
                     <>
-                      <span>Complete Free Registration</span>
+                      <span>Register for Startup Conclave 1.0</span>
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -1655,35 +1655,57 @@ export const SinglePage: React.FC = () => {
 
           <div className="space-y-2">
             <span className="font-mono font-black text-[#111111] uppercase block text-xs sm:text-sm">Social & Community</span>
-            <div className="flex items-center gap-3">
-              <a
-                href={CONFIG.contact.socials.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 brutal-border bg-white hover:bg-[#FFD400] transition-colors min-h-[44px] flex items-center text-xs font-mono font-bold"
-                aria-label="LinkedIn"
-              >
-                LinkedIn
-              </a>
-              <a
-                href={CONFIG.contact.socials.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 brutal-border bg-white hover:bg-[#FFD400] transition-colors min-h-[44px] flex items-center text-xs font-mono font-bold"
-                aria-label="Twitter"
-              >
-                X (Twitter)
-              </a>
-              <a
-                href={CONFIG.contact.socials.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2.5 brutal-border bg-white hover:bg-[#FFD400] transition-colors min-h-[44px] flex items-center text-xs font-mono font-bold"
-                aria-label="Instagram"
-              >
-                Instagram
-              </a>
-            </div>
+            {(() => {
+              const hasLinkedin = Boolean(CONFIG.contact.socials?.linkedin && CONFIG.contact.socials.linkedin.trim() !== '');
+              const hasTwitter = Boolean(CONFIG.contact.socials?.twitter && CONFIG.contact.socials.twitter.trim() !== '');
+              const hasInstagram = Boolean(CONFIG.contact.socials?.instagram && CONFIG.contact.socials.instagram.trim() !== '');
+
+              if (!hasLinkedin && !hasTwitter && !hasInstagram) {
+                return (
+                  <span className="font-mono text-xs text-[#111111]/60 block pt-1">
+                    Announcing soon
+                  </span>
+                );
+              }
+
+              return (
+                <div className="flex flex-wrap items-center gap-3">
+                  {hasLinkedin && (
+                    <a
+                      href={CONFIG.contact.socials.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2.5 brutal-border bg-white hover:bg-[#FFD400] transition-colors min-h-[44px] flex items-center text-xs font-mono font-bold"
+                      aria-label="LinkedIn"
+                    >
+                      LinkedIn
+                    </a>
+                  )}
+                  {hasTwitter && (
+                    <a
+                      href={CONFIG.contact.socials.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2.5 brutal-border bg-white hover:bg-[#FFD400] transition-colors min-h-[44px] flex items-center text-xs font-mono font-bold"
+                      aria-label="Twitter"
+                    >
+                      X (Twitter)
+                    </a>
+                  )}
+                  {hasInstagram && (
+                    <a
+                      href={CONFIG.contact.socials.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2.5 brutal-border bg-white hover:bg-[#FFD400] transition-colors min-h-[44px] flex items-center text-xs font-mono font-bold"
+                      aria-label="Instagram"
+                    >
+                      Instagram
+                    </a>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
         </div>

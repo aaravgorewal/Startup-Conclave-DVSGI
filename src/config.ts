@@ -42,7 +42,7 @@ export const CONFIG = {
       },
       {
         tag: "PITCH",
-        desc: "Present live to an active jury of angel investors and mentors.",
+        desc: "Present live to an expert jury.",
       },
       {
         tag: "SCALE",
@@ -174,14 +174,14 @@ export const CONFIG = {
   ],
 
   contact: {
-    email: "conclave@dvsiet.ac.in",
-    phone: "+91 121 244 0495",
+    email: "contact@example.com",
+    phone: "+91 ..........",
     campus: "Dewan V.S. Institute of Engineering & Technology (DVSIET)",
     city: "Meerut, Uttar Pradesh, India",
     socials: {
-      linkedin: "https://linkedin.com",
-      twitter: "https://x.com",
-      instagram: "https://instagram.com",
+      linkedin: "",
+      twitter: "",
+      instagram: "",
     },
   },
 };

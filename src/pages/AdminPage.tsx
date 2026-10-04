@@ -526,63 +526,61 @@ export const AdminPage: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-8">
         
         {/* =================================================================== */}
-        {/* STATS CARDS BAR                                                     */}
-        {/* =================================================================== */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
-            <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
-              Total Registrations
-            </span>
-            <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
-              {stats.total}
-            </div>
-            <span className="text-[10px] font-mono text-[#FF6B1A]">
-              Live database count
-            </span>
-          </div>
-
-          <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
-            <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
-              Students vs Founders
-            </span>
-            <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
-              {stats.students} <span className="text-base text-[#111111]/40">/</span> {stats.founders}
-            </div>
-            <span className="text-[10px] font-mono text-[#111111]/60">
-              {stats.others} Professionals / Others
-            </span>
-          </div>
-
-          <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
-            <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
-              Want to Pitch
-            </span>
-            <div className="font-display font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-              {stats.wantsToPitch}
-            </div>
-            <span className="text-[10px] font-mono text-[#111111]/60">
-              Mainstage aspirants
-            </span>
-          </div>
-
-          <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
-            <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
-              Registered Today
-            </span>
-            <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
-              {stats.today}
-            </div>
-            <span className="text-[10px] font-mono text-emerald-700 font-bold">
-              Active intake rate
-            </span>
-          </div>
-        </div>
-
-        {/* =================================================================== */}
         {/* TAB 1: REGISTRATIONS TABLE                                          */}
         {/* =================================================================== */}
         {activeTab === 'registrations' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
+
+            {/* STATS CARDS BAR (Rendered only on Registrations Tab) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
+                <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
+                  Total Registrations
+                </span>
+                <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+                  {stats.total}
+                </div>
+                <span className="text-[10px] font-mono text-[#FF6B1A]">
+                  Live database count
+                </span>
+              </div>
+
+              <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
+                <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
+                  Students vs Founders
+                </span>
+                <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+                  {stats.students} <span className="text-base text-[#111111]/40">/</span> {stats.founders}
+                </div>
+                <span className="text-[10px] font-mono text-[#111111]/60">
+                  {stats.others} Professionals / Others
+                </span>
+              </div>
+
+              <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
+                <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
+                  Want to Pitch
+                </span>
+                <div className="font-display font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+                  {stats.wantsToPitch}
+                </div>
+                <span className="text-[10px] font-mono text-[#111111]/60">
+                  Mainstage aspirants
+                </span>
+              </div>
+
+              <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
+                <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
+                  Registered Today
+                </span>
+                <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+                  {stats.today}
+                </div>
+                <span className="text-[10px] font-mono text-emerald-700 font-bold">
+                  Active intake rate
+                </span>
+              </div>
+            </div>
             
             {/* Action Bar: Search, Filters & Export */}
             <div className="p-4 bg-white brutal-border brutal-shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
