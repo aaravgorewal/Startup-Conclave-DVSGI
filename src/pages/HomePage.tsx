@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowUpRight, Calendar, MapPin, ShieldAlert } from 'lucide-react';
 import { EVENT_DATA } from '../data/content.ts';
 import { Hero } from '../components/sections/Hero.tsx';
+import { Pillars } from '../components/sections/Pillars.tsx';
 
 export const HomePage: React.FC = () => {
   return (
@@ -21,16 +22,9 @@ export const HomePage: React.FC = () => {
       />
 
       {/* 4 Pillars of the Theme */}
-      <section className="border-b border-[#E4E0D7] bg-white py-12">
+      <section className="border-b border-[#E4E0D7] bg-white py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-            {EVENT_DATA.theme.map((pillar, idx) => (
-              <div key={pillar} className="border border-[#E4E0D7] bg-[#FBF9F5] p-5 rounded-[3px] shadow-xs">
-                <span className="text-xs font-mono text-[#E8590C] block mb-1">0{idx + 1}</span>
-                <span className="text-lg sm:text-xl font-bold font-display text-[#18181B]">{pillar}</span>
-              </div>
-            ))}
-          </div>
+          <Pillars />
         </div>
       </section>
 
