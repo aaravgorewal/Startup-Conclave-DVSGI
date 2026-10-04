@@ -273,6 +273,44 @@ export const STARTUPS_STATUS = {
   ]
 };
 
+export type StartupSector =
+  | 'AI / SaaS'
+  | 'AgriTech'
+  | 'CleanTech / EV'
+  | 'HealthTech'
+  | 'EdTech'
+  | 'FinTech'
+  | 'Consumer / D2C'
+  | 'DeepTech / Robotics';
+
+export type StartupStatus = 'confirmed' | 'shortlisted' | 'hidden';
+
+export interface StartupItem {
+  id: string;
+  name: string;
+  oneLiner: string;
+  sector: StartupSector;
+  website?: string;
+  logo?: string;
+  founders?: string;
+  status: StartupStatus;
+  boothNumber?: string;
+}
+
+export const STARTUPS: StartupItem[] = [
+  // 1 clearly-labelled DEMO item hidden by default (shown only when confirmed or previewed)
+  {
+    id: "demo-startup-01",
+    name: "KrishiFlow Technologies (Demo Sample)",
+    oneLiner: "Automated precision sensor arrays and water irrigation intelligence for smallholder sugarcane farms.",
+    sector: "AgriTech",
+    website: "https://example.com",
+    founders: "Aarav Sharma & Priya Verma",
+    status: "hidden", // Strictly hidden by default as instructed
+    boothNumber: "Booth A-04"
+  }
+];
+
 export const PITCH_ARENA_STATUS = {
   title: "Pitch Arena 1.0",
   badge: "Flagship Competition",
