@@ -3,48 +3,65 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Layout } from './components/layout/Layout.tsx';
+import React, { useState, useEffect } from 'react';
+import { SinglePage } from './components/single-page/SinglePage.tsx';
 
-// All 12 Route Pages
-import { HomePage } from './pages/HomePage.tsx';
-import { AboutPage } from './pages/AboutPage.tsx';
-import { SchedulePage } from './pages/SchedulePage.tsx';
-import { SpeakersPage } from './pages/SpeakersPage.tsx';
-import { InvestorsPage } from './pages/InvestorsPage.tsx';
-import { StartupsPage } from './pages/StartupsPage.tsx';
-import { PitchArenaPage } from './pages/PitchArenaPage.tsx';
-import { SponsorsPage } from './pages/SponsorsPage.tsx';
-import { VenuePage } from './pages/VenuePage.tsx';
-import { FaqPage } from './pages/FaqPage.tsx';
-import { RegisterPage } from './pages/RegisterPage.tsx';
-import { ContactPage } from './pages/ContactPage.tsx';
-import { DesignSystemPage } from './pages/DesignSystemPage.tsx';
+// Hidden /admin route placeholder reserved for administrative management
+const AdminPlaceholder: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-[#FFF8EC] text-[#111111] p-6 sm:p-12 font-sans flex items-center justify-center">
+      <div className="max-w-lg w-full p-8 bg-white border-2 border-[#111111] shadow-[6px_6px_0px_#111111] text-left space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-xs font-black uppercase tracking-wider bg-[#FFD400] text-[#111111] px-2 py-0.5 border border-[#111111]">
+            ADMIN PORTAL
+          </span>
+          <span className="font-mono text-xs text-[#FF6B1A] font-bold">
+            /admin
+          </span>
+        </div>
+
+        <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-[#111111]">
+          Secretariat Administration
+        </h1>
+
+        <p className="text-xs sm:text-sm text-[#52525B] leading-relaxed">
+          The administrative console for viewing registrant expressions of interest, reviewing Pitch Arena deck submissions, and managing partner inquiries.
+        </p>
+
+        <div className="p-3 bg-[#FFF8EC] border-2 border-[#111111] font-mono text-xs space-y-1">
+          <div><strong>Status:</strong> Active Secretarial Holding</div>
+          <div><strong>Event:</strong> Startup Conclave 1.0 (DVSIET Meerut)</div>
+        </div>
+
+        <div className="pt-2">
+          <a
+            href="/"
+            className="inline-block px-4 py-2 bg-[#111111] text-white font-mono text-xs font-bold uppercase tracking-wider hover:bg-[#FF6B1A] transition-colors"
+          >
+            ← Return to Conclave Website
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route path="about" element={<AboutPage />} />
-          <Route path="schedule" element={<SchedulePage />} />
-          <Route path="speakers" element={<SpeakersPage />} />
-          <Route path="investors" element={<InvestorsPage />} />
-          <Route path="startups" element={<StartupsPage />} />
-          <Route path="pitch" element={<PitchArenaPage />} />
-          <Route path="sponsors" element={<SponsorsPage />} />
-          <Route path="venue" element={<VenuePage />} />
-          <Route path="faq" element={<FaqPage />} />
-          <Route path="register" element={<RegisterPage />} />
-          <Route path="contact" element={<ContactPage />} />
-          {/* Design System showcase route */}
-          <Route path="design-system" element={<DesignSystemPage />} />
-          {/* Catch-all fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  );
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Hidden /admin route check
+  if (currentPath.startsWith('/admin')) {
+    return <AdminPlaceholder />;
+  }
+
+  // Single-Page Scrolling Website with section anchors
+  return <SinglePage />;
 }

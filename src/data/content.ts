@@ -62,11 +62,18 @@ export interface DaySchedulePlaceholder {
   tracks: TrackPlaceholder[];
 }
 
+export type FaqCategory =
+  | 'General'
+  | 'Registration'
+  | 'Pitch Arena'
+  | 'Sponsors'
+  | 'Venue & Logistics';
+
 export interface FaqItem {
   id: string;
   question: string;
   answer: string;
-  category: 'general' | 'registration' | 'pitch' | 'sponsorship' | 'venue';
+  category: FaqCategory;
 }
 
 export interface TierInfo {
@@ -130,6 +137,20 @@ export const PRIMARY_CTA: NavItem = {
   name: "Register",
   href: "/register",
   highlight: true
+};
+
+export type RegistrationStatusMode = 'open' | 'waitlist' | 'closed';
+
+export interface RegistrationConfig {
+  mode: RegistrationStatusMode;
+  enablePaymentStep: boolean; // Controls whether payment checkout step is visible
+  maxCapacity: number;
+}
+
+export const REGISTRATION_CONFIG: RegistrationConfig = {
+  mode: 'open',
+  enablePaymentStep: false, // Payment step exists in code but hidden behind flag
+  maxCapacity: 500,
 };
 
 export const SCHEDULE_PREVIEW: DaySchedulePlaceholder[] = [
@@ -330,42 +351,137 @@ export const SPONSOR_TIERS: TierInfo[] = [
   { tierName: "Track & Ecosystem Partner", description: "Specific track patronage (e.g. Pitch Arena, Student Hack Track) and mentorship credits.", status: "Inquire for availability" }
 ];
 
+export type SponsorCategory =
+  | 'Title Partner'
+  | 'Powered By Partner'
+  | 'Gold'
+  | 'Silver'
+  | 'Technology'
+  | 'Banking/FinTech'
+  | 'Education'
+  | 'Community'
+  | 'Media'
+  | 'Food'
+  | 'Printing'
+  | 'Swag';
+
+export type SponsorStatus = 'confirmed' | 'in_discussion' | 'hidden';
+
+export interface SponsorItem {
+  id: string;
+  name: string;
+  category: SponsorCategory;
+  logo?: string;
+  website?: string;
+  status: SponsorStatus;
+}
+
+export const SPONSORS_CONFIG = {
+  deckUrl: null as string | null, // Set to URL when deck is published; null triggers disabled "Deck coming soon"
+  statusMessage: "Partners announcing soon",
+};
+
+export const SPONSORS: SponsorItem[] = [
+  // 1 clearly-labelled DEMO item hidden by default (shown only when confirmed or previewed)
+  {
+    id: "demo-sponsor-01",
+    name: "Enterprise Cloud Systems (Demo Sample)",
+    category: "Technology",
+    website: "https://example.com",
+    status: "hidden", // Strictly hidden by default as instructed
+  }
+];
+
 export const FAQS: FaqItem[] = [
   {
-    id: "f1",
-    category: "general",
-    question: "What is Startup Conclave 1.0?",
-    answer: "Startup Conclave 1.0 is a 2-day in-person startup, entrepreneurship, and innovation conclave hosted at Dewan V.S. Institute of Engineering & Technology (DVSIET), Meerut. It convenes students, innovators, early-stage founders, investors, and industry mentors."
+    id: "who-can-attend",
+    category: "General",
+    question: "Who can attend Startup Conclave 1.0?",
+    answer: "The conclave is open to all: undergraduate and postgraduate students from any discipline, aspiring campus founders, early-stage startup teams, university researchers, angel investors, venture capitalists, and industry professionals. Whether you have an active startup or simply want to learn how ventures are built, there is a dedicated track for you."
   },
   {
-    id: "f2",
-    category: "general",
-    question: "When and where will the conclave take place?",
-    answer: "The event will take place physically at the DVSIET campus in Meerut, Uttar Pradesh, India. The exact dates are currently being finalized with institutional authorities and will be formally announced shortly."
+    id: "registration-fee",
+    category: "Registration",
+    question: "Is there a registration fee to attend?",
+    answer: "Registration fees are to be announced. Subsidized delegate passes for students, standard founder passes, and early-bird discount structures are undergoing final institutional approvals and will be published transparently as soon as ticket bookings open."
   },
   {
-    id: "f3",
-    category: "registration",
-    question: "What is the registration fee for attendees?",
-    answer: "The registration fee structure is currently to be announced. Subsidized passes for student attendees and early-bird tickets will be detailed as soon as registration officially opens."
+    id: "single-day-pass",
+    category: "Registration",
+    question: "Can I attend for only one of the two days?",
+    answer: "Delegate passes are primarily designed for the complete two-day immersion (Day 1: Build & Connect; Day 2: Pitch & Scale). Single-day pass availability is to be announced closer to the event depending on hall capacity."
   },
   {
-    id: "f4",
-    category: "pitch",
-    question: "Who is eligible to apply for the Pitch Arena?",
-    answer: "Early-stage startups, student entrepreneurs, and innovative product teams with a working prototype or established early traction are eligible. Detailed application requirements will be released with the open call."
+    id: "how-to-register",
+    category: "Registration",
+    question: "How do I register for the conclave?",
+    answer: "You can express your interest today via the Registration page by submitting your basic contact details. Pre-registered attendees will receive priority alerts and early-bird reservation windows before public pass sales commence."
   },
   {
-    id: "f5",
-    category: "sponsorship",
-    question: "How can my organization partner with or sponsor Startup Conclave 1.0?",
-    answer: "We offer curated partnership tiers for corporate sponsors, venture capital firms, developer tools, and regional industry associations. Reach out via our Partners page or contact partnerships@dvsiet.ac.in."
+    id: "apply-to-pitch",
+    category: "Pitch Arena",
+    question: "How do I apply to pitch in the Pitch Arena?",
+    answer: "Founders can apply directly via our online Pitch Arena portal on the Pitch page. The application requires details about your startup, problem statement, unit economics, and an uploaded PDF pitch deck (max 10 MB)."
   },
   {
-    id: "f6",
-    category: "venue",
-    question: "How do I reach DVSIET Meerut?",
-    answer: "DVSIET is conveniently situated on the NH-58 Bypass Road, Partapur, Meerut. It is accessible via the Delhi-Meerut Expressway, Rapid Rail Transit System (RRTS/Namo Bharat), and Meerut City railway station."
+    id: "how-startups-selected",
+    category: "Pitch Arena",
+    question: "How are startups selected for the live Pitch Arena rounds?",
+    answer: "All applications undergo thorough Stage 01 evaluation by our technical screening committee. Submissions are scored across 8 weighted criteria: Problem (10%), Solution (15%), Market (15%), Business Model (15%), Traction (15%), Innovation (10%), Team (10%), and Scalability (10%). The top 10 finalists advance to the mainstage on Day 2."
+  },
+  {
+    id: "need-prototype",
+    category: "Pitch Arena",
+    question: "Do I need a working prototype to apply for the Pitch Arena?",
+    answer: "Yes, having a working prototype, minimum viable product (MVP), or demonstrable proof-of-concept is strongly prioritized for the mainstage Pitch Arena. Early conceptual ideas are encouraged to participate in our open workshops and exhibition demo tables to gather feedback."
+  },
+  {
+    id: "certificates-provided",
+    category: "General",
+    question: "Will certificates of participation be provided?",
+    answer: "Yes. All registered student delegates who attend the scheduled sessions and workshops across both days will receive an official Certificate of Participation endorsed by DVSIET Meerut and conclave ecosystem partners."
+  },
+  {
+    id: "food-provided",
+    category: "Venue & Logistics",
+    question: "Is food and lunch provided during the event?",
+    answer: "Yes. All registered delegate passes include access to the on-campus networking luncheon, as well as morning and evening tea, coffee, and refreshments served across the central atrium during session intervals."
+  },
+  {
+    id: "accommodation",
+    category: "Venue & Logistics",
+    question: "Is accommodation provided for outstation attendees?",
+    answer: "Campus hostel guest rooms are strictly limited and prioritized for invited keynote speakers and jury delegates. For general outstation attendees, the secretariat has partnered with business hotels along the Partapur / Delhi Road corridor to offer negotiated discount codes. Specific booking assistance will be shared upon ticket confirmation."
+  },
+  {
+    id: "how-sponsors-join",
+    category: "Sponsors",
+    question: "How can corporate brands and sponsors partner with the conclave?",
+    answer: "We offer 12 curated sponsorship categories ranging from Title Partner and Powered By Partner to Technology, Education, and Swag partners. Organizations can review the deliverables matrix on the Partners page and submit an inquiry or email partnerships@dvsiet.ac.in directly."
+  },
+  {
+    id: "can-i-speak",
+    category: "General",
+    question: "Can I speak or conduct a masterclass workshop?",
+    answer: "Yes! We welcome seasoned founders, angel operators, technical architects, and policy champions. If you would like to deliver a keynote or lead a technical workshop, please submit your proposal through our Contact Secretariat page."
+  },
+  {
+    id: "who-to-contact",
+    category: "Venue & Logistics",
+    question: "Who can I contact for urgent queries or student delegations?",
+    answer: "You can reach the organizing secretariat desk by emailing conclave@dvsiet.ac.in or calling our helpline at +91 121 244 0495 (available 10:00 AM – 5:00 PM IST, Monday to Saturday). For faculty delegations and college bus parking, early coordination is recommended."
+  },
+  {
+    id: "engineering-only",
+    category: "General",
+    question: "Is Startup Conclave 1.0 only for engineering students?",
+    answer: "No. Interdisciplinary collaboration is fundamental to building enduring businesses. Students and faculty from management (BBA/MBA), commerce, pure sciences, computer applications (BCA/MCA), design, and arts are actively encouraged to attend, network, and form co-founding teams."
+  },
+  {
+    id: "after-registering",
+    category: "Registration",
+    question: "What happens after I register my expression of interest?",
+    answer: "Once you submit your interest, you will receive an immediate confirmation on-screen. When official event dates, speaker announcements, and ticketing passes launch, you will receive priority email notifications and direct reservation links before public booking goes live."
   }
 ];
 

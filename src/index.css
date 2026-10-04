@@ -1,192 +1,148 @@
 @import "tailwindcss";
 
 /* 
- * STARTUP CONCLAVE 1.0 — DESIGN SYSTEM TOKENS (DIRECTION B: EDITORIAL LIGHT)
+ * STARTUP CONCLAVE 1.0 — INDIAN STARTUP PITCH COMPETITION DESIGN SYSTEM
  * 
- * Changing the brand theme is a ONE-FILE edit here.
- * All colors, typography, radii, shadows, and transitions map to these CSS custom properties.
+ * Theme: Neo-Brutalist Lean, Pitch-Stage Energy
+ * Palette:
+ *  - Canvas: Warm Off-White (#FFF8EC)
+ *  - Ink: Near-Black (#111111)
+ *  - Primary Accent: Saffron / Orange (#FF6B1A)
+ *  - Secondary Highlight: Electric Yellow (#FFD400)
+ *  - Accent Dark: Deep Emerald/Navy (#1B4D3E)
+ * 
+ * Borders: Thick 2px solid #111111
+ * Shadows: Hard Offset 4px/6px (No soft blur)
+ * Fonts: Space Grotesk / Bricolage Grotesque, Inter, JetBrains Mono
  */
 
 :root {
-  /* Color Tokens */
-  --color-canvas: #FBF9F5;          /* Warm Alabaster Canvas */
-  --color-surface: #FFFFFF;         /* Crisp Paper White */
-  --color-surface-subdued: #F4F1EA; /* Subtle warm stone surface */
-  --color-surface-hover: #F0EDE6;   /* Card hover surface */
-  
-  --color-primary: #18181B;         /* Deep Carbon Ink for headlines & primary buttons */
-  --color-primary-hover: #27272A;   /* Primary dark hover */
-  
-  --color-accent: #E8590C;          /* Warm Terracotta / Coral */
-  --color-accent-hover: #C2410C;    /* Darker terracotta */
-  --color-accent-subtle: #FFF7ED;   /* Pale warm tint for highlights */
-  --color-accent-border: #FDBA74;   /* Subtle accent border */
-  
-  --color-text: #18181B;            /* High-contrast ink body typography */
-  --color-text-muted: #52525B;      /* Warm stone muted text (WCAG AA >= 4.5:1 on canvas) */
-  --color-text-subtle: #71717A;     /* Secondary metadata & labels */
-  --color-text-inverse: #FBF9F5;    /* Off-white text on dark surfaces */
-  
-  --color-border: #E4E0D7;          /* Bookbinding warm hairline divider */
-  --color-border-subtle: #EFECE6;   /* Extra soft hairline divider */
-  --color-border-strong: #D4CEBF;   /* High-contrast structural border */
+  --color-canvas: #FFF8EC;
+  --color-ink: #111111;
+  --color-orange: #FF6B1A;
+  --color-orange-hover: #E05307;
+  --color-yellow: #FFD400;
+  --color-surface: #FFFFFF;
+  --color-surface-subdued: #FFF2D6;
 
-  /* Status Colors */
-  --color-status-confirmed-bg: #ECFDF5;
-  --color-status-confirmed-text: #065F46;
-  --color-status-confirmed-border: #A7F3D0;
-
-  --color-status-invited-bg: #EFF6FF;
-  --color-status-invited-text: #1E40AF;
-  --color-status-invited-border: #BFDBFE;
-
-  --color-status-soon-bg: #FFF7ED;
-  --color-status-soon-text: #9A3412;
-  --color-status-soon-border: #FED7AA;
-
-  /* Typography Families */
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'Space Grotesk', monospace;
-
-  /* Radius Tokens */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-full: 9999px;
-
-  /* Shadow Tokens */
-  --shadow-paper-xs: 0 1px 2px rgba(24, 24, 27, 0.04);
-  --shadow-paper: 0 2px 6px -1px rgba(24, 24, 27, 0.06), 0 1px 3px -1px rgba(24, 24, 27, 0.04);
-  --shadow-paper-lg: 0 10px 25px -5px rgba(24, 24, 27, 0.08), 0 8px 10px -6px rgba(24, 24, 27, 0.04);
-
-  /* Motion Timing */
-  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-normal: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --font-display: 'Bricolage Grotesque', 'Space Grotesk', sans-serif;
+  --font-headline: 'Space Grotesk', 'Bricolage Grotesque', sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
-@theme {
-  --font-display: var(--font-display);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+html {
+  scroll-behavior: smooth;
+  background-color: #FFF8EC;
+  color: #111111;
 }
 
-/* Global Reset & Base Typography */
 body {
   font-family: var(--font-sans);
-  background-color: var(--color-canvas);
-  color: var(--color-text);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+  background-color: #FFF8EC;
+  color: #111111;
+  overflow-x: hidden;
 }
 
-h1, h2, h3, h4, .font-display {
+/* Custom Neo-Brutalist Classes */
+.font-display {
   font-family: var(--font-display);
 }
 
-/* Universal Keyboard Focus Ring */
-:focus-visible {
-  outline: 2px solid var(--color-accent) !important;
-  outline-offset: 2px !important;
+.font-headline {
+  font-family: var(--font-headline);
 }
 
-/* Typography Scale Utilities */
-.type-display {
-  font-family: var(--font-display);
-  font-size: 2.25rem;      /* 36px mobile */
-  line-height: 1.1;
-  letter-spacing: -0.025em;
-  font-weight: 700;
-}
-@media (min-width: 640px) {
-  .type-display {
-    font-size: 3.5rem;    /* 56px desktop */
-    line-height: 1.06;
-  }
-}
-@media (min-width: 1024px) {
-  .type-display {
-    font-size: 4.25rem;   /* 68px wide */
-    line-height: 1.04;
-  }
+.font-mono {
+  font-family: var(--font-mono);
 }
 
-.type-h1 {
-  font-family: var(--font-display);
-  font-size: 1.875rem;    /* 30px mobile */
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  font-weight: 700;
-}
-@media (min-width: 640px) {
-  .type-h1 {
-    font-size: 2.5rem;    /* 40px desktop */
-  }
+/* Hard Offset Shadows */
+.brutal-border {
+  border: 2px solid #111111;
 }
 
-.type-h2 {
-  font-family: var(--font-display);
-  font-size: 1.5rem;      /* 24px mobile */
-  line-height: 1.25;
-  letter-spacing: -0.015em;
-  font-weight: 700;
-}
-@media (min-width: 640px) {
-  .type-h2 {
-    font-size: 2rem;       /* 32px desktop */
-  }
+.brutal-border-3 {
+  border: 3px solid #111111;
 }
 
-.type-h3 {
-  font-family: var(--font-display);
-  font-size: 1.25rem;     /* 20px mobile */
-  line-height: 1.3;
-  letter-spacing: -0.01em;
-  font-weight: 600;
-}
-@media (min-width: 640px) {
-  .type-h3 {
-    font-size: 1.5rem;     /* 24px desktop */
-  }
+.brutal-shadow {
+  box-shadow: 4px 4px 0px #111111;
 }
 
-.type-h4 {
-  font-family: var(--font-display);
-  font-size: 1.125rem;    /* 18px mobile */
-  line-height: 1.35;
-  font-weight: 600;
+.brutal-shadow-sm {
+  box-shadow: 2px 2px 0px #111111;
 }
-@media (min-width: 640px) {
-  .type-h4 {
-    font-size: 1.25rem;    /* 20px desktop */
+
+.brutal-shadow-lg {
+  box-shadow: 6px 6px 0px #111111;
+}
+
+.brutal-shadow-orange {
+  box-shadow: 4px 4px 0px #FF6B1A;
+}
+
+.brutal-shadow-yellow {
+  box-shadow: 4px 4px 0px #FFD400;
+}
+
+/* Interactive Button Movement */
+.brutal-btn {
+  border: 2px solid #111111;
+  box-shadow: 4px 4px 0px #111111;
+  transition: all 0.15s ease-out;
+}
+
+.brutal-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px #111111;
+}
+
+.brutal-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #111111;
+}
+
+/* Hand-drawn style highlighter mark */
+.highlight-yellow {
+  background: linear-gradient(120deg, rgba(255, 212, 0, 0.95) 0%, rgba(255, 212, 0, 0.85) 100%);
+  display: inline-block;
+  padding: 0 0.2em;
+  transform: rotate(-1deg);
+  border: 2px solid #111111;
+  box-shadow: 2px 2px 0px #111111;
+}
+
+/* Continuous Marquee Animation */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
   }
 }
 
-.type-body {
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;   /* 15px mobile */
-  line-height: 1.65;
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 22s linear infinite;
 }
-@media (min-width: 640px) {
-  .type-body {
-    font-size: 1rem;       /* 16px desktop */
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation: none;
+    transform: none;
   }
-}
-
-.type-small {
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;   /* 13px */
-  line-height: 1.5;
-  color: var(--color-text-muted);
-}
-
-.type-eyebrow {
-  font-family: var(--font-sans);
-  font-size: 0.75rem;     /* 12px */
-  line-height: 1;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-accent);
+  html {
+    scroll-behavior: auto;
+  }
+  .brutal-btn, .brutal-btn:hover, .brutal-btn:active {
+    transition: none;
+    transform: none;
+  }
 }
