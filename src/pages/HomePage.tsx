@@ -134,6 +134,7 @@ export const HomePage: React.FC = () => {
               { path: "/faq", title: "FAQ", note: "Attendee, founder, and student questions answered." },
               { path: "/register", title: "Registration", note: "Attendee ticket access and expression of interest." },
               { path: "/contact", title: "Contact", note: "Organizing committee and administrative contact." },
+              { path: "/design-lab", title: "Design Lab (Creative Directions)", note: "Compare 3 visual identities: Electric Dark, Editorial Light, and Capital Navy." },
             ].map((route) => (
               <Link
                 key={route.path}

@@ -20,6 +20,7 @@ import { VenuePage } from './pages/VenuePage.tsx';
 import { FaqPage } from './pages/FaqPage.tsx';
 import { RegisterPage } from './pages/RegisterPage.tsx';
 import { ContactPage } from './pages/ContactPage.tsx';
+import { DesignLabPage } from './pages/DesignLabPage.tsx';
 
 export default function App() {
   return (
@@ -38,6 +39,8 @@ export default function App() {
           <Route path="faq" element={<FaqPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route path="contact" element={<ContactPage />} />
+          {/* Temporary Design Lab route */}
+          <Route path="design-lab" element={<DesignLabPage />} />
           {/* Catch-all fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

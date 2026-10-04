@@ -38,7 +38,8 @@ export const Header: React.FC = () => {
     { name: "Startup Showcase", href: "/startups" },
     { name: "Partners", href: "/sponsors" },
     { name: "FAQ", href: "/faq" },
-    { name: "Contact", href: "/contact" }
+    { name: "Contact", href: "/contact" },
+    { name: "Design Lab (Preview)", href: "/design-lab" }
   ];
 
   const [desktopDropdownOpen, setDesktopDropdownOpen] = useState(false);
