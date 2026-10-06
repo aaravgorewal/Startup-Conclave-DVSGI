@@ -32,7 +32,8 @@ service cloud.firestore {
           'id', 'registrationId', 'emailHash', 'sequenceNumber',
           'name', 'email', 'phone', 'college', 'course', 'year',
           'role', 'city', 'notes', 'wantsToPitch', 'startupName',
-          'startupPitch', 'pitchStatus', 'status', 'createdAt'
+          'startupPitch', 'pitchStatus', 'status', 'createdAt',
+          'sector', 'stage', 'pitchDeckLink', 'teamSize'
         ])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 100
         && data.email is string && data.email.size() > 0 && data.email.size() <= 120
@@ -52,7 +53,11 @@ service cloud.firestore {
         && (!('wantsToPitch' in data) || data.wantsToPitch is bool)
         && (!('startupName' in data) || (data.startupName is string && data.startupName.size() <= 150))
         && (!('startupPitch' in data) || (data.startupPitch is string && data.startupPitch.size() <= 1000))
-        && (!('pitchStatus' in data) || (data.pitchStatus is string && data.pitchStatus.size() <= 50));
+        && (!('pitchStatus' in data) || (data.pitchStatus is string && data.pitchStatus.size() <= 50))
+        && (!('sector' in data) || (data.sector is string && data.sector.size() <= 100))
+        && (!('stage' in data) || (data.stage is string && data.stage.size() <= 50))
+        && (!('pitchDeckLink' in data) || (data.pitchDeckLink is string && data.pitchDeckLink.size() <= 1000))
+        && (!('teamSize' in data) || (data.teamSize is string && data.teamSize.size() <= 50) || data.teamSize is int);
     }
 
     // Helper: Validate phone index creation payload for deterministic deduplication
@@ -81,6 +86,22 @@ service cloud.firestore {
         && (!('phone' in data) || data.phone == '' || (data.phone is string && data.phone.matches('^[0-9]{10}$')))
         && (!('message' in data) || (data.message is string && data.message.size() <= 500))
         && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+    }
+
+    // Helper: Validate trigger email document for Firebase Trigger Email extension
+    function isValidMail(data) {
+      return data.keys().hasAll(['to', 'message', 'createdAt'])
+        && data.keys().hasOnly(['to', 'message', 'registrationId', 'createdAt'])
+        && data.to is list
+        && data.to.size() >= 1 && data.to.size() <= 3
+        && data.to[0] is string && data.to[0].size() > 0 && data.to[0].size() <= 120
+        && data.message is map
+        && data.message.keys().hasAll(['subject', 'text'])
+        && data.message.subject is string && data.message.subject.size() <= 200
+        && data.message.text is string && data.message.text.size() <= 4000
+        && (!('html' in data.message) || (data.message.html is string && data.message.html.size() <= 10000))
+        && (!('registrationId' in data) || (data.registrationId is string && data.registrationId.size() <= 64))
+        && data.createdAt == request.time;
     }
 
     // 1. Counter Collection for sequential atomic ID allocation (SC1-00001, etc.)
@@ -130,6 +151,15 @@ service cloud.firestore {
 
       // Only verified administrators can write or modify settings
       allow write: if isAdmin();
+    }
+
+    // 6. Trigger Email Collection (for Firebase Trigger Email extension)
+    match /mail/{mailId} {
+      // Public users may create email jobs with strict validation
+      allow create: if isValidMail(request.resource.data);
+
+      // Only administrators can read, update, or purge email logs
+      allow read, update, delete: if isAdmin();
     }
 
     // Default deny for all other unmatched collections and paths

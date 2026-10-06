@@ -18,6 +18,12 @@ import {
   Check,
   Lock,
   RotateCw,
+  Shield,
+  FileText,
+  Copy,
+  Camera,
+  Download,
+  QrCode,
 } from 'lucide-react';
 import { CONFIG } from '../../config.ts';
 import {
@@ -408,6 +414,56 @@ export const SinglePage: React.FC = () => {
 
   // Partner Modal State
   const [partnerModalOpen, setPartnerModalOpen] = useState(false);
+
+  // Privacy Notice Modal State (/privacy or #privacy)
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleLocation = () => {
+      if (typeof window !== 'undefined') {
+        if (window.location.hash === '#privacy' || window.location.pathname === '/privacy') {
+          setPrivacyModalOpen(true);
+        }
+      }
+    };
+    handleLocation();
+    window.addEventListener('hashchange', handleLocation);
+    window.addEventListener('popstate', handleLocation);
+    return () => {
+      window.removeEventListener('hashchange', handleLocation);
+      window.removeEventListener('popstate', handleLocation);
+    };
+  }, []);
+
+  const handleOpenPrivacyModal = () => {
+    setPrivacyModalOpen(true);
+    if (typeof window !== 'undefined' && window.location.hash !== '#privacy' && window.location.pathname !== '/privacy') {
+      window.history.pushState(null, '', '#privacy');
+    }
+  };
+
+  const handleClosePrivacyModal = () => {
+    setPrivacyModalOpen(false);
+    if (typeof window !== 'undefined') {
+      if (window.location.hash === '#privacy') {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      } else if (window.location.pathname === '/privacy') {
+        window.history.replaceState(null, '', '/');
+      }
+    }
+  };
+
+  // Keyboard accessibility for ESC key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (privacyModalOpen) handleClosePrivacyModal();
+        if (partnerModalOpen) setPartnerModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [privacyModalOpen, partnerModalOpen]);
   const [partnerData, setPartnerData] = useState({
     company: '',
     contactName: '',
@@ -431,6 +487,10 @@ export const SinglePage: React.FC = () => {
   const [wantsToPitch, setWantsToPitch] = useState(false);
   const [startupName, setStartupName] = useState('');
   const [startupPitch, setStartupPitch] = useState('');
+  const [pitchSector, setPitchSector] = useState('');
+  const [pitchStage, setPitchStage] = useState<'Idea' | 'Prototype' | 'Launched' | 'Revenue' | ''>('');
+  const [pitchDeckLink, setPitchDeckLink] = useState('');
+  const [pitchTeamSize, setPitchTeamSize] = useState('');
   const [consentAgreed, setConsentAgreed] = useState(false);
   const [honeypot, setHoneypot] = useState('');
 
@@ -448,6 +508,10 @@ export const SinglePage: React.FC = () => {
     wantsToPitch: boolean;
     startupName?: string;
     startupPitch?: string;
+    sector?: string;
+    stage?: string;
+    pitchDeckLink?: string;
+    teamSize?: string;
     status?: string;
   } | null>(null);
 
@@ -663,6 +727,162 @@ export const SinglePage: React.FC = () => {
     setErrors({});
     setIsNetworkError(false);
     setRegFormStartTime(Date.now());
+    setCopiedId(false);
+  };
+
+  // Copy ID State & Feedback
+  const [copiedId, setCopiedId] = useState(false);
+  const [isDownloadingPass, setIsDownloadingPass] = useState(false);
+
+  const handleCopyId = async () => {
+    if (!submittedRecord?.id) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(submittedRecord.id);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = submittedRecord.id;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2500);
+    } catch (e) {
+      console.warn('Copy notice:', e);
+    }
+  };
+
+  const handleDownloadConfirmation = () => {
+    if (!submittedRecord) return;
+    setIsDownloadingPass(true);
+
+    try {
+      const canvas = document.createElement('canvas');
+      const width = 1200;
+      const height = 800;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        window.print();
+        setIsDownloadingPass(false);
+        return;
+      }
+
+      // Background
+      ctx.fillStyle = '#FFF8EC';
+      ctx.fillRect(0, 0, width, height);
+
+      // Card Shadow
+      ctx.fillStyle = '#111111';
+      ctx.fillRect(40, 40, width - 60, height - 60);
+
+      // Main Card Surface
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(30, 30, width - 70, height - 70);
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#111111';
+      ctx.strokeRect(30, 30, width - 70, height - 70);
+
+      // Header Banner
+      ctx.fillStyle = '#111111';
+      ctx.fillRect(30, 30, width - 70, 110);
+
+      ctx.fillStyle = '#FFD400';
+      ctx.font = '900 36px sans-serif';
+      ctx.fillText('STARTUP CONCLAVE 1.0', 70, 95);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '700 16px monospace';
+      ctx.fillText('OFFICIAL REGISTRATION CONFIRMATION PASS', 70, 122);
+
+      // Registration ID Callout Box
+      ctx.fillStyle = '#FFD400';
+      ctx.fillRect(70, 170, width - 150, 100);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#111111';
+      ctx.strokeRect(70, 170, width - 150, 100);
+
+      ctx.fillStyle = '#111111';
+      ctx.font = '700 14px monospace';
+      ctx.fillText('OFFICIAL REGISTRATION ID', 95, 202);
+
+      ctx.font = '900 40px monospace';
+      ctx.fillText(submittedRecord.id, 95, 248);
+
+      const statusBadge = submittedRecord.status === 'waitlist' ? 'STATUS: WAITLIST' : 'STATUS: CONFIRMED';
+      ctx.fillStyle = submittedRecord.status === 'waitlist' ? '#78350F' : '#065F46';
+      ctx.font = '800 16px monospace';
+      ctx.fillText(statusBadge, width - 340, 230);
+
+      // Attendee Details
+      ctx.fillStyle = '#111111';
+      ctx.font = '700 22px sans-serif';
+      ctx.fillText(`Attendee: ${submittedRecord.name}`, 70, 320);
+
+      ctx.font = '500 18px sans-serif';
+      ctx.fillText(`College / Org: ${submittedRecord.college}`, 70, 360);
+      ctx.fillText(`Phone: ${submittedRecord.phone}   |   Email: ${submittedRecord.email}`, 70, 400);
+      ctx.fillText(`Category: ${submittedRecord.role} · ${submittedRecord.city}`, 70, 440);
+
+      // Mandatory Venue & Entry Line Box
+      ctx.fillStyle = '#FFF2D6';
+      ctx.fillRect(70, 480, width - 150, 120);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#111111';
+      ctx.strokeRect(70, 480, width - 150, 120);
+
+      ctx.fillStyle = '#FF6B1A';
+      ctx.font = '900 20px sans-serif';
+      ctx.fillText('Venue: DVSIET, Meerut', 95, 518);
+
+      ctx.fillStyle = '#111111';
+      ctx.font = '700 17px sans-serif';
+      ctx.fillText('Date and entry details will be shared by email and WhatsApp.', 95, 555);
+
+      ctx.font = '500 14px monospace';
+      ctx.fillStyle = '#444444';
+      ctx.fillText('Dewan V.S. Institute of Engineering & Technology, NH-58, Meerut, UP', 95, 582);
+
+      // Organiser Contact
+      const contactEmail = (CONFIG.contactEmail || CONFIG.contact?.email || 'conclave@dvsiet.ac.in').trim();
+      const contactPhone = (CONFIG.contactPhone || CONFIG.contact?.phone || '+91 98765 43210').trim();
+
+      ctx.fillStyle = '#111111';
+      ctx.font = '600 15px monospace';
+      ctx.fillText(`Organiser Contact: ${contactEmail}   |   ${contactPhone}`, 70, 650);
+
+      ctx.font = 'italic 13px sans-serif';
+      ctx.fillStyle = '#666666';
+      ctx.fillText('Take a screenshot of your Registration ID or carry this confirmation pass for venue entry.', 70, 680);
+
+      ctx.font = '500 12px monospace';
+      ctx.fillText(`Issued: ${new Date().toLocaleDateString()} · Startup Conclave 1.0`, 70, 715);
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          setIsDownloadingPass(false);
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `StartupConclave-Confirmation-${submittedRecord.id}.png`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        setIsDownloadingPass(false);
+      }, 'image/png');
+    } catch (err) {
+      console.warn('Canvas pass error:', err);
+      window.print();
+      setIsDownloadingPass(false);
+    }
   };
 
   return (
@@ -1469,14 +1689,111 @@ export const SinglePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Mandatory Entry Line */}
-            <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] font-sans font-bold text-sm sm:text-base text-[#111111] flex items-center gap-2.5">
-              <Calendar className="w-5 h-5 text-[#FF6B1A] shrink-0" />
-              <span>
-                {submittedRecord.status === 'waitlist'
-                  ? 'Capacity reached. Waitlist updates and seat release details will be shared on email/WhatsApp.'
-                  : 'Date and entry details will be shared on your email/WhatsApp.'}
-              </span>
+            {/* Ticket QR Code Gate Pass Preview */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] text-left">
+              <div className="p-1.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(submittedRecord.id)}`}
+                  alt={`QR Code for Registration ${submittedRecord.id}`}
+                  className="w-24 h-24 object-contain"
+                  loading="lazy"
+                />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase text-[#FF6B1A]">
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Official Entry Pass QR</span>
+                </div>
+                <div className="font-display font-black text-base sm:text-lg text-[#111111]">
+                  Scan at DVSIET Gate Check-in
+                </div>
+                <p className="text-xs font-sans text-[#111111]/80 leading-relaxed">
+                  Present this QR code or your Registration ID (<span className="font-mono font-bold">{submittedRecord.id}</span>) on your screen at the registration desk for instant venue admission.
+                </p>
+              </div>
+            </div>
+
+            {/* Prominent On-Screen Instruction & Action Row */}
+            <div className="p-5 bg-[#FFD400] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3 text-left">
+              <div className="flex items-center gap-2.5">
+                <Camera className="w-5 h-5 text-[#111111] shrink-0" />
+                <h4 className="font-display font-black text-base sm:text-lg text-[#111111] uppercase tracking-wide">
+                  Take a screenshot of your Registration ID
+                </h4>
+              </div>
+              <p className="font-sans text-xs sm:text-sm text-[#111111] font-semibold leading-relaxed">
+                Save your Registration ID (<span className="font-mono font-bold text-base">{submittedRecord.id}</span>) now. You must present it along with your college or government ID at the registration desk for venue access.
+              </p>
+
+              {/* Action Buttons: Copy ID & Download Confirmation */}
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                {/* Copy ID Button */}
+                <button
+                  type="button"
+                  onClick={handleCopyId}
+                  className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-4 py-2.5 font-mono text-xs sm:text-sm font-bold border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2 cursor-pointer transition-all min-h-[44px]"
+                >
+                  {copiedId ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
+                      <span className="text-emerald-800 font-black">Copied ({submittedRecord.id})</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 text-[#FF6B1A]" />
+                      <span>Copy ID</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Download confirmation (PDF or image) Button */}
+                <button
+                  type="button"
+                  onClick={handleDownloadConfirmation}
+                  disabled={isDownloadingPass}
+                  className="brutal-btn bg-[#111111] hover:bg-[#222222] text-[#FFD400] px-4 py-2.5 font-display font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2 cursor-pointer transition-all min-h-[44px] disabled:opacity-60"
+                >
+                  <Download className="w-4 h-4 text-[#FFD400]" />
+                  <span>{isDownloadingPass ? 'Generating...' : 'Download confirmation (PDF or image)'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Mandatory Venue and Entry Notice Line */}
+            <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2.5 text-left font-sans">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#111111]/20 pb-2">
+                <div className="flex items-center gap-2 font-display font-black text-sm sm:text-base text-[#111111]">
+                  <MapPin className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                  <span>Venue: DVSIET, Meerut</span>
+                </div>
+                <span className="font-mono text-xs font-bold text-[#111111]/70 bg-white px-2 py-0.5 border border-[#111111]">
+                  Startup Conclave 1.0
+                </span>
+              </div>
+
+              <div className="font-sans font-bold text-sm sm:text-base text-[#111111] flex items-center gap-2.5">
+                <Calendar className="w-5 h-5 text-[#FF6B1A] shrink-0" />
+                <span>Date and entry details will be shared by email and WhatsApp.</span>
+              </div>
+
+              <div className="font-mono text-xs text-[#111111]/85 pt-1.5 border-t border-[#111111]/20 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="font-black text-[#111111]">Organiser Contact:</span>
+                <a
+                  href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || 'conclave@dvsiet.ac.in').trim()}`}
+                  className="underline font-bold text-[#FF6B1A] hover:text-[#111111]"
+                >
+                  {(CONFIG.contactEmail || CONFIG.contact?.email || 'conclave@dvsiet.ac.in').trim()}
+                </a>
+                <span>•</span>
+                <a
+                  href={`tel:${(CONFIG.contactPhone || CONFIG.contact?.phone || '+91 98765 43210').trim()}`}
+                  className="underline font-bold text-[#111111] hover:text-[#FF6B1A]"
+                >
+                  {(CONFIG.contactPhone || CONFIG.contact?.phone || '+91 98765 43210').trim()}
+                </a>
+                <span>•</span>
+                <span className="text-[#111111]/70">Dewan V.S. Institute of Engineering & Technology, Meerut</span>
+              </div>
             </div>
 
             {/* Summary of what they entered */}
@@ -1780,9 +2097,9 @@ export const SinglePage: React.FC = () => {
                 )}
               </div>
 
-              {/* 7. Consent Checkbox */}
+              {/* 7. Consent Checkbox with Privacy Notice Link */}
               <div className="pt-2">
-                <div className="flex items-center gap-3 min-h-[44px]">
+                <div className="flex items-start sm:items-center gap-3 min-h-[44px]">
                   <input
                     type="checkbox"
                     id="consentCheck"
@@ -1792,10 +2109,21 @@ export const SinglePage: React.FC = () => {
                       setConsentAgreed(e.target.checked);
                       if (errors.consent) setErrors({ ...errors, consent: '' });
                     }}
-                    className="w-5 h-5 accent-[#FF6B1A] border-2 border-[#111111] rounded-none cursor-pointer shrink-0"
+                    className="w-5 h-5 accent-[#FF6B1A] border-2 border-[#111111] rounded-none cursor-pointer shrink-0 mt-0.5 sm:mt-0"
                   />
-                  <label htmlFor="consentCheck" className="text-xs sm:text-sm font-semibold text-[#111111] cursor-pointer">
-                    I agree to be contacted about this event.
+                  <label htmlFor="consentCheck" className="text-xs sm:text-sm font-semibold text-[#111111] cursor-pointer leading-normal">
+                    <span>I agree to be contacted about this event.</span>{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleOpenPrivacyModal();
+                      }}
+                      className="text-[#FF6B1A] underline hover:text-[#111111] font-bold cursor-pointer inline transition-colors"
+                    >
+                      See Privacy Notice
+                    </button>
                   </label>
                 </div>
                 {errors.consent && <p className="text-xs text-red-600 font-bold mt-1">{errors.consent}</p>}
@@ -1998,7 +2326,16 @@ export const SinglePage: React.FC = () => {
         </div>
 
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm font-mono text-[#111111]/70">
-          <span>© {new Date().getFullYear()} Startup Conclave 1.0. All rights reserved.</span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span>© {new Date().getFullYear()} Startup Conclave 1.0. All rights reserved.</span>
+            <button
+              type="button"
+              onClick={handleOpenPrivacyModal}
+              className="text-[#FF6B1A] hover:text-[#111111] underline font-bold cursor-pointer transition-colors"
+            >
+              Privacy Notice
+            </button>
+          </div>
           <span>Dewan V.S. Institute of Engineering & Technology, Meerut.</span>
         </div>
       </footer>
@@ -2174,6 +2511,158 @@ export const SinglePage: React.FC = () => {
                 </div>
               </form>
             )}
+
+          </div>
+        </div>
+      )}
+
+      {/* Anchored Section Target for /privacy or #privacy navigation */}
+      <div id="privacy" className="sr-only" aria-hidden="true" />
+
+      {/* =================================================================== */}
+      {/* PRIVACY NOTICE MODAL (/privacy or #privacy)                          */}
+      {/* =================================================================== */}
+      {privacyModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="privacy-modal-title"
+          className="fixed inset-0 z-50 bg-[#111111]/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleClosePrivacyModal();
+          }}
+        >
+          <div className="bg-[#FFF8EC] brutal-border brutal-shadow-lg p-5 sm:p-8 max-w-2xl w-full text-left space-y-5 max-h-[90vh] overflow-y-auto animate-brutal-pop">
+            
+            {/* Draft Notice Banner */}
+            <div className="p-3 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2.5">
+              <AlertCircle className="w-5 h-5 text-[#111111] shrink-0" />
+              <div className="font-mono text-xs font-black uppercase tracking-wider text-[#111111]">
+                Draft: review with the college before launch
+              </div>
+            </div>
+
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b-2 border-[#111111] pb-3 gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-[#FF6B1A]" />
+                  <span className="font-mono text-xs font-bold text-[#FF6B1A] uppercase tracking-wider">
+                    Privacy Notice
+                  </span>
+                </div>
+                <h3 id="privacy-modal-title" className="font-display font-black text-2xl sm:text-3xl text-[#111111] tracking-tight">
+                  Attendee Privacy & Data Usage
+                </h3>
+                <p className="font-sans text-xs sm:text-sm text-[#111111]/80 font-medium">
+                  Startup Conclave 1.0 · Dewan V.S. Institute of Engineering & Technology, Meerut
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleClosePrivacyModal}
+                aria-label="Close Privacy Notice"
+                className="p-1.5 brutal-border bg-white hover:bg-[#FFD400] transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center shrink-0 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body: Plain-Language Sections */}
+            <div className="space-y-4 font-sans text-sm text-[#111111] leading-relaxed">
+              
+              {/* Section 1: What Data Is Collected */}
+              <div className="p-4 bg-white border-2 border-[#111111] space-y-2">
+                <div className="flex items-center gap-2 font-display font-black text-base text-[#111111]">
+                  <span className="font-mono text-xs px-2 py-0.5 bg-[#FFF2D6] border border-[#111111] text-[#FF6B1A]">01</span>
+                  <h4>What Data Is Collected</h4>
+                </div>
+                <p className="text-xs sm:text-sm text-[#111111]/85">
+                  When you register or submit an inquiry for Startup Conclave 1.0, we collect the following limited details:
+                </p>
+                <ul className="list-disc pl-5 text-xs sm:text-sm space-y-1 font-medium text-[#111111]">
+                  <li><strong>Full Name:</strong> To print physical badges, issue accreditation, and maintain attendee lists.</li>
+                  <li><strong>Email Address:</strong> To deliver registration confirmation codes, venue access instructions, and schedule alerts.</li>
+                  <li><strong>Phone / WhatsApp Number (10 digits):</strong> To send urgent entry instructions and prevent duplicate bookings.</li>
+                  <li><strong>College / Organisation Name:</strong> To classify institutional contingents and verify student/founder affiliations.</li>
+                  <li><strong>Degree / Course & Year (students only):</strong> To verify valid student enrolment and student ticket passes.</li>
+                  <li><strong>City of Residence:</strong> To coordinate regional transport logistics and arrival planning.</li>
+                  <li><strong>Pitch Details (optional):</strong> Startup name and one-line summary if applying to the Pitch Arena.</li>
+                </ul>
+              </div>
+
+              {/* Section 2: Why It Is Collected (Purpose) */}
+              <div className="p-4 bg-white border-2 border-[#111111] space-y-2">
+                <div className="flex items-center gap-2 font-display font-black text-base text-[#111111]">
+                  <span className="font-mono text-xs px-2 py-0.5 bg-[#FFF2D6] border border-[#111111] text-[#FF6B1A]">02</span>
+                  <h4>Why We Collect It (Purpose)</h4>
+                </div>
+                <p className="text-xs sm:text-sm text-[#111111]/85">
+                  <strong>Event communication only:</strong> We process your details exclusively to communicate critical event updates with you. This includes sending your official Registration ID, gate pass information, speaker schedules, track rooms, waitlist status, and certificates of attendance. We do not engage in spam, telemarketing, or third-party marketing.
+                </p>
+              </div>
+
+              {/* Section 3: Who Can See It (Access) */}
+              <div className="p-4 bg-white border-2 border-[#111111] space-y-2">
+                <div className="flex items-center gap-2 font-display font-black text-base text-[#111111]">
+                  <span className="font-mono text-xs px-2 py-0.5 bg-[#FFF2D6] border border-[#111111] text-[#FF6B1A]">03</span>
+                  <h4>Who Can See It (Access)</h4>
+                </div>
+                <p className="text-xs sm:text-sm text-[#111111]/85">
+                  <strong>Organisers only:</strong> Your personal information is accessible only to the authorized Startup Conclave 1.0 Secretariat and designated faculty coordinators at DVSIET Meerut. Your information will <em>never</em> be sold, rented, monetized, or shared with external commercial marketing agencies or unrelated third parties.
+                </p>
+              </div>
+
+              {/* Section 4: How Long It Is Kept (Retention) */}
+              <div className="p-4 bg-white border-2 border-[#111111] space-y-2">
+                <div className="flex items-center gap-2 font-display font-black text-base text-[#111111]">
+                  <span className="font-mono text-xs px-2 py-0.5 bg-[#FFF2D6] border border-[#111111] text-[#FF6B1A]">04</span>
+                  <h4>How Long It Is Kept (Retention)</h4>
+                </div>
+                <p className="text-xs sm:text-sm text-[#111111]/85">
+                  Registration records are stored securely in Google Cloud Firestore for the duration of Startup Conclave 1.0 and immediate post-event requirements (such as distributing digital certificates of participation and processing pitch jury outcomes). Records are scheduled to be safely purged or archived within 90 days following event completion.
+                </p>
+              </div>
+
+              {/* Section 5: Contact Email for Deletion Requests */}
+              <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] space-y-2">
+                <div className="flex items-center gap-2 font-display font-black text-base text-[#111111]">
+                  <span className="font-mono text-xs px-2 py-0.5 bg-white border border-[#111111] text-[#FF6B1A]">05</span>
+                  <h4>Data Deletion & Contact Email</h4>
+                </div>
+                <p className="text-xs sm:text-sm text-[#111111]/85">
+                  You retain full control over your submitted information. If you wish to update your details, request a copy of your information, or have your registration permanently erased from our records at any time, please contact the organising committee:
+                </p>
+                <div className="p-3 bg-white border border-[#111111] font-mono text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                    <a
+                      href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || 'conclave@dvsiet.ac.in').trim()}?subject=Privacy%20Data%20Deletion%20Request`}
+                      className="font-bold text-[#FF6B1A] hover:underline"
+                    >
+                      {(CONFIG.contactEmail || CONFIG.contact?.email || 'conclave@dvsiet.ac.in').trim()}
+                    </a>
+                  </div>
+                  <span className="text-[#111111]/60 text-xs">Response within 48 hours</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-2 border-t-2 border-[#111111] flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span className="font-mono text-xs text-[#111111]/70">
+                Last updated: October 2026 · Startup Conclave 1.0
+              </span>
+              <button
+                type="button"
+                onClick={handleClosePrivacyModal}
+                className="w-full sm:w-auto brutal-btn bg-[#111111] text-[#FFD400] px-6 py-2.5 font-display font-bold text-xs uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px]"
+              >
+                I Understand & Close
+              </button>
+            </div>
 
           </div>
         </div>

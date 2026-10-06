@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   signInWithEmailAndPassword,
   signOut,
@@ -34,7 +34,22 @@ import {
   Lock,
   Layers,
   Sparkles,
+  RotateCcw,
+  Trash2,
+  HelpCircle,
+  ShieldCheck,
+  QrCode,
+  Camera,
+  UserCheck,
+  AlertTriangle,
+  Volume2,
+  RefreshCw,
+  ScanLine,
+  CheckCheck,
+  BarChart3,
+  GraduationCap,
 } from 'lucide-react';
+import jsQR from 'jsqr';
 import { auth } from '../services/firebase.ts';
 import { ADMIN_EMAILS, CONFIG } from '../config.ts';
 import {
@@ -44,6 +59,8 @@ import {
   fetchPartnerEnquiries,
   updateRegistration,
   bulkUpdateStatus,
+  deleteRegistration,
+  deletePartnerEnquiry,
   updatePartnerEnquiry,
   exportToCSV,
   getEventSettings,
@@ -96,7 +113,7 @@ export const AdminPage: React.FC = () => {
   }, [lockoutSeconds]);
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'registrations' | 'pitch' | 'partners' | 'settings'>('registrations');
+  const [activeTab, setActiveTab] = useState<'registrations' | 'checkin' | 'pitch' | 'partners' | 'settings'>('registrations');
 
   // Data State
   const [registrations, setRegistrations] = useState<AdminRegistration[]>([]);
@@ -124,11 +141,64 @@ export const AdminPage: React.FC = () => {
   const [activeDetailItem, setActiveDetailItem] = useState<AdminRegistration | null>(null);
   const [detailNotes, setDetailNotes] = useState('');
 
+  // Confirmation Dialog State
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel: string;
+    cancelLabel?: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void | Promise<void>;
+  } | null>(null);
+
+  // 5-Second Undo Toast State for Single Status Changes
+  const [undoToast, setUndoToast] = useState<{
+    id: string;
+    name: string;
+    previousStatus: string;
+    newStatus: string;
+    secondsRemaining: number;
+  } | null>(null);
+
+  // Countdown timer for 5-second Undo Toast
+  useEffect(() => {
+    if (!undoToast) return;
+    if (undoToast.secondsRemaining <= 0) {
+      setUndoToast(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setUndoToast((prev) =>
+        prev ? { ...prev, secondsRemaining: prev.secondsRemaining - 1 } : null
+      );
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [undoToast?.secondsRemaining]);
+
   // Event Settings State (Config Overrides & Firestore settings/event)
   const [registrationCapSetting, setRegistrationCapSetting] = useState<number>(500);
   const [regStatusSetting, setRegStatusSetting] = useState<'open' | 'closed'>(CONFIG.registration.status);
   const [showCountSetting, setShowCountSetting] = useState<boolean>(CONFIG.registration.showCount);
   const [settingsSavedToast, setSettingsSavedToast] = useState(false);
+
+  // =========================================================================
+  // Check-in Desk State (Optimised for Mobile & Gate Volunteers)
+  // =========================================================================
+  const [checkinQuery, setCheckinQuery] = useState('');
+  const [checkinFilter, setCheckinFilter] = useState<'all' | 'pending' | 'checked_in'>('all');
+  const [selectedCheckinId, setSelectedCheckinId] = useState<string | null>(null);
+  const [isScanningQR, setIsScanningQR] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [scanSuccessNotice, setScanSuccessNotice] = useState<string | null>(null);
+  const [justCheckedInRecord, setJustCheckedInRecord] = useState<AdminRegistration | null>(null);
+  const [checkinDoubleWarning, setCheckinDoubleWarning] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const scanStreamRef = useRef<MediaStream | null>(null);
+  const scanAnimationRef = useRef<number | null>(null);
 
   // Load Firestore settings/event on mount
   useEffect(() => {
@@ -234,24 +304,122 @@ export const AdminPage: React.FC = () => {
     setCurrentUser(null);
   };
 
-  // Status Update Handlers
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    await updateRegistration(id, { status: newStatus });
+  // Status Update Handlers with Confirmation on Cancel & 5-Second Undo Toast
+  const executeStatusChange = async (id: string, newStatus: string) => {
+    const target = registrations.find((r) => r.id === id);
+    const oldStatus = target?.status || 'registered';
+    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
+    const timestamp = new Date().toISOString();
+
+    await updateRegistration(id, {
+      status: newStatus,
+      updatedBy: adminEmail,
+      updatedAt: timestamp,
+    });
+
     setRegistrations((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, status: newStatus, updatedBy: adminEmail, updatedAt: timestamp }
+          : item
+      )
     );
+
     if (activeDetailItem?.id === id) {
-      setActiveDetailItem((prev) => (prev ? { ...prev, status: newStatus } : null));
+      setActiveDetailItem((prev) =>
+        prev
+          ? { ...prev, status: newStatus, updatedBy: adminEmail, updatedAt: timestamp }
+          : null
+      );
     }
+
+    // Requirement: Add an "Undo" toast for single status changes for 5 seconds
+    setUndoToast({
+      id,
+      name: target?.name || id,
+      previousStatus: oldStatus,
+      newStatus,
+      secondsRemaining: 5,
+    });
+  };
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    const target = registrations.find((r) => r.id === id);
+    if (!target) return;
+
+    // Requirement: Add confirmation dialog for cancelling a registration
+    if (newStatus === 'cancelled') {
+      setConfirmDialog({
+        isOpen: true,
+        title: 'Cancel Registration?',
+        message: `Are you sure you want to cancel the registration for ${target.name} (${target.id})? This will mark their delegate ticket as cancelled.`,
+        confirmLabel: 'Yes, Cancel Registration',
+        cancelLabel: 'Keep Registration',
+        variant: 'danger',
+        onConfirm: async () => {
+          setConfirmDialog(null);
+          await executeStatusChange(id, 'cancelled');
+        },
+      });
+      return;
+    }
+
+    await executeStatusChange(id, newStatus);
+  };
+
+  // Revert single status change on Undo click
+  const handleUndoStatusChange = async () => {
+    if (!undoToast) return;
+    const { id, previousStatus } = undoToast;
+    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
+    const timestamp = new Date().toISOString();
+
+    await updateRegistration(id, {
+      status: previousStatus,
+      updatedBy: adminEmail,
+      updatedAt: timestamp,
+    });
+
+    setRegistrations((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, status: previousStatus, updatedBy: adminEmail, updatedAt: timestamp }
+          : item
+      )
+    );
+
+    if (activeDetailItem?.id === id) {
+      setActiveDetailItem((prev) =>
+        prev
+          ? { ...prev, status: previousStatus, updatedBy: adminEmail, updatedAt: timestamp }
+          : null
+      );
+    }
+
+    setUndoToast(null);
   };
 
   const handlePitchStatusChange = async (id: string, newPitchStatus: string) => {
-    await updateRegistration(id, { pitchStatus: newPitchStatus });
+    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
+    const timestamp = new Date().toISOString();
+    await updateRegistration(id, {
+      pitchStatus: newPitchStatus,
+      updatedBy: adminEmail,
+      updatedAt: timestamp,
+    });
     setRegistrations((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, pitchStatus: newPitchStatus } : item))
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, pitchStatus: newPitchStatus, updatedBy: adminEmail, updatedAt: timestamp }
+          : item
+      )
     );
     if (activeDetailItem?.id === id) {
-      setActiveDetailItem((prev) => (prev ? { ...prev, pitchStatus: newPitchStatus } : null));
+      setActiveDetailItem((prev) =>
+        prev
+          ? { ...prev, pitchStatus: newPitchStatus, updatedBy: adminEmail, updatedAt: timestamp }
+          : null
+      );
     }
   };
 
@@ -264,11 +432,82 @@ export const AdminPage: React.FC = () => {
 
   const handleSaveNotes = async () => {
     if (!activeDetailItem) return;
-    await updateRegistration(activeDetailItem.id, { notes: detailNotes });
+    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
+    const timestamp = new Date().toISOString();
+    await updateRegistration(activeDetailItem.id, {
+      notes: detailNotes,
+      updatedBy: adminEmail,
+      updatedAt: timestamp,
+    });
     setRegistrations((prev) =>
-      prev.map((item) => (item.id === activeDetailItem.id ? { ...item, notes: detailNotes } : item))
+      prev.map((item) =>
+        item.id === activeDetailItem.id
+          ? { ...item, notes: detailNotes, updatedBy: adminEmail, updatedAt: timestamp }
+          : item
+      )
     );
-    setActiveDetailItem((prev) => (prev ? { ...prev, notes: detailNotes } : null));
+    setActiveDetailItem((prev) =>
+      prev
+        ? { ...prev, notes: detailNotes, updatedBy: adminEmail, updatedAt: timestamp }
+        : null
+    );
+  };
+
+  // Requirement: Add confirmation dialog for any delete
+  const handleDeleteRegistration = (reg: AdminRegistration) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Permanently Delete Registration?',
+      message: `Are you sure you want to delete ${reg.name} (${reg.id})? This will permanently remove their document from Firestore. This action cannot be undone.`,
+      confirmLabel: 'Permanently Delete',
+      cancelLabel: 'Keep Record',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await deleteRegistration(reg.id, reg.docId);
+        setRegistrations((prev) => prev.filter((item) => item.id !== reg.id));
+        if (activeDetailItem?.id === reg.id) {
+          setActiveDetailItem(null);
+        }
+      },
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    const count = selectedIds.length;
+    setConfirmDialog({
+      isOpen: true,
+      title: `Permanently Delete ${count} Registrations?`,
+      message: `Are you sure you want to permanently delete ${count} selected attendee registration${count > 1 ? 's' : ''} from Firestore? This action cannot be undone.`,
+      confirmLabel: `Delete ${count} Records`,
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        for (const id of selectedIds) {
+          await deleteRegistration(id);
+        }
+        setRegistrations((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
+        setSelectedIds([]);
+      },
+    });
+  };
+
+  const handleDeletePartnerEnquiry = (enquiry: AdminPartnerEnquiry) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Partnership Inquiry?',
+      message: `Are you sure you want to delete the enquiry from ${enquiry.company} (${enquiry.contactName})? This cannot be undone.`,
+      confirmLabel: 'Delete Inquiry',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await deletePartnerEnquiry(enquiry.id);
+        setPartnerEnquiries((prev) => prev.filter((item) => item.id !== enquiry.id));
+      },
+    });
   };
 
   // Bulk Actions
@@ -286,12 +525,40 @@ export const AdminPage: React.FC = () => {
     );
   };
 
-  const handleBulkStatus = async (status: string) => {
-    await bulkUpdateStatus(selectedIds, status);
+  const executeBulkStatus = async (status: string) => {
+    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
+    const timestamp = new Date().toISOString();
+    await bulkUpdateStatus(selectedIds, status, adminEmail);
     setRegistrations((prev) =>
-      prev.map((item) => (selectedIds.includes(item.id) ? { ...item, status } : item))
+      prev.map((item) =>
+        selectedIds.includes(item.id)
+          ? { ...item, status, updatedBy: adminEmail, updatedAt: timestamp }
+          : item
+      )
     );
     setSelectedIds([]);
+  };
+
+  // Requirement: Add confirmation dialog for bulk status changes
+  const handleBulkStatus = (status: string) => {
+    if (selectedIds.length === 0) return;
+
+    const count = selectedIds.length;
+    const isCancel = status === 'cancelled';
+    const formattedStatus = status.replace('_', ' ').toUpperCase();
+
+    setConfirmDialog({
+      isOpen: true,
+      title: isCancel ? `Cancel ${count} Registrations?` : `Bulk Update to ${formattedStatus}?`,
+      message: `You have selected ${count} attendee record${count > 1 ? 's' : ''}. Are you sure you want to change their status to "${status}"? This will update all selected records.`,
+      confirmLabel: isCancel ? `Cancel ${count} Registrations` : `Update ${count} Registrations`,
+      cancelLabel: 'Dismiss',
+      variant: isCancel ? 'danger' : 'primary',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await executeBulkStatus(status);
+      },
+    });
   };
 
   // Settings Save to Firestore "settings/event"
@@ -308,19 +575,81 @@ export const AdminPage: React.FC = () => {
     setTimeout(() => setSettingsSavedToast(false), 2500);
   };
 
-  // Top Stat Cards Calculations
+  // Top Stat Cards Calculations (Registrations Tab Only)
   const stats = useMemo(() => {
     const total = registrations.length;
+    const confirmed = registrations.filter((r) => r.status === 'confirmed').length;
+    const registered = registrations.filter((r) => r.status === 'registered').length;
+    const checkedIn = registrations.filter((r) => r.status === 'checked_in').length;
+    const cancelled = registrations.filter((r) => r.status === 'cancelled').length;
+    const waitlist = registrations.filter((r) => r.status === 'waitlist').length;
+    const wantsToPitch = registrations.filter((r) => r.wantsToPitch).length;
     const students = registrations.filter((r) => r.role === 'Student').length;
     const founders = registrations.filter((r) => r.role === 'Founder').length;
     const others = total - (students + founders);
-    const wantsToPitch = registrations.filter((r) => r.wantsToPitch).length;
-    const waitlist = registrations.filter((r) => r.status === 'waitlist').length;
 
     const todayStr = new Date().toISOString().slice(0, 10);
     const today = registrations.filter((r) => r.createdAt && r.createdAt.slice(0, 10) === todayStr).length;
 
-    return { total, students, founders, others, wantsToPitch, waitlist, today };
+    return {
+      total,
+      confirmed,
+      registered,
+      checkedIn,
+      cancelled,
+      waitlist,
+      wantsToPitch,
+      students,
+      founders,
+      others,
+      today,
+    };
+  }, [registrations]);
+
+  // Daily Registrations for Small Bar Chart
+  const dailyRegistrations = useMemo(() => {
+    const map: Record<string, number> = {};
+    registrations.forEach((r) => {
+      if (!r.createdAt) return;
+      const dateStr = r.createdAt.slice(0, 10);
+      map[dateStr] = (map[dateStr] || 0) + 1;
+    });
+
+    const sortedDates = Object.keys(map).sort();
+    if (sortedDates.length === 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      return [{ date: today, label: 'Today', count: 0 }];
+    }
+
+    // Return the last 7 recorded days
+    const recentDates = sortedDates.slice(-7);
+    return recentDates.map((dateStr) => {
+      const parts = dateStr.split('-');
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const m = parseInt(parts[1], 10) - 1;
+      const d = parseInt(parts[2], 10);
+      const label = `${monthNames[m] || ''} ${d}`;
+      return {
+        date: dateStr,
+        label,
+        count: map[dateStr] || 0,
+      };
+    });
+  }, [registrations]);
+
+  // Top 5 Colleges Breakdown
+  const topColleges = useMemo(() => {
+    const map: Record<string, number> = {};
+    registrations.forEach((r) => {
+      const col = (r.college || '').trim();
+      if (!col) return;
+      map[col] = (map[col] || 0) + 1;
+    });
+
+    return Object.entries(map)
+      .map(([college, count]) => ({ college, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
   }, [registrations]);
 
   // Filtered & Sorted Registrations
@@ -432,6 +761,304 @@ export const AdminPage: React.FC = () => {
     }));
     exportToCSV(exportData, 'StartupConclave-PartnerEnquiries');
   };
+
+  // =========================================================================
+  // CHECK-IN DESK LOGIC & HANDLERS (Mobile Optimised & Double Check-in Proof)
+  // =========================================================================
+
+  // Audio & Haptic feedback
+  const triggerCheckinFeedback = (type: 'success' | 'warning' | 'error') => {
+    try {
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        if (type === 'success') navigator.vibrate([80, 40, 80]);
+        else if (type === 'warning') navigator.vibrate([180, 80, 180]);
+        else navigator.vibrate([250]);
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      if (type === 'success') {
+        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.22);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.22);
+      } else if (type === 'warning') {
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.setValueAtTime(349.23, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Stop camera video stream & QR frame loop
+  const stopQRScanner = () => {
+    if (scanAnimationRef.current) {
+      cancelAnimationFrame(scanAnimationRef.current);
+      scanAnimationRef.current = null;
+    }
+    if (scanStreamRef.current) {
+      scanStreamRef.current.getTracks().forEach((track) => track.stop());
+      scanStreamRef.current = null;
+    }
+    setIsScanningQR(false);
+  };
+
+  // Scan video frame using jsQR
+  const scanVideoFrame = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert',
+        });
+        if (code && code.data) {
+          handleScannedResult(code.data);
+          return;
+        }
+      }
+    }
+    scanAnimationRef.current = requestAnimationFrame(scanVideoFrame);
+  };
+
+  // Start camera video stream
+  const startQRScanner = async (facing: 'environment' | 'user' = cameraFacingMode) => {
+    stopQRScanner();
+    setCameraError(null);
+    setIsScanningQR(true);
+    setScanSuccessNotice(null);
+
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera is not supported on this device/browser.');
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: facing } },
+      });
+      scanStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        await videoRef.current.play();
+        scanAnimationRef.current = requestAnimationFrame(scanVideoFrame);
+      }
+    } catch (err: any) {
+      console.warn('Camera access error:', err);
+      setIsScanningQR(false);
+      setCameraError(
+        err?.name === 'NotAllowedError'
+          ? 'Camera permission denied. Please allow camera access in browser settings, or enter the Registration ID / Phone manually.'
+          : 'Camera unavailable. Please enter the Registration ID or Phone number manually.'
+      );
+    }
+  };
+
+  // Handle scanned QR payload
+  const handleScannedResult = (raw: string) => {
+    if (!raw) return;
+    const clean = raw.trim();
+
+    // Extract ID if contained in a URL or structured text
+    let extractedId = clean;
+    const idMatch = clean.match(/(SC1-\d{5}|SC1-[A-Za-z0-9]+)/i);
+    if (idMatch) {
+      extractedId = idMatch[1];
+    } else {
+      try {
+        const parsed = new URL(clean);
+        const paramId = parsed.searchParams.get('id') || parsed.searchParams.get('regId');
+        if (paramId) extractedId = paramId;
+      } catch {
+        // Not a URL
+      }
+    }
+
+    const found = registrations.find(
+      (r) =>
+        r.id.toLowerCase() === extractedId.toLowerCase() ||
+        (r.registrationId && r.registrationId.toLowerCase() === extractedId.toLowerCase()) ||
+        r.docId === extractedId ||
+        r.phone === clean
+    );
+
+    stopQRScanner();
+    setCheckinQuery(extractedId);
+
+    if (found) {
+      setSelectedCheckinId(found.id);
+      triggerCheckinFeedback('success');
+      setScanSuccessNotice(`Identified Pass: ${found.name} (${found.id})`);
+    } else {
+      triggerCheckinFeedback('warning');
+      setScanSuccessNotice(`Scanned "${extractedId}". No matching registration record found.`);
+    }
+  };
+
+  // Clean up camera on tab change
+  useEffect(() => {
+    if (activeTab !== 'checkin') {
+      stopQRScanner();
+    }
+    return () => {
+      stopQRScanner();
+    };
+  }, [activeTab]);
+
+  // Execute Check-in with strict double check-in prevention
+  const handlePerformCheckIn = async (target: AdminRegistration) => {
+    // REQUIREMENT: Prevent double check-in with a clear warning
+    if (target.status === 'checked_in') {
+      triggerCheckinFeedback('warning');
+      const timeStr = target.checkInTime || target.updatedAt
+        ? new Date(target.checkInTime || target.updatedAt!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : 'earlier';
+      setCheckinDoubleWarning(
+        `DOUBLE CHECK-IN WARNING: ${target.name} (${target.id}) was ALREADY checked in at ${timeStr} by ${target.updatedBy || 'organizer'}.`
+      );
+      return;
+    }
+
+    if (target.status === 'cancelled') {
+      triggerCheckinFeedback('error');
+      setCheckinDoubleWarning(
+        `CANNOT CHECK IN: Registration for ${target.name} (${target.id}) is CANCELLED.`
+      );
+      return;
+    }
+
+    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
+    const timestamp = new Date().toISOString();
+
+    const updates = {
+      status: 'checked_in',
+      checkInTime: timestamp,
+      updatedAt: timestamp,
+      updatedBy: adminEmail,
+    };
+
+    await updateRegistration(target.id, updates, target.docId);
+
+    const updatedRecord: AdminRegistration = {
+      ...target,
+      ...updates,
+    };
+
+    setRegistrations((prev) =>
+      prev.map((item) => (item.id === target.id ? updatedRecord : item))
+    );
+
+    setJustCheckedInRecord(updatedRecord);
+    setCheckinDoubleWarning(null);
+    triggerCheckinFeedback('success');
+
+    // 5-second undo toast
+    setUndoToast({
+      id: target.id,
+      name: target.name,
+      previousStatus: target.status,
+      newStatus: 'checked_in',
+      secondsRemaining: 5,
+    });
+  };
+
+  // Revert check-in if made in error
+  const handleRevertCheckIn = (target: AdminRegistration) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: `Revert Check-in for ${target.name}?`,
+      message: `Are you sure you want to revert ${target.name} (${target.id}) back to "registered"? This will reset their checked-in entry status.`,
+      confirmLabel: 'Revert to Registered',
+      cancelLabel: 'Keep Checked-in',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
+        const timestamp = new Date().toISOString();
+        const updates = {
+          status: 'registered',
+          checkInTime: undefined,
+          updatedAt: timestamp,
+          updatedBy: adminEmail,
+        };
+        await updateRegistration(target.id, updates, target.docId);
+        setRegistrations((prev) =>
+          prev.map((item) => (item.id === target.id ? { ...item, ...updates } : item))
+        );
+        if (justCheckedInRecord?.id === target.id) {
+          setJustCheckedInRecord(null);
+        }
+      },
+    });
+  };
+
+  // Check-in search results (by registration ID, phone, or name)
+  const checkinSearchResults = useMemo(() => {
+    const q = checkinQuery.trim().toLowerCase();
+    const phoneDigits = checkinQuery.replace(/\D/g, '');
+
+    return registrations.filter((r) => {
+      if (checkinFilter === 'pending' && r.status === 'checked_in') return false;
+      if (checkinFilter === 'checked_in' && r.status !== 'checked_in') return false;
+
+      if (!q) return true;
+
+      const idMatch =
+        r.id.toLowerCase().includes(q) ||
+        (r.registrationId && r.registrationId.toLowerCase().includes(q));
+      const nameMatch = r.name.toLowerCase().includes(q);
+      const emailMatch = r.email.toLowerCase().includes(q);
+      const collegeMatch = r.college.toLowerCase().includes(q);
+      const phoneMatch = phoneDigits.length >= 3 && r.phone.replace(/\D/g, '').includes(phoneDigits);
+
+      return idMatch || nameMatch || emailMatch || collegeMatch || phoneMatch;
+    });
+  }, [registrations, checkinQuery, checkinFilter]);
+
+  // Primary active attendee for the big Result Card
+  const activeCheckinAttendee = useMemo(() => {
+    if (selectedCheckinId) {
+      const found = registrations.find((r) => r.id === selectedCheckinId);
+      if (found) return found;
+    }
+    if (checkinQuery.trim() && checkinSearchResults.length > 0) {
+      return checkinSearchResults[0];
+    }
+    return null;
+  }, [selectedCheckinId, registrations, checkinSearchResults, checkinQuery]);
+
+  // Recent Check-ins timeline
+  const recentCheckins = useMemo(() => {
+    return registrations
+      .filter((r) => r.status === 'checked_in')
+      .sort((a, b) => {
+        const timeA = new Date(a.checkInTime || a.updatedAt || a.createdAt).getTime();
+        const timeB = new Date(b.checkInTime || b.updatedAt || b.createdAt).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, 8);
+  }, [registrations]);
 
   // =========================================================================
   // VIEW A: AUTH LOGIN / ACCESS GATE
@@ -548,10 +1175,10 @@ export const AdminPage: React.FC = () => {
         </div>
 
         {/* Tab Switchers */}
-        <nav className="flex items-center gap-1.5 font-mono text-xs font-bold">
+        <nav className="flex items-center gap-1.5 font-mono text-xs font-bold overflow-x-auto max-w-full py-1">
           <button
             onClick={() => setActiveTab('registrations')}
-            className={`px-3 py-1.5 border border-[#111111] transition-all cursor-pointer ${
+            className={`px-3 py-1.5 border border-[#111111] transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'registrations' ? 'bg-[#111111] text-[#FFD400]' : 'bg-white hover:bg-[#FFF2D6]'
             }`}
           >
@@ -559,8 +1186,20 @@ export const AdminPage: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setActiveTab('checkin')}
+            className={`px-3 py-1.5 border border-[#111111] transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'checkin'
+                ? 'bg-[#FF6B1A] text-white shadow-[2px_2px_0px_#111111]'
+                : 'bg-white hover:bg-[#FFF2D6] text-[#111111]'
+            }`}
+          >
+            <UserCheck className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Check-in ({stats.checkedIn}/{stats.total})</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('pitch')}
-            className={`px-3 py-1.5 border border-[#111111] transition-all cursor-pointer ${
+            className={`px-3 py-1.5 border border-[#111111] transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'pitch' ? 'bg-[#111111] text-[#FFD400]' : 'bg-white hover:bg-[#FFF2D6]'
             }`}
           >
@@ -569,7 +1208,7 @@ export const AdminPage: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('partners')}
-            className={`px-3 py-1.5 border border-[#111111] transition-all cursor-pointer ${
+            className={`px-3 py-1.5 border border-[#111111] transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'partners' ? 'bg-[#111111] text-[#FFD400]' : 'bg-white hover:bg-[#FFF2D6]'
             }`}
           >
@@ -578,7 +1217,7 @@ export const AdminPage: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`px-3 py-1.5 border border-[#111111] transition-all cursor-pointer ${
+            className={`px-3 py-1.5 border border-[#111111] transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'settings' ? 'bg-[#111111] text-[#FFD400]' : 'bg-white hover:bg-[#FFF2D6]'
             }`}
           >
@@ -609,55 +1248,243 @@ export const AdminPage: React.FC = () => {
         {activeTab === 'registrations' && (
           <div className="space-y-6">
 
-            {/* STATS CARDS BAR (Rendered only on Registrations Tab) */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
-                <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
-                  Total Registrations
-                </span>
-                <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
-                  {stats.total}
+            {/* STATS CARDS BAR (Rendered ONLY on Registrations Tab) */}
+            <div className="space-y-4">
+              
+              {/* Row 1: The 6 Key Stat Metric Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+                
+                {/* 1. Total */}
+                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
+                      Total
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-[#111111]" />
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+                    {stats.total}
+                  </div>
+                  <div className="text-[10px] font-mono font-bold text-[#FF6B1A] truncate">
+                    {stats.waitlist > 0 ? `${stats.waitlist} on waitlist` : `Cap: ${registrationCapSetting}`}
+                  </div>
                 </div>
-                <span className="text-[10px] font-mono text-[#FF6B1A]">
-                  {stats.waitlist > 0 ? `${stats.waitlist} on waitlist` : `Cap: ${registrationCapSetting}`}
-                </span>
+
+                {/* 2. Confirmed */}
+                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
+                      Confirmed
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-blue-600" />
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-blue-900">
+                    {stats.confirmed}
+                  </div>
+                  <div className="text-[10px] font-mono font-bold text-[#111111]/70 truncate">
+                    {stats.registered > 0 ? `+ ${stats.registered} registered` : 'Approved delegates'}
+                  </div>
+                </div>
+
+                {/* 3. Checked-in */}
+                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
+                      Checked-in
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-emerald-700">
+                    {stats.checkedIn}
+                  </div>
+                  <div className="text-[10px] font-mono font-bold text-emerald-800 truncate">
+                    {stats.total > 0 ? `${Math.round((stats.checkedIn / stats.total) * 100)}% venue turnout` : 'At venue desk'}
+                  </div>
+                </div>
+
+                {/* 4. Cancelled */}
+                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
+                      Cancelled
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-red-600">
+                    {stats.cancelled}
+                  </div>
+                  <div className="text-[10px] font-mono font-bold text-[#111111]/60 truncate">
+                    Revoked passes
+                  </div>
+                </div>
+
+                {/* 5. Waitlist */}
+                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
+                      Waitlist
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-amber-700">
+                    {stats.waitlist}
+                  </div>
+                  <div className="text-[10px] font-mono font-bold text-amber-900 truncate">
+                    Capacity overflow
+                  </div>
+                </div>
+
+                {/* 6. Want-to-Pitch */}
+                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
+                      Want to Pitch
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-[#FF6B1A]" />
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+                    {stats.wantsToPitch}
+                  </div>
+                  <div className="text-[10px] font-mono font-bold text-[#111111]/70 truncate">
+                    Stage applicants
+                  </div>
+                </div>
+
               </div>
 
-              <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
-                <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
-                  Students vs Founders
-                </span>
-                <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
-                  {stats.students} <span className="text-base text-[#111111]/40">/</span> {stats.founders}
+              {/* Row 2: Registrations Per Day (Small Bar Chart) + Top 5 Colleges */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                
+                {/* Registrations Per Day (Small Bar Chart) */}
+                <div className="lg:col-span-7 p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] flex flex-col justify-between space-y-3">
+                  <div className="flex items-center justify-between border-b border-[#111111]/15 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-[#FF6B1A]" />
+                      <h4 className="font-display font-black text-xs sm:text-sm uppercase text-[#111111] tracking-wide">
+                        Registrations Per Day
+                      </h4>
+                    </div>
+                    <span className="font-mono text-[11px] font-bold text-[#111111] bg-[#FFD400] px-2 py-0.5 border border-[#111111]">
+                      Today: {stats.today}
+                    </span>
+                  </div>
+
+                  {/* Chart Canvas Area */}
+                  <div className="pt-2">
+                    <div className="h-32 sm:h-36 flex items-end justify-between gap-2 px-1 pb-1 border-b-2 border-[#111111]">
+                      {dailyRegistrations.map((item, idx) => {
+                        const maxCount = Math.max(...dailyRegistrations.map((d) => d.count), 1);
+                        const heightPercent = Math.max(
+                          Math.round((item.count / maxCount) * 100),
+                          item.count > 0 ? 14 : 4
+                        );
+                        return (
+                          <div
+                            key={item.date || idx}
+                            className="flex-1 flex flex-col items-center h-full justify-end group cursor-default"
+                          >
+                            {/* Value label on top of bar */}
+                            <span className="font-mono text-[11px] font-black text-[#111111] mb-1 group-hover:scale-110 transition-transform">
+                              {item.count}
+                            </span>
+                            {/* Bar */}
+                            <div
+                              className="w-full max-w-[42px] bg-[#FFD400] group-hover:bg-[#FF6B1A] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] transition-all duration-200"
+                              style={{ height: `${heightPercent}%` }}
+                              title={`${item.date}: ${item.count} registrations`}
+                            />
+                            {/* Date Label */}
+                            <span className="font-mono text-[10px] sm:text-[11px] font-bold text-[#111111]/80 mt-2 truncate max-w-full text-center">
+                              {item.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center justify-between pt-2 text-[11px] font-mono text-[#111111]/70">
+                      <span>Recent daily intake breakdown</span>
+                      <span className="font-bold text-[#111111]">
+                        Peak: {Math.max(...dailyRegistrations.map((d) => d.count), 0)} / day
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <span className="text-[10px] font-mono text-[#111111]/60">
-                  {stats.others} Professionals / Others
-                </span>
+
+                {/* Top 5 Colleges */}
+                <div className="lg:col-span-5 p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] flex flex-col justify-between space-y-3">
+                  <div className="flex items-center justify-between border-b border-[#111111]/15 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-[#FF6B1A]" />
+                      <h4 className="font-display font-black text-xs sm:text-sm uppercase text-[#111111] tracking-wide">
+                        Top 5 Colleges
+                      </h4>
+                    </div>
+                    <span className="font-mono text-[11px] font-bold text-[#111111]/70 bg-[#FFF2D6] px-2 py-0.5 border border-[#111111]">
+                      {topColleges.length} Active
+                    </span>
+                  </div>
+
+                  {/* List of Colleges */}
+                  {topColleges.length === 0 ? (
+                    <div className="py-8 text-center font-mono text-xs text-[#111111]/60">
+                      No college data registered yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {topColleges.map((item, index) => {
+                        const percent = stats.total > 0 ? Math.round((item.count / stats.total) * 100) : 0;
+                        const rankStyles = [
+                          'bg-[#FFD400] text-[#111111]', // #1
+                          'bg-[#FF6B1A] text-white',     // #2
+                          'bg-[#111111] text-[#FFD400]', // #3
+                          'bg-[#FFF2D6] text-[#111111]', // #4
+                          'bg-white text-[#111111]',      // #5
+                        ];
+                        return (
+                          <div key={item.college} className="space-y-1">
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-2 truncate">
+                                <span
+                                  className={`font-mono text-[10px] font-black px-1.5 py-0.5 border border-[#111111] shrink-0 shadow-[1px_1px_0px_#111111] ${
+                                    rankStyles[index] || 'bg-white text-[#111111]'
+                                  }`}
+                                >
+                                  #{index + 1}
+                                </span>
+                                <span
+                                  className="font-bold text-[#111111] truncate"
+                                  title={item.college}
+                                >
+                                  {item.college}
+                                </span>
+                              </div>
+                              <span className="font-mono font-black text-xs text-[#111111] shrink-0">
+                                {item.count}{' '}
+                                <span className="font-normal text-[10px] text-[#111111]/60">
+                                  ({percent}%)
+                                </span>
+                              </span>
+                            </div>
+                            {/* Horizontal visual indicator */}
+                            <div className="w-full bg-[#FFF2D6] h-2 border border-[#111111] overflow-hidden">
+                              <div
+                                className="bg-[#111111] h-full"
+                                style={{ width: `${Math.min(100, percent)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="pt-1 text-[11px] font-mono text-[#111111]/70 border-t border-[#111111]/10 flex items-center justify-between">
+                    <span>Ranked by verified registrant volume</span>
+                  </div>
+                </div>
+
               </div>
 
-              <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
-                <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
-                  Want to Pitch
-                </span>
-                <div className="font-display font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-                  {stats.wantsToPitch}
-                </div>
-                <span className="text-[10px] font-mono text-[#111111]/60">
-                  Mainstage aspirants
-                </span>
-              </div>
-
-              <div className="p-4 bg-white brutal-border brutal-shadow-sm space-y-1">
-                <span className="font-mono text-[11px] font-bold text-[#111111]/70 uppercase">
-                  Registered Today
-                </span>
-                <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
-                  {stats.today}
-                </div>
-                <span className="text-[10px] font-mono text-emerald-700 font-bold">
-                  Active intake rate
-                </span>
-              </div>
             </div>
             
             {/* Action Bar: Search, Filters & Export */}
@@ -739,34 +1566,41 @@ export const AdminPage: React.FC = () => {
             {selectedIds.length > 0 && (
               <div className="p-3 bg-[#FFD400] border-2 border-[#111111] flex flex-wrap items-center justify-between gap-3 text-xs font-mono font-bold animate-in fade-in">
                 <span>Selected: {selectedIds.length} registration(s)</span>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={() => handleBulkStatus('confirmed')}
-                    className="px-3 py-1 bg-white border border-[#111111] hover:bg-emerald-50 text-emerald-900"
+                    className="px-3 py-1 bg-white border border-[#111111] hover:bg-emerald-50 text-emerald-900 cursor-pointer"
                   >
                     Mark Confirmed
                   </button>
                   <button
                     onClick={() => handleBulkStatus('waitlist')}
-                    className="px-3 py-1 bg-white border border-[#111111] hover:bg-amber-50 text-amber-950 font-bold"
+                    className="px-3 py-1 bg-white border border-[#111111] hover:bg-amber-50 text-amber-950 font-bold cursor-pointer"
                   >
                     Mark Waitlist
                   </button>
                   <button
                     onClick={() => handleBulkStatus('checked_in')}
-                    className="px-3 py-1 bg-white border border-[#111111] hover:bg-blue-50 text-blue-900"
+                    className="px-3 py-1 bg-white border border-[#111111] hover:bg-blue-50 text-blue-900 cursor-pointer"
                   >
                     Mark Checked-in
                   </button>
                   <button
                     onClick={() => handleBulkStatus('cancelled')}
-                    className="px-3 py-1 bg-white border border-[#111111] hover:bg-red-50 text-red-900"
+                    className="px-3 py-1 bg-white border border-[#111111] hover:bg-red-50 text-red-900 cursor-pointer"
                   >
                     Mark Cancelled
                   </button>
                   <button
+                    onClick={handleBulkDelete}
+                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white flex items-center gap-1 border border-[#111111] cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Selected</span>
+                  </button>
+                  <button
                     onClick={() => setSelectedIds([])}
-                    className="text-[#111111] underline ml-2"
+                    className="text-[#111111] underline ml-2 cursor-pointer"
                   >
                     Deselect All
                   </button>
@@ -890,15 +1724,25 @@ export const AdminPage: React.FC = () => {
                         {new Date(reg.createdAt).toLocaleDateString()}
                       </td>
                       <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => {
-                            setActiveDetailItem(reg);
-                            setDetailNotes(reg.notes || '');
-                          }}
-                          className="px-2 py-1 border border-[#111111] bg-white hover:bg-[#FFD400] font-mono text-[10px] font-bold"
-                        >
-                          Inspect
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setActiveDetailItem(reg);
+                              setDetailNotes(reg.notes || '');
+                            }}
+                            className="px-2 py-1 border border-[#111111] bg-white hover:bg-[#FFD400] font-mono text-[10px] font-bold cursor-pointer"
+                          >
+                            Inspect
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRegistration(reg)}
+                            className="p-1 border border-[#111111] bg-white hover:bg-red-50 text-red-600 font-mono text-[10px] font-bold cursor-pointer transition-colors"
+                            title="Delete registration"
+                            aria-label={`Delete registration for ${reg.name}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -940,6 +1784,613 @@ export const AdminPage: React.FC = () => {
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB: CHECK-IN DESK (Optimised for Mobile & Venue Gate Verification) */}
+        {/* =================================================================== */}
+        {activeTab === 'checkin' && (
+          <div className="space-y-6 max-w-4xl mx-auto">
+            
+            {/* 1. COUNTER BANNER: "Checked in: X / Y" */}
+            <div className="p-4 sm:p-6 bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
+                    <span className="font-mono text-xs font-black uppercase text-[#111111] tracking-wider">
+                      Gate Check-in Desk · DVSIET Meerut
+                    </span>
+                  </div>
+                  <h2 className="font-display font-black text-2xl sm:text-3xl text-[#111111] leading-tight">
+                    Attendee Check-in
+                  </h2>
+                </div>
+
+                {/* Counter Pill */}
+                <div className="p-3 sm:p-4 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] text-left sm:text-right">
+                  <div className="font-mono text-[10px] sm:text-xs font-black uppercase text-[#111111]/80">
+                    Live Venue Admission
+                  </div>
+                  <div className="font-mono font-black text-2xl sm:text-3xl text-[#111111]">
+                    Checked in: <span className="text-[#FF6B1A]">{stats.checkedIn}</span> / {stats.total}
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Bar & Sub-stats */}
+              <div className="space-y-1.5">
+                <div className="w-full bg-[#FFF2D6] h-3.5 border-2 border-[#111111] overflow-hidden">
+                  <div
+                    className="bg-[#FF6B1A] h-full transition-all duration-300"
+                    style={{
+                      width: `${stats.total > 0 ? Math.min(100, Math.round((stats.checkedIn / stats.total) * 100)) : 0}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono font-bold text-[#111111]">
+                  <span>
+                    Turnout:{' '}
+                    <strong className="text-[#FF6B1A]">
+                      {stats.total > 0 ? Math.round((stats.checkedIn / stats.total) * 100) : 0}%
+                    </strong>
+                  </span>
+                  <span>Admitted: {stats.checkedIn}</span>
+                  <span>Pending Entry: {Math.max(0, stats.total - stats.checkedIn)}</span>
+                  <span>Waitlist: {stats.waitlist}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. BIG SEARCH BOX & QR SCAN TOGGLE (Optimised for Mobile) */}
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
+                {/* Big Search Input */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 sm:w-6 sm:h-6 text-[#111111]/60" />
+                  <input
+                    type="text"
+                    value={checkinQuery}
+                    onChange={(e) => {
+                      setCheckinQuery(e.target.value);
+                      setSelectedCheckinId(null);
+                      setCheckinDoubleWarning(null);
+                    }}
+                    placeholder="Search by ID (SC1-00001), phone, or name..."
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    className="w-full pl-12 pr-12 py-3.5 sm:py-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] text-base sm:text-lg font-mono font-bold text-[#111111] placeholder:font-sans placeholder:font-normal placeholder:text-[#111111]/50 focus:outline-none focus:ring-2 focus:ring-[#FF6B1A]"
+                  />
+                  {checkinQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCheckinQuery('');
+                        setSelectedCheckinId(null);
+                        setCheckinDoubleWarning(null);
+                      }}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1.5 bg-[#FFF2D6] hover:bg-[#FFD400] border border-[#111111] cursor-pointer"
+                      title="Clear Search"
+                    >
+                      <X className="w-4 h-4 text-[#111111]" />
+                    </button>
+                  )}
+                </div>
+
+                {/* QR Scanner Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isScanningQR) {
+                      stopQRScanner();
+                    } else {
+                      startQRScanner();
+                    }
+                  }}
+                  className={`px-5 py-3.5 border-2 border-[#111111] shadow-[3px_3px_0px_#111111] font-display font-black text-sm sm:text-base uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all active:translate-x-0.5 active:translate-y-0.5 ${
+                    isScanningQR
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-[#111111] text-[#FFD400] hover:bg-[#222222]'
+                  }`}
+                >
+                  {isScanningQR ? (
+                    <>
+                      <X className="w-5 h-5" />
+                      <span>Stop Camera</span>
+                    </>
+                  ) : (
+                    <>
+                      <QrCode className="w-5 h-5 text-[#FFD400]" />
+                      <span>Scan Ticket QR</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Filter Chips */}
+              <div className="flex flex-wrap items-center gap-2 font-mono text-xs font-bold">
+                <span className="text-[#111111]/70 mr-1">Filter list:</span>
+                <button
+                  type="button"
+                  onClick={() => setCheckinFilter('all')}
+                  className={`px-3 py-1 border border-[#111111] cursor-pointer ${
+                    checkinFilter === 'all'
+                      ? 'bg-[#111111] text-[#FFD400]'
+                      : 'bg-white hover:bg-[#FFF2D6]'
+                  }`}
+                >
+                  All ({registrations.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCheckinFilter('pending')}
+                  className={`px-3 py-1 border border-[#111111] cursor-pointer ${
+                    checkinFilter === 'pending'
+                      ? 'bg-[#111111] text-[#FFD400]'
+                      : 'bg-white hover:bg-[#FFF2D6]'
+                  }`}
+                >
+                  Pending Entry ({registrations.filter((r) => r.status !== 'checked_in').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCheckinFilter('checked_in')}
+                  className={`px-3 py-1 border border-[#111111] cursor-pointer ${
+                    checkinFilter === 'checked_in'
+                      ? 'bg-[#111111] text-[#FFD400]'
+                      : 'bg-white hover:bg-[#FFF2D6]'
+                  }`}
+                >
+                  Checked In ({stats.checkedIn})
+                </button>
+              </div>
+            </div>
+
+            {/* 3. OPTIONAL QR SCANNER VIEWPORT (Device Camera) */}
+            {isScanningQR && (
+              <div className="p-4 bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] space-y-3">
+                <div className="flex items-center justify-between border-b border-[#111111]/20 pb-2">
+                  <div className="flex items-center gap-2 font-display font-black text-sm text-[#111111]">
+                    <Camera className="w-4 h-4 text-[#FF6B1A]" />
+                    <span>Device Camera QR Scanner Active</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextFacing = cameraFacingMode === 'environment' ? 'user' : 'environment';
+                        setCameraFacingMode(nextFacing);
+                        startQRScanner(nextFacing);
+                      }}
+                      className="px-2 py-1 text-xs font-mono font-bold border border-[#111111] bg-[#FFF2D6] hover:bg-[#FFD400] flex items-center gap-1 cursor-pointer"
+                      title="Flip camera"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Flip</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopQRScanner}
+                      className="p-1 border border-[#111111] hover:bg-red-100 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Video Viewport with Targeting Overlay */}
+                <div className="relative rounded bg-black overflow-hidden aspect-4/3 max-h-72 mx-auto flex items-center justify-center">
+                  <video
+                    ref={videoRef}
+                    playsInline
+                    muted
+                    autoPlay
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Hidden canvas for jsQR frame sampling */}
+                  <canvas ref={canvasRef} className="hidden" />
+
+                  {/* Targeting Reticle */}
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                    <div className="w-48 h-48 border-2 border-[#FFD400] relative shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]">
+                      {/* Reticle corner accents */}
+                      <span className="absolute -top-1 -left-1 w-4 h-4 border-t-4 border-l-4 border-[#FF6B1A]" />
+                      <span className="absolute -top-1 -right-1 w-4 h-4 border-t-4 border-r-4 border-[#FF6B1A]" />
+                      <span className="absolute -bottom-1 -left-1 w-4 h-4 border-b-4 border-l-4 border-[#FF6B1A]" />
+                      <span className="absolute -bottom-1 -right-1 w-4 h-4 border-b-4 border-r-4 border-[#FF6B1A]" />
+                      {/* Scanning Line */}
+                      <div className="w-full h-0.5 bg-red-500 shadow-[0_0_8px_red] animate-pulse absolute top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-2 inset-x-0 text-center pointer-events-none">
+                    <span className="px-3 py-1 bg-black/80 text-[#FFD400] font-mono text-xs font-bold rounded">
+                      Align pass QR code within box
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs font-mono text-[#111111]/70 text-center">
+                  The scanner automatically reads Registration ID passes issued to attendees.
+                </p>
+              </div>
+            )}
+
+            {/* Camera Error Banner */}
+            {cameraError && (
+              <div className="p-4 bg-amber-50 border-2 border-amber-600 shadow-[3px_3px_0px_#b45309] text-xs font-mono text-amber-950 flex items-start gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <strong className="block font-black uppercase">Camera Notice</strong>
+                  <span>{cameraError}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Scan Success Notice */}
+            {scanSuccessNotice && (
+              <div className="p-3 bg-emerald-50 border-2 border-emerald-600 shadow-[2px_2px_0px_#059669] text-xs font-mono text-emerald-950 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span className="font-bold">{scanSuccessNotice}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setScanSuccessNotice(null)}
+                  className="p-1 hover:bg-emerald-200"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Top Double Check-in Warning Alert (if triggered) */}
+            {checkinDoubleWarning && (
+              <div className="p-4 bg-amber-100 border-2 border-amber-600 shadow-[3px_3px_0px_#b45309] space-y-1.5 text-left">
+                <div className="flex items-center gap-2 font-black text-amber-950 text-sm">
+                  <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 stroke-[2.5]" />
+                  <span>PREVENT DOUBLE CHECK-IN</span>
+                </div>
+                <p className="text-xs sm:text-sm font-sans font-semibold text-amber-900">
+                  {checkinDoubleWarning}
+                </p>
+              </div>
+            )}
+
+            {/* 4. RESULT CARD (Optimised for Mobile) */}
+            {activeCheckinAttendee ? (
+              <div className="p-5 sm:p-6 bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] space-y-5 text-left">
+                
+                {/* Result Card Header */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b-2 border-[#111111] pb-4">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-[#111111]/70">
+                        ATTENDEE RECORD
+                      </span>
+                      <span className="font-mono text-xs font-bold px-2 py-0.5 bg-[#FFF2D6] border border-[#111111]">
+                        {activeCheckinAttendee.role}
+                      </span>
+                      {activeCheckinAttendee.wantsToPitch && (
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 bg-[#FF6B1A] text-white border border-[#111111]">
+                          🎤 Pitch Applicant
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-display font-black text-2xl sm:text-3xl text-[#111111] leading-tight">
+                      {activeCheckinAttendee.name}
+                    </h3>
+                  </div>
+
+                  {/* Prominent ID Badge */}
+                  <div className="shrink-0">
+                    <div className="p-2 sm:p-3 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] text-center">
+                      <span className="font-mono text-[10px] block font-bold text-[#111111]/75">REGISTRATION ID</span>
+                      <span className="font-mono font-black text-lg sm:text-xl text-[#111111]">
+                        {activeCheckinAttendee.id}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Attendee Details Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm font-sans">
+                  <div className="p-3 bg-[#FFF8EC] border border-[#111111] space-y-1">
+                    <div className="font-mono text-[11px] font-bold text-[#111111]/70">COLLEGE / INSTITUTION</div>
+                    <div className="font-bold text-[#111111] flex items-center gap-1.5">
+                      <Building className="w-3.5 h-3.5 text-[#FF6B1A] shrink-0" />
+                      <span>{activeCheckinAttendee.college}</span>
+                    </div>
+                    {(activeCheckinAttendee.course || activeCheckinAttendee.year) && (
+                      <div className="text-xs text-[#111111]/80">
+                        {activeCheckinAttendee.course} {activeCheckinAttendee.year ? `· ${activeCheckinAttendee.year}` : ''}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-3 bg-[#FFF8EC] border border-[#111111] space-y-1">
+                    <div className="font-mono text-[11px] font-bold text-[#111111]/70">CONTACT & CITY</div>
+                    <div className="flex items-center gap-1.5 font-mono font-bold text-[#111111]">
+                      <Phone className="w-3.5 h-3.5 text-[#FF6B1A] shrink-0" />
+                      <a href={`tel:${activeCheckinAttendee.phone}`} className="underline hover:text-[#FF6B1A]">
+                        {activeCheckinAttendee.phone}
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono text-xs text-[#111111]/80 truncate">
+                      <Mail className="w-3.5 h-3.5 text-[#FF6B1A] shrink-0" />
+                      <span className="truncate">{activeCheckinAttendee.email}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pitch Details (if applicable) */}
+                {activeCheckinAttendee.wantsToPitch && activeCheckinAttendee.startupName && (
+                  <div className="p-3 bg-[#FFF2D6] border border-[#111111] text-xs font-sans space-y-1">
+                    <div className="font-mono font-bold text-[#FF6B1A]">🎤 STARTUP PITCH SUBMISSION:</div>
+                    <strong className="text-sm text-[#111111]">{activeCheckinAttendee.startupName}</strong>
+                    {activeCheckinAttendee.startupPitch && (
+                      <p className="text-xs text-[#111111]/80 italic">"{activeCheckinAttendee.startupPitch}"</p>
+                    )}
+                  </div>
+                )}
+
+                {/* ========================================================= */}
+                {/* PREVENT DOUBLE CHECK-IN WITH A CLEAR WARNING              */}
+                {/* ========================================================= */}
+                {activeCheckinAttendee.status === 'checked_in' ? (
+                  <div className="space-y-3 pt-2">
+                    {/* Clear Warning Banner */}
+                    <div className="p-4 sm:p-5 bg-amber-100 border-3 border-amber-600 shadow-[3px_3px_0px_#b45309] space-y-2">
+                      <div className="flex items-center gap-2 text-amber-950 font-black text-base sm:text-lg uppercase">
+                        <AlertTriangle className="w-6 h-6 text-amber-700 shrink-0 stroke-[2.5]" />
+                        <span>WARNING: ATTENDEE ALREADY CHECKED IN</span>
+                      </div>
+                      <p className="font-sans text-xs sm:text-sm text-amber-900 leading-relaxed font-semibold">
+                        This delegate was already checked in and issued entry clearance at{' '}
+                        <span className="font-mono underline text-amber-950 font-black">
+                          {activeCheckinAttendee.checkInTime || activeCheckinAttendee.updatedAt
+                            ? new Date(activeCheckinAttendee.checkInTime || activeCheckinAttendee.updatedAt!).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                              })
+                            : 'earlier today'}
+                        </span>
+                        {activeCheckinAttendee.updatedBy && (
+                          <> by <span className="font-mono font-bold">{activeCheckinAttendee.updatedBy}</span></>
+                        )}.
+                      </p>
+                      <div className="p-2.5 bg-white/70 border border-amber-400 font-mono text-[11px] text-amber-950 font-bold">
+                        ⚠️ DO NOT ISSUE DUPLICATE ENTRY WRISTBAND / BADGE.
+                        If the attendee left and is re-entering, verify their stamped hand or wristband.
+                      </div>
+                    </div>
+
+                    {/* Disabled Check-in Button */}
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full min-h-[58px] p-4 bg-emerald-100 text-emerald-950 border-2 border-emerald-600 font-display font-black text-base sm:text-lg uppercase tracking-wider flex items-center justify-center gap-2 cursor-not-allowed shadow-[2px_2px_0px_#059669]"
+                    >
+                      <CheckCircle2 className="w-6 h-6 text-emerald-700 stroke-[2.5]" />
+                      <span>✓ Already Checked In — Cannot Check In Twice</span>
+                    </button>
+
+                    {/* Revert Action */}
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleRevertCheckIn(activeCheckinAttendee)}
+                        className="text-xs font-mono text-red-700 hover:text-red-900 underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Revert Check-in (Mark as Un-checked)</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : activeCheckinAttendee.status === 'cancelled' ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="p-4 bg-red-100 border-2 border-red-600 shadow-[3px_3px_0px_#dc2626] text-xs sm:text-sm font-sans text-red-950 font-bold space-y-1">
+                      <div className="flex items-center gap-2 text-red-900 font-black text-base uppercase">
+                        <XCircle className="w-5 h-5 text-red-700 shrink-0" />
+                        <span>REGISTRATION CANCELLED — DO NOT ADMIT</span>
+                      </div>
+                      <p>This registration has been marked cancelled by event administration. Please refer attendee to Helpdesk.</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full min-h-[56px] p-3.5 bg-gray-200 text-gray-600 border-2 border-gray-400 font-display font-bold text-sm uppercase flex items-center justify-center gap-2 cursor-not-allowed"
+                    >
+                      <XCircle className="w-5 h-5" />
+                      <span>Ticket Cancelled (Entry Disallowed)</span>
+                    </button>
+                  </div>
+                ) : activeCheckinAttendee.status === 'waitlist' ? (
+                  <div className="space-y-3 pt-2">
+                    <div className="p-4 bg-amber-50 border-2 border-amber-600 shadow-[3px_3px_0px_#b45309] text-xs sm:text-sm font-sans text-amber-950 font-semibold space-y-1">
+                      <div className="flex items-center gap-2 text-amber-900 font-black text-base uppercase">
+                        <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0" />
+                        <span>WAITLIST DELEGATE</span>
+                      </div>
+                      <p>Attendee is on the event waitlist. Only admit if auditorium seats remain available.</p>
+                    </div>
+
+                    {/* Admit Waitlist Button */}
+                    <button
+                      type="button"
+                      onClick={() => handlePerformCheckIn(activeCheckinAttendee)}
+                      className="w-full min-h-[58px] p-4 bg-amber-400 hover:bg-amber-500 text-[#111111] font-display font-black text-lg sm:text-xl uppercase tracking-wider border-2 border-[#111111] shadow-[4px_4px_0px_#111111] flex items-center justify-center gap-3 cursor-pointer active:translate-x-1 active:translate-y-1 active:shadow-none transition-all"
+                    >
+                      <UserCheck className="w-6 h-6 stroke-[3]" />
+                      <span>[ Admit & Check In (Confirm Waitlist) ]</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2 pt-2">
+                    {/* LARGE [Check in] BUTTON */}
+                    <button
+                      type="button"
+                      onClick={() => handlePerformCheckIn(activeCheckinAttendee)}
+                      className="w-full min-h-[60px] p-4 bg-[#FF6B1A] hover:bg-[#e0560a] text-white font-display font-black text-lg sm:text-2xl uppercase tracking-wider border-2 border-[#111111] shadow-[4px_4px_0px_#111111] flex items-center justify-center gap-3 cursor-pointer active:translate-x-1 active:translate-y-1 active:shadow-none transition-all"
+                    >
+                      <UserCheck className="w-7 h-7 stroke-[3]" />
+                      <span>[ Check in Attendee ]</span>
+                    </button>
+                    <p className="text-center font-mono text-xs text-[#111111]/70">
+                      Sets status to "checked_in" with an official gate timestamp and admin log.
+                    </p>
+                  </div>
+                )}
+
+              </div>
+            ) : checkinQuery.trim() ? (
+              <div className="p-8 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] text-center space-y-3">
+                <HelpCircle className="w-10 h-10 text-[#FF6B1A] mx-auto" />
+                <h3 className="font-display font-bold text-lg text-[#111111]">
+                  No Attendee Found matching "{checkinQuery}"
+                </h3>
+                <p className="text-xs font-mono text-[#111111]/70 max-w-md mx-auto">
+                  Try typing their 10-digit phone number, exact Registration ID (e.g. SC1-00001), or full name.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCheckinQuery('');
+                    setSelectedCheckinId(null);
+                  }}
+                  className="px-4 py-2 bg-[#FFD400] text-[#111111] font-mono text-xs font-bold border border-[#111111] cursor-pointer"
+                >
+                  Clear Search
+                </button>
+              </div>
+            ) : null}
+
+            {/* 5. MULTIPLE SEARCH MATCHES LIST (If query matches > 1 attendee) */}
+            {checkinQuery.trim() && checkinSearchResults.length > 1 && (
+              <div className="p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3 text-left">
+                <div className="flex items-center justify-between border-b border-[#111111]/20 pb-2">
+                  <span className="font-mono text-xs font-bold text-[#111111]">
+                    Matching Attendees ({checkinSearchResults.length})
+                  </span>
+                  <span className="text-[11px] font-mono text-[#111111]/70">
+                    Tap any attendee to review or check in
+                  </span>
+                </div>
+
+                <div className="divide-y divide-[#111111]/15">
+                  {checkinSearchResults.map((reg) => (
+                    <div
+                      key={reg.id}
+                      className={`py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors ${
+                        activeCheckinAttendee?.id === reg.id ? 'bg-[#FFF8EC] -mx-2 px-2' : ''
+                      }`}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-black text-[#FF6B1A]">
+                            {reg.id}
+                          </span>
+                          <strong className="text-sm font-bold text-[#111111]">{reg.name}</strong>
+                          <span className="text-[11px] font-mono text-[#111111]/60">· {reg.phone}</span>
+                        </div>
+                        <div className="text-xs text-[#111111]/75 truncate max-w-md">
+                          {reg.college} · {reg.role}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {reg.status === 'checked_in' ? (
+                          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 font-mono text-xs font-bold border border-emerald-600">
+                            ✓ Checked In
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handlePerformCheckIn(reg)}
+                            className="px-3.5 py-1.5 bg-[#FF6B1A] hover:bg-[#e0560a] text-white font-mono text-xs font-bold border border-[#111111] shadow-[1px_1px_0px_#111111] cursor-pointer"
+                          >
+                            Check in
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCheckinId(reg.id);
+                            window.scrollTo({ top: 150, behavior: 'smooth' });
+                          }}
+                          className="px-2.5 py-1.5 bg-white hover:bg-[#FFF2D6] font-mono text-xs font-bold border border-[#111111] cursor-pointer"
+                        >
+                          View Card
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 6. RECENT CHECK-INS TIMELINE (Gate verification history) */}
+            <div className="p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3 text-left">
+              <div className="flex items-center justify-between border-b border-[#111111]/20 pb-2">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-emerald-600" />
+                  <h4 className="font-display font-black text-sm uppercase text-[#111111]">
+                    Recently Admitted Delegates ({recentCheckins.length})
+                  </h4>
+                </div>
+                <span className="font-mono text-[11px] text-[#111111]/70">
+                  Last 8 entries
+                </span>
+              </div>
+
+              {recentCheckins.length === 0 ? (
+                <p className="text-xs font-mono text-[#111111]/60 py-3 text-center">
+                  No attendees checked in yet. Start scanning passes or searching by ID above.
+                </p>
+              ) : (
+                <div className="divide-y divide-[#111111]/10">
+                  {recentCheckins.map((item) => (
+                    <div
+                      key={item.id}
+                      className="py-2.5 flex items-center justify-between gap-2 text-xs font-mono"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="font-bold text-[#FF6B1A]">{item.id}</span>
+                        <span className="font-bold text-[#111111] truncate">{item.name}</span>
+                        <span className="hidden sm:inline text-[#111111]/60 truncate">({item.college})</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] text-[#111111]/70">
+                          {item.checkInTime || item.updatedAt
+                            ? new Date(item.checkInTime || item.updatedAt!).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'Just now'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCheckinId(item.id);
+                            window.scrollTo({ top: 150, behavior: 'smooth' });
+                          }}
+                          className="px-2 py-0.5 bg-[#FFF2D6] hover:bg-[#FFD400] border border-[#111111] text-[11px] font-bold cursor-pointer"
+                        >
+                          View
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
@@ -1067,6 +2518,7 @@ export const AdminPage: React.FC = () => {
                     <th className="p-3">Inquiry Message</th>
                     <th className="p-3">Status</th>
                     <th className="p-3">Received At</th>
+                    <th className="p-3 text-right">Actions</th>
                   </tr>
                 </thead>
 
@@ -1104,12 +2556,23 @@ export const AdminPage: React.FC = () => {
                       <td className="p-3 font-mono text-[10px] text-[#111111]/60 whitespace-nowrap">
                         {new Date(p.createdAt).toLocaleDateString()}
                       </td>
+                      <td className="p-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePartnerEnquiry(p)}
+                          className="p-1 border border-[#111111] bg-white hover:bg-red-50 text-red-600 font-mono text-[10px] font-bold cursor-pointer transition-colors"
+                          title="Delete inquiry"
+                          aria-label={`Delete inquiry from ${p.company}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
 
                   {partnerEnquiries.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-[#111111]/60 font-mono">
+                      <td colSpan={7} className="p-8 text-center text-[#111111]/60 font-mono">
                         No partner enquiries received yet.
                       </td>
                     </tr>
@@ -1274,7 +2737,7 @@ export const AdminPage: React.FC = () => {
                   <button
                     key={st}
                     onClick={() => handleStatusChange(activeDetailItem.id, st)}
-                    className={`p-2 border border-[#111111] uppercase font-bold text-[11px] ${
+                    className={`p-2 border border-[#111111] uppercase font-bold text-[11px] cursor-pointer transition-colors ${
                       activeDetailItem.status === st
                         ? 'bg-[#111111] text-[#FFD400]'
                         : st === 'waitlist'
@@ -1286,6 +2749,39 @@ export const AdminPage: React.FC = () => {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Requirement: Show who changed a status and when (updatedBy, updatedAt) in the details drawer */}
+            <div className="p-3.5 bg-[#FFF2D6] border-2 border-[#111111] space-y-2 text-xs font-mono shadow-[2px_2px_0px_#111111]">
+              <div className="flex items-center gap-1.5 font-black uppercase text-[#111111] border-b border-[#111111]/20 pb-1">
+                <Clock className="w-3.5 h-3.5 text-[#FF6B1A]" />
+                <span>Status Change Audit Trail</span>
+              </div>
+              {activeDetailItem.updatedAt || activeDetailItem.updatedBy ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[#111111]/70">Updated By:</span>
+                    <strong className="text-[#111111] text-right truncate max-w-[220px]">
+                      {activeDetailItem.updatedBy || 'admin'}
+                    </strong>
+                  </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-[#111111]/70">Updated At:</span>
+                    <strong className="text-[#111111] text-right">
+                      {activeDetailItem.updatedAt
+                        ? new Date(activeDetailItem.updatedAt).toLocaleString(undefined, {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })
+                        : 'Recently'}
+                    </strong>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[#111111]/75 italic text-[11px]">
+                  No status updates recorded yet. Created on {new Date(activeDetailItem.createdAt).toLocaleDateString()}.
+                </p>
+              )}
             </div>
 
             {/* Contact Details */}
@@ -1353,15 +2849,130 @@ export const AdminPage: React.FC = () => {
               />
               <button
                 onClick={handleSaveNotes}
-                className="brutal-btn bg-[#111111] text-white px-4 py-2 font-mono text-xs font-bold uppercase"
+                className="brutal-btn bg-[#111111] text-white px-4 py-2 font-mono text-xs font-bold uppercase cursor-pointer"
               >
                 Save Notes
               </button>
             </div>
 
-            <div className="pt-4 border-t border-[#111111]/20 font-mono text-[10px] text-[#111111]/60">
-              Registered on: {new Date(activeDetailItem.createdAt).toLocaleString()}
+            {/* Drawer Footer with Delete Action */}
+            <div className="pt-4 border-t-2 border-[#111111] flex items-center justify-between gap-2">
+              <span className="font-mono text-[10px] text-[#111111]/60">
+                Registered: {new Date(activeDetailItem.createdAt).toLocaleDateString()}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleDeleteRegistration(activeDetailItem)}
+                className="px-3 py-1.5 bg-white hover:bg-red-600 hover:text-white text-red-600 border border-red-600 font-mono text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-[2px_2px_0px_#dc2626]"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Record</span>
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* CONFIRMATION DIALOG MODAL (Bulk status, Cancel reg, Any delete)     */}
+      {/* =================================================================== */}
+      {confirmDialog && confirmDialog.isOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-[#111111]/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setConfirmDialog(null);
+          }}
+        >
+          <div className="bg-[#FFF8EC] brutal-border brutal-shadow-lg p-6 max-w-md w-full text-left space-y-4 animate-brutal-pop">
+            <div className="flex items-start gap-3">
+              <div
+                className={`p-2 border-2 border-[#111111] shrink-0 ${
+                  confirmDialog.variant === 'danger'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-[#FFD400] text-[#111111]'
+                }`}
+              >
+                {confirmDialog.variant === 'danger' ? (
+                  <AlertCircle className="w-6 h-6 stroke-[2.5]" />
+                ) : (
+                  <HelpCircle className="w-6 h-6 stroke-[2.5]" />
+                )}
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-display font-black text-xl text-[#111111]">
+                  {confirmDialog.title}
+                </h3>
+                <p className="font-sans text-sm text-[#111111]/85 font-medium leading-relaxed">
+                  {confirmDialog.message}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t-2 border-[#111111] flex items-center justify-end gap-3 font-mono text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(null)}
+                className="px-4 py-2 border-2 border-[#111111] bg-white hover:bg-[#FFF2D6] text-[#111111] cursor-pointer min-h-[40px]"
+              >
+                {confirmDialog.cancelLabel || 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={confirmDialog.onConfirm}
+                className={`brutal-btn px-4 py-2 text-xs uppercase tracking-wider font-bold cursor-pointer min-h-[40px] ${
+                  confirmDialog.variant === 'danger'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-[#111111] hover:bg-[#222222] text-[#FFD400]'
+                }`}
+              >
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* 5-SECOND UNDO TOAST FOR SINGLE STATUS CHANGES                       */}
+      {/* =================================================================== */}
+      {undoToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 right-6 z-50 max-w-md w-full bg-[#111111] text-white border-2 border-[#FFD400] shadow-[4px_4px_0px_#FFD400] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-5"
+        >
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-[#FFD400] shrink-0" />
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FFD400]">
+                Status Updated
+              </span>
+            </div>
+            <p className="font-sans text-xs text-white/90">
+              Changed <strong>{undoToast.name}</strong> to{' '}
+              <span className="font-mono font-bold text-[#FFD400] uppercase">{undoToast.newStatus}</span>
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 font-mono text-xs font-bold">
+            <button
+              type="button"
+              onClick={handleUndoStatusChange}
+              className="bg-[#FFD400] hover:bg-white text-[#111111] px-3 py-1.5 border border-[#111111] flex items-center gap-1.5 cursor-pointer transition-colors shadow-[2px_2px_0px_#000]"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Undo ({undoToast.secondsRemaining}s)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUndoToast(null)}
+              className="text-white/60 hover:text-white p-1 cursor-pointer"
+              aria-label="Dismiss toast"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

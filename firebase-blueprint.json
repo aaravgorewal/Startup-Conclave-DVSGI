@@ -31,8 +31,14 @@
         "wantsToPitch": { "type": "boolean", "description": "Whether attendee wants to pitch in the Pitch Arena" },
         "startupName": { "type": "string", "maxLength": 150, "description": "Name of startup if wantsToPitch is true" },
         "startupPitch": { "type": "string", "maxLength": 1000, "description": "One-line pitch of startup if wantsToPitch is true" },
+        "sector": { "type": "string", "maxLength": 100, "description": "Startup sector / domain" },
+        "stage": { "type": "string", "maxLength": 50, "description": "Startup stage (Idea, Prototype, Launched, Revenue)" },
+        "pitchDeckLink": { "type": "string", "maxLength": 1000, "description": "Validated Google Drive or Canva pitch deck link" },
+        "teamSize": { "type": "string", "maxLength": 50, "description": "Number of founding/team members" },
+        "pitchScores": { "type": "object", "description": "Jury criteria evaluation scores (1-10 per criterion)" },
+        "pitchTotalScore": { "type": "number", "description": "Weighted total score out of 100" },
         "pitchStatus": { "type": "string", "maxLength": 50, "description": "Pitch screening status" },
-        "status": { "type": "string", "enum": ["registered"], "description": "Registration status (registered)" },
+        "status": { "type": "string", "enum": ["registered", "waitlist", "confirmed", "checked_in", "cancelled"], "description": "Registration status (registered, waitlist, confirmed, checked_in, cancelled)" },
         "createdAt": { "type": "string", "description": "Server timestamp of registration" }
       },
       "required": ["name", "email", "phone", "college", "role", "status", "createdAt"]
@@ -71,12 +77,25 @@
       "description": "Global event configuration settings",
       "type": "object",
       "properties": {
+        "registrationCap": { "type": "number", "description": "Maximum registered attendees before waitlist triggers (default 500)" },
         "registrationStatus": { "type": "string", "enum": ["open", "closed"], "description": "Registration status" },
         "showCount": { "type": "boolean", "description": "Whether to show registration counter" },
         "status": { "type": "string", "description": "Status mirror" },
         "updatedAt": { "type": "string", "description": "Timestamp of update" }
       },
       "required": ["registrationStatus"]
+    },
+    "Mail": {
+      "title": "Mail",
+      "description": "Trigger email document queued for Firebase Trigger Email extension",
+      "type": "object",
+      "properties": {
+        "to": { "type": "array", "description": "Array of recipient email addresses" },
+        "registrationId": { "type": "string", "maxLength": 64, "description": "Associated registration code" },
+        "message": { "type": "object", "description": "Subject and text/html email body payload" },
+        "createdAt": { "type": "string", "description": "Server timestamp of email queue entry" }
+      },
+      "required": ["to", "message", "createdAt"]
     }
   },
   "firestore": {
@@ -99,6 +118,10 @@
     "/settings/{settingId}": {
       "schema": "Setting",
       "description": "Global application and registration settings"
+    },
+    "/mail/{mailId}": {
+      "schema": "Mail",
+      "description": "Trigger email jobs for Firebase Trigger Email extension"
     }
   }
 }

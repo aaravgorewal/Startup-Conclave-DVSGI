@@ -13,6 +13,10 @@ export interface RegistrationInput {
   wantsToPitch: boolean;
   startupName?: string;
   startupPitch?: string;
+  sector?: string;
+  stage?: 'Idea' | 'Prototype' | 'Launched' | 'Revenue' | string;
+  pitchDeckLink?: string;
+  teamSize?: string | number;
 }
 
 export interface RegistrationRecord {
@@ -29,6 +33,10 @@ export interface RegistrationRecord {
   wantsToPitch: boolean;
   startupName: string;
   startupPitch: string;
+  sector?: string;
+  stage?: string;
+  pitchDeckLink?: string;
+  teamSize?: string;
   status: string;
   createdAt: string;
 }
@@ -91,6 +99,28 @@ export const isValidIndianPhone = (phone: string): boolean => {
  */
 export const isValidEmail = (email: string): boolean => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase());
+};
+
+/**
+ * Validate pitch deck URL: Must be Google Drive or Canva URL if provided
+ */
+export const isValidPitchDeckUrl = (url?: string): boolean => {
+  if (!url || !url.trim()) return true;
+  try {
+    const raw = url.trim();
+    const formatted = raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
+    const parsed = new URL(formatted);
+    const host = parsed.hostname.toLowerCase();
+    const isDrive =
+      host === 'drive.google.com' ||
+      host === 'docs.google.com' ||
+      host.endsWith('.drive.google.com') ||
+      host.endsWith('.docs.google.com');
+    const isCanva = host === 'canva.com' || host.endsWith('.canva.com');
+    return isDrive || isCanva;
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -171,6 +201,14 @@ export const createRegistration = async (
     };
   }
 
+  // Pitch deck link validation
+  if (input.wantsToPitch && input.pitchDeckLink && !isValidPitchDeckUrl(input.pitchDeckLink)) {
+    return {
+      success: false,
+      error: 'Pitch deck link must be a Google Drive (drive.google.com) or Canva (canva.com) URL.',
+    };
+  }
+
   if (!input.name.trim()) {
     return { success: false, error: 'Please provide your full legal name.' };
   }
@@ -218,6 +256,10 @@ export const createRegistration = async (
     wantsToPitch: Boolean(input.wantsToPitch),
     startupName: input.wantsToPitch ? (input.startupName?.trim() || '') : '',
     startupPitch: input.wantsToPitch ? (input.startupPitch?.trim() || '') : '',
+    sector: input.wantsToPitch ? (input.sector?.trim() || '') : '',
+    stage: input.wantsToPitch ? (input.stage?.trim() || '') : '',
+    pitchDeckLink: input.wantsToPitch ? (input.pitchDeckLink?.trim() || '') : '',
+    teamSize: input.wantsToPitch ? (input.teamSize ? String(input.teamSize).trim() : '') : '',
     status: 'registered',
     createdAt: nowIso,
   };
@@ -279,6 +321,10 @@ export const createRegistration = async (
         wantsToPitch: record.wantsToPitch,
         startupName: record.startupName,
         startupPitch: record.startupPitch,
+        sector: record.sector || '',
+        stage: record.stage || '',
+        pitchDeckLink: record.pitchDeckLink || '',
+        teamSize: record.teamSize || '',
         status: assignedStatus,
         createdAt: serverTimestamp(),
       });
@@ -331,7 +377,79 @@ export const createRegistration = async (
   record.id = assignedId;
   record.status = finalStatus;
 
-  // 6. Update local cache ONLY after verified successful Firestore confirmation
+  // 6. Queue confirmation email for Firebase Trigger Email extension / Cloud Function
+  try {
+    const contactEmail = 'conclave@dvsiet.ac.in';
+    const contactPhone = '+91 98765 43210';
+    const mailDocId = `confirm-${assignedId}-${Date.now().toString(36)}`;
+    const mailDocRef = doc(db, 'mail', mailDocId);
+
+    const subject = `Startup Conclave 1.0 — Registration Confirmation (${assignedId})`;
+    const plainText = [
+      `Hello ${record.name},`,
+      ``,
+      `Your registration for Startup Conclave 1.0 is confirmed.`,
+      ``,
+      `Registration Details:`,
+      `• Registration ID: ${assignedId}`,
+      `• Event: Startup Conclave 1.0`,
+      `• Venue: DVSIET, Meerut`,
+      `• Category: ${record.role} · ${record.city}`,
+      `• College / Organisation: ${record.college}`,
+      ``,
+      `Date and entry details will be shared by email and WhatsApp.`,
+      ``,
+      `Organiser Contact:`,
+      `• Email: ${contactEmail}`,
+      `• Phone: ${contactPhone}`,
+      `• Address: Dewan V.S. Institute of Engineering & Technology, Meerut, Uttar Pradesh`,
+      ``,
+      `Please save this email or take a screenshot of your Registration ID for venue entry.`,
+    ].join('\n');
+
+    const htmlBody = [
+      `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 16px; color: #111111; line-height: 1.5;">`,
+      `  <div style="border: 2px solid #111111; padding: 20px; background-color: #FFF8EC;">`,
+      `    <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111111;">Startup Conclave 1.0</h2>`,
+      `    <p style="margin: 0 0 16px 0; font-size: 13px; color: #555555;">Official Registration Confirmation</p>`,
+      `    <div style="background-color: #FFD400; border: 2px solid #111111; padding: 12px; margin-bottom: 16px;">`,
+      `      <p style="margin: 0; font-size: 11px; font-weight: bold; text-transform: uppercase;">Registration ID</p>`,
+      `      <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; font-family: monospace; color: #111111;">${assignedId}</p>`,
+      `    </div>`,
+      `    <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 16px;">`,
+      `      <tr><td style="padding: 6px 0; color: #555;">Attendee:</td><td style="padding: 6px 0; font-weight: bold;">${record.name}</td></tr>`,
+      `      <tr><td style="padding: 6px 0; color: #555;">Venue:</td><td style="padding: 6px 0; font-weight: bold;">DVSIET, Meerut</td></tr>`,
+      `      <tr><td style="padding: 6px 0; color: #555;">College:</td><td style="padding: 6px 0; font-weight: bold;">${record.college}</td></tr>`,
+      `      <tr><td style="padding: 6px 0; color: #555;">Status:</td><td style="padding: 6px 0; font-weight: bold;">${finalStatus === 'waitlist' ? 'Waitlist' : 'Confirmed'}</td></tr>`,
+      `    </table>`,
+      `    <div style="background-color: #FFF2D6; border: 1px solid #111111; padding: 12px; margin-bottom: 16px; font-weight: bold; font-size: 13px;">`,
+      `      Date and entry details will be shared by email and WhatsApp.`,
+      `    </div>`,
+      `    <div style="border-top: 1px solid #ddd; padding-top: 12px; font-size: 12px; color: #555;">`,
+      `      <p style="margin: 0 0 4px 0; font-weight: bold; color: #111;">Organiser Contact:</p>`,
+      `      <p style="margin: 0 0 2px 0;">Email: <a href="mailto:${contactEmail}" style="color: #FF6B1A;">${contactEmail}</a></p>`,
+      `      <p style="margin: 0 0 2px 0;">Phone: ${contactPhone}</p>`,
+      `      <p style="margin: 0;">Dewan V.S. Institute of Engineering & Technology, Meerut</p>`,
+      `    </div>`,
+      `  </div>`,
+      `</div>`,
+    ].join('\n');
+
+    await setDoc(mailDocRef, {
+      to: [emailClean],
+      registrationId: assignedId,
+      message: {
+        subject,
+        text: plainText,
+        html: htmlBody,
+      },
+      createdAt: serverTimestamp(),
+    });
+  } catch (mailError) {
+    console.info('Trigger email queue notice (extension may not be active yet):', mailError);
+  }
+
+  // 7. Update local cache ONLY after verified successful Firestore confirmation
   try {
     const rawList = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
     const list: any[] = rawList ? JSON.parse(rawList) : [];

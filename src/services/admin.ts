@@ -21,11 +21,44 @@ export interface EventSettings {
   updatedAt?: any;
 }
 
+export interface PitchCriteriaScores {
+  problem?: number;        // weight: 10%
+  solution?: number;       // weight: 15%
+  market?: number;         // weight: 15%
+  businessModel?: number;  // weight: 15%
+  traction?: number;       // weight: 15%
+  innovation?: number;     // weight: 10%
+  team?: number;           // weight: 10%
+  scalability?: number;    // weight: 10%
+}
+
+/**
+ * Calculates weighted score out of 100 using criteria weights: 10/15/15/15/15/10/10/10
+ */
+export const calculateWeightedPitchScore = (scores?: PitchCriteriaScores): number => {
+  if (!scores) return 0;
+  const p = Number(scores.problem) || 0;
+  const s = Number(scores.solution) || 0;
+  const m = Number(scores.market) || 0;
+  const bm = Number(scores.businessModel) || 0;
+  const tr = Number(scores.traction) || 0;
+  const inn = Number(scores.innovation) || 0;
+  const tm = Number(scores.team) || 0;
+  const sc = Number(scores.scalability) || 0;
+
+  const total = (p * 10 + s * 15 + m * 15 + bm * 15 + tr * 15 + inn * 10 + tm * 10 + sc * 10) / 10;
+  return Math.round(total * 10) / 10;
+};
+
 export interface AdminRegistration extends RegistrationRecord {
   pitchStatus?: 'Applied' | 'Shortlisted' | 'Finalist' | 'Rejected' | string;
+  pitchScores?: PitchCriteriaScores;
+  pitchTotalScore?: number;
   notes?: string;
   checkInTime?: string;
   docId?: string;
+  updatedBy?: string;
+  updatedAt?: string;
 }
 
 export interface AdminPartnerEnquiry {
@@ -163,15 +196,76 @@ export const updateRegistration = async (
 };
 
 /**
- * Bulk update registrations status
+ * Bulk update registrations status with audit trail
  */
 export const bulkUpdateStatus = async (
   ids: string[],
-  newStatus: string
+  newStatus: string,
+  updatedBy?: string
 ): Promise<boolean> => {
+  const timestamp = new Date().toISOString();
   for (const id of ids) {
-    await updateRegistration(id, { status: newStatus });
+    await updateRegistration(id, {
+      status: newStatus,
+      updatedBy: updatedBy || 'admin',
+      updatedAt: timestamp,
+    });
   }
+  return true;
+};
+
+/**
+ * Delete a registration from Firestore and local cache
+ */
+export const deleteRegistration = async (id: string, docId?: string): Promise<boolean> => {
+  let resolvedDocId = docId;
+
+  // Remove from local cache
+  try {
+    const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
+    const list: AdminRegistration[] = raw ? JSON.parse(raw) : [];
+    const index = list.findIndex((item) => item.id === id || item.docId === id);
+    if (index !== -1) {
+      resolvedDocId = resolvedDocId || list[index].docId;
+      list.splice(index, 1);
+      localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(list));
+    }
+  } catch (e) {
+    console.warn('Cache delete notice:', e);
+  }
+
+  // Remove from Firestore
+  try {
+    const target = resolvedDocId || id;
+    const ref = doc(db, 'registrations', target);
+    await deleteDoc(ref);
+  } catch (e) {
+    console.warn('Firestore delete notice:', e);
+  }
+
+  return true;
+};
+
+/**
+ * Delete a partner enquiry from Firestore and local cache
+ */
+export const deletePartnerEnquiry = async (id: string): Promise<boolean> => {
+  try {
+    const ref = doc(db, 'partnerEnquiries', id);
+    await deleteDoc(ref);
+  } catch (e) {
+    console.warn('Firestore partner delete notice:', e);
+  }
+
+  try {
+    const raw = localStorage.getItem(LOCAL_PARTNER_KEY);
+    const list: AdminPartnerEnquiry[] = raw ? JSON.parse(raw) : [];
+    const filtered = list.filter((item) => item.id !== id);
+    localStorage.setItem(LOCAL_PARTNER_KEY, JSON.stringify(filtered));
+  } catch (e) {
+    console.warn('Cache partner delete notice:', e);
+  }
+
   return true;
 };
 
