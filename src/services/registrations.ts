@@ -1,4 +1,4 @@
-import { doc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection, serverTimestamp, writeBatch, runTransaction } from 'firebase/firestore';
 import { db } from './firebase.ts';
 
 export interface RegistrationInput {
@@ -17,6 +17,7 @@ export interface RegistrationInput {
 
 export interface RegistrationRecord {
   id: string;
+  registrationId?: string;
   name: string;
   email: string;
   phone: string;
@@ -44,6 +45,30 @@ export interface PartnerEnquiryInput {
 const LOCAL_REGISTRATIONS_KEY = 'sc1_registrations_cache';
 const LOCAL_REGISTERED_EMAILS_KEY = 'sc1_registered_emails';
 const LOCAL_REGISTERED_PHONES_KEY = 'sc1_registered_phones';
+
+/**
+ * Deterministic SHA-256 hash helper (produces 64-char lowercase hex string)
+ */
+export const hashString = async (input: string): Promise<string> => {
+  const normalized = input.trim().toLowerCase();
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(normalized);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  // Deterministic fallback if crypto.subtle is unavailable
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(16, '0');
+};
 
 /**
  * Clean phone number to 10 digits
@@ -158,26 +183,20 @@ export const createRegistration = async (
   }
 
   // 2. Duplicate Check
-  if (isEmailRegistered(emailClean)) {
+  if (isEmailRegistered(emailClean) || isPhoneRegistered(phoneClean)) {
     return {
       success: false,
-      error: 'This email address is already registered for Startup Conclave 1.0.',
+      error: 'This email or phone is already registered.',
     };
   }
 
-  if (isPhoneRegistered(phoneClean)) {
-    return {
-      success: false,
-      error: 'This WhatsApp / phone number is already registered for Startup Conclave 1.0.',
-    };
-  }
-
-  // 3. Generate ID and Record
-  const registrationId = generateRegistrationId();
+  // 3. Compute deterministic hashes for email and phone
+  const emailHash = await hashString(emailClean);
+  const phoneHash = await hashString(phoneClean);
   const nowIso = new Date().toISOString();
 
   const record: RegistrationRecord = {
-    id: registrationId,
+    id: emailHash,
     name: input.name.trim(),
     email: emailClean,
     phone: phoneClean,
@@ -193,17 +212,70 @@ export const createRegistration = async (
     createdAt: nowIso,
   };
 
-  // 4. Store in Firestore database
+  // 4. Store in Firestore database using an atomic transaction on counter document
+  // Increments /counters/registrations to assign SC1-00001, SC1-00002... safely.
+  // Registrations doc keyed by emailHash; phoneIndex doc keyed by phoneHash.
+  // If either doc already exists, Firestore security rules reject the write and transaction aborts.
+  let assignedId = '';
   try {
-    const docRef = doc(db, 'registrations', registrationId);
-    await setDoc(docRef, {
-      ...record,
-      serverTimestamp: serverTimestamp(),
+    const counterRef = doc(db, 'counters', 'registrations');
+    const regDocRef = doc(db, 'registrations', emailHash);
+    const phoneDocRef = doc(db, 'phoneIndex', phoneHash);
+
+    assignedId = await runTransaction(db, async (transaction) => {
+      const counterSnap = await transaction.get(counterRef);
+      let nextCount = 1;
+      if (counterSnap.exists()) {
+        const data = counterSnap.data();
+        const current = typeof data?.currentCount === 'number' ? data.currentCount : 0;
+        nextCount = current + 1;
+      }
+      const idCode = `SC1-${nextCount.toString().padStart(5, '0')}`;
+
+      transaction.set(counterRef, {
+        currentCount: nextCount,
+        updatedAt: serverTimestamp(),
+      });
+
+      transaction.set(regDocRef, {
+        id: idCode,
+        registrationId: idCode,
+        sequenceNumber: nextCount,
+        emailHash: emailHash,
+        name: record.name,
+        email: record.email,
+        phone: record.phone,
+        college: record.college,
+        course: record.course,
+        year: record.year,
+        role: record.role,
+        city: record.city,
+        wantsToPitch: record.wantsToPitch,
+        startupName: record.startupName,
+        startupPitch: record.startupPitch,
+        status: 'registered',
+        createdAt: serverTimestamp(),
+      });
+
+      transaction.set(phoneDocRef, {
+        registrationId: idCode,
+        emailHash: emailHash,
+        phoneHash: phoneHash,
+        createdAt: serverTimestamp(),
+      });
+
+      return idCode;
     });
   } catch (firestoreError: any) {
-    console.warn('Firestore write notice:', firestoreError);
-    // Even if client is offline or network fails, we gracefully continue with local storage
+    console.warn('Firestore registration transaction error:', firestoreError);
+    // Write failed due to existing document, duplicate conflict, or rule restriction
+    return {
+      success: false,
+      error: 'This email or phone is already registered.',
+    };
   }
+
+  record.id = assignedId;
 
   // 5. Update local cache for deduplication & offline resilience
   try {
@@ -225,7 +297,7 @@ export const createRegistration = async (
     console.warn('Local storage cache write notice:', storageError);
   }
 
-  return { success: true, id: registrationId };
+  return { success: true, id: assignedId };
 };
 
 /**
@@ -238,6 +310,14 @@ export const createPartnerEnquiry = async (
     return { success: false, error: 'Please fill in company, contact name, and email.' };
   }
 
+  const cleanedPhone = input.phone?.trim() ? cleanPhoneNumber(input.phone) : '';
+  if (cleanedPhone && !/^[0-9]{10}$/.test(cleanedPhone)) {
+    return {
+      success: false,
+      error: 'Please enter a valid 10-digit phone number or leave it blank.',
+    };
+  }
+
   const enquiryId = `PARTNER-${Date.now().toString(36).toUpperCase()}`;
   const nowIso = new Date().toISOString();
 
@@ -246,7 +326,7 @@ export const createPartnerEnquiry = async (
     company: input.company.trim(),
     contactName: input.contactName.trim(),
     email: input.email.trim().toLowerCase(),
-    phone: input.phone?.trim() || '',
+    phone: cleanedPhone,
     message: input.message?.trim() || '',
     status: 'new',
     createdAt: nowIso,
@@ -255,8 +335,14 @@ export const createPartnerEnquiry = async (
   try {
     const docRef = doc(db, 'partnerEnquiries', enquiryId);
     await setDoc(docRef, {
-      ...data,
-      serverTimestamp: serverTimestamp(),
+      id: enquiryId,
+      company: input.company.trim(),
+      contactName: input.contactName.trim(),
+      email: input.email.trim().toLowerCase(),
+      phone: cleanedPhone,
+      message: (input.message || '').trim().slice(0, 500),
+      status: 'new',
+      createdAt: serverTimestamp(),
     });
   } catch (firestoreError) {
     console.warn('Firestore partner write notice:', firestoreError);

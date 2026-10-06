@@ -14,6 +14,7 @@ export interface AdminRegistration extends RegistrationRecord {
   pitchStatus?: 'Applied' | 'Shortlisted' | 'Finalist' | 'Rejected' | string;
   notes?: string;
   checkInTime?: string;
+  docId?: string;
 }
 
 export interface AdminPartnerEnquiry {
@@ -31,106 +32,10 @@ export interface AdminPartnerEnquiry {
 const LOCAL_REGISTRATIONS_KEY = 'sc1_registrations_cache';
 const LOCAL_PARTNER_KEY = 'sc1_partner_enquiries';
 
-// Fallback seed data if database is empty so admin can immediately test filters/actions
-const INITIAL_DEMO_REGISTRATIONS: AdminRegistration[] = [
-  {
-    id: 'SC1-00042',
-    name: 'Aarav Sharma',
-    email: 'aarav.sharma@dvsiet.ac.in',
-    phone: '9876543210',
-    college: 'DVSIET Meerut',
-    course: 'B.Tech Computer Science',
-    year: '3rd Year',
-    role: 'Student',
-    city: 'Meerut',
-    wantsToPitch: true,
-    startupName: 'KrishiFlow Technologies',
-    startupPitch: 'Automated precision IoT sensor arrays for sugarcane farmers in Western UP',
-    status: 'confirmed',
-    pitchStatus: 'Shortlisted',
-    notes: 'Strong hardware prototype, reviewed by faculty.',
-    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-  },
-  {
-    id: 'SC1-00043',
-    name: 'Pooja Verma',
-    email: 'pooja.verma@kiet.edu',
-    phone: '9812345678',
-    college: 'KIET Ghaziabad',
-    course: 'B.Tech IT',
-    year: '4th Year',
-    role: 'Founder',
-    city: 'Ghaziabad',
-    wantsToPitch: true,
-    startupName: 'CampusCart',
-    startupPitch: 'Hyperlocal student essentials delivery in under 15 minutes',
-    status: 'registered',
-    pitchStatus: 'Applied',
-    notes: 'Has initial traction in 2 college hostels.',
-    createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
-  },
-  {
-    id: 'SC1-00044',
-    name: 'Rohan Gupta',
-    email: 'rohan.gupta@delhi.ac.in',
-    phone: '9798765432',
-    college: 'Delhi University',
-    course: 'B.Com Honours',
-    year: '2nd Year',
-    role: 'Student',
-    city: 'Delhi',
-    wantsToPitch: false,
-    startupName: '',
-    startupPitch: '',
-    status: 'checked_in',
-    pitchStatus: 'Applied',
-    notes: 'Interested in venture capital panel and networking.',
-    createdAt: new Date(Date.now() - 3600000 * 18).toISOString(),
-  },
-  {
-    id: 'SC1-00045',
-    name: 'Dr. Sunita Malik',
-    email: 'sunita.malik@miet.ac.in',
-    phone: '9845012345',
-    college: 'MIET Meerut',
-    course: 'Faculty / BioTech',
-    year: 'Faculty',
-    role: 'Professional',
-    city: 'Meerut',
-    wantsToPitch: false,
-    startupName: '',
-    startupPitch: '',
-    status: 'confirmed',
-    pitchStatus: 'Applied',
-    notes: 'Leading a student delegation of 15 bio-tech innovators.',
-    createdAt: new Date(Date.now() - 3600000 * 26).toISOString(),
-  },
-];
+// Initial empty lists — only real registrations and enquiries are stored and displayed
+const INITIAL_DEMO_REGISTRATIONS: AdminRegistration[] = [];
 
-const INITIAL_DEMO_PARTNERS: AdminPartnerEnquiry[] = [
-  {
-    id: 'PARTNER-01',
-    company: 'Apex Cloud Systems',
-    contactName: 'Nitin Oberoi',
-    email: 'nitin@apexcloud.io',
-    phone: '9988776655',
-    message: 'Interested in providing developer cloud credits and hosting the Day 1 MVP workshop.',
-    status: 'New',
-    notes: 'Sent sponsorship deck tier proposal.',
-    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-  },
-  {
-    id: 'PARTNER-02',
-    company: 'VentureCatalyst Capital',
-    contactName: 'Divya Rastogi',
-    email: 'divya@venturecat.vc',
-    phone: '9877112233',
-    message: 'Looking to join the Pitch Arena jury and meet pre-seed founders.',
-    status: 'Contacted',
-    notes: 'Confirmed for Day 2 Investor Panel.',
-    createdAt: new Date(Date.now() - 3600000 * 20).toISOString(),
-  },
-];
+const INITIAL_DEMO_PARTNERS: AdminPartnerEnquiry[] = [];
 
 /**
  * Fetch all registrations from Firestore, merging with local cache
@@ -143,7 +48,8 @@ export const fetchRegistrations = async (): Promise<AdminRegistration[]> => {
     const snapshot = await getDocs(q);
     snapshot.forEach((d) => {
       const data = d.data() as AdminRegistration;
-      list.push({ ...data, id: d.id });
+      const displayId = data.registrationId || data.id || d.id;
+      list.push({ ...data, id: displayId, docId: d.id });
     });
   } catch (error) {
     console.warn('Firestore fetch notice (using cache):', error);
@@ -214,27 +120,32 @@ export const fetchPartnerEnquiries = async (): Promise<AdminPartnerEnquiry[]> =>
  */
 export const updateRegistration = async (
   id: string,
-  updates: Partial<AdminRegistration>
+  updates: Partial<AdminRegistration>,
+  docId?: string
 ): Promise<boolean> => {
-  // Update in Firestore
-  try {
-    const ref = doc(db, 'registrations', id);
-    await updateDoc(ref, updates);
-  } catch (e) {
-    console.warn('Firestore update notice:', e);
-  }
+  let resolvedDocId = docId;
 
   // Update in local cache
   try {
     const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
     const list: AdminRegistration[] = raw ? JSON.parse(raw) : [];
-    const index = list.findIndex((item) => item.id === id);
+    const index = list.findIndex((item) => item.id === id || item.docId === id);
     if (index !== -1) {
+      resolvedDocId = resolvedDocId || list[index].docId;
       list[index] = { ...list[index], ...updates };
       localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(list));
     }
   } catch (e) {
     console.warn('Cache update notice:', e);
+  }
+
+  // Update in Firestore
+  try {
+    const target = resolvedDocId || id;
+    const ref = doc(db, 'registrations', target);
+    await updateDoc(ref, updates);
+  } catch (e) {
+    console.warn('Firestore update notice:', e);
   }
 
   return true;

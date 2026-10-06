@@ -170,7 +170,7 @@ export const AdminPage: React.FC = () => {
     if (next >= 5) {
       setFailedAttempts(0);
       setLockoutSeconds(60);
-      setAuthError('Too many failed attempts. Form locked for 60 seconds.');
+      setAuthError('Invalid credentials');
     } else {
       setFailedAttempts(next);
       setAuthError('Invalid credentials');
@@ -181,7 +181,6 @@ export const AdminPage: React.FC = () => {
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (lockoutSeconds > 0) {
-      setAuthError(`Too many failed attempts. Form locked for ${lockoutSeconds}s.`);
       return;
     }
     setAuthError('');
@@ -437,7 +436,6 @@ export const AdminPage: React.FC = () => {
               <span className="font-mono text-xs font-black uppercase bg-[#FFD400] px-2 py-0.5 border border-[#111111]">
                 ADMIN GATEWAY
               </span>
-              <span className="font-mono text-xs text-[#FF6B1A] font-bold">/admin</span>
             </div>
             <h1 className="font-display font-extrabold text-2xl text-[#111111] pt-1">
               Secretariat Portal
@@ -451,6 +449,13 @@ export const AdminPage: React.FC = () => {
             <div className="p-3 bg-red-100 border-2 border-red-500 text-red-700 text-xs font-bold flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{authError}</span>
+            </div>
+          )}
+
+          {lockoutSeconds > 0 && (
+            <div className="p-3 bg-[#FFD400]/30 border-2 border-[#111111] text-[#111111] text-xs font-mono font-bold flex items-center gap-2">
+              <Clock className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+              <span>Too many failed attempts. Form locked for {lockoutSeconds}s.</span>
             </div>
           )}
 

@@ -2,7 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: Verify if user is authenticated and their email is in the designated admin roster
+    // Helper: Verify if user is signed in and their email is in the designated admin roster
     function isAdmin() {
       return request.auth != null
         && request.auth.token.email != null
@@ -13,84 +13,126 @@ service cloud.firestore {
         ]);
     }
 
+    // Helper: Validate counter increment for sequential unique IDs
+    function isValidCounter(incoming, existing) {
+      return incoming.keys().hasAll(['currentCount', 'updatedAt'])
+        && incoming.keys().hasOnly(['currentCount', 'updatedAt'])
+        && incoming.currentCount is int
+        && incoming.updatedAt == request.time
+        && (
+          (existing == null && incoming.currentCount == 1)
+          || (existing != null && incoming.currentCount == existing.currentCount + 1)
+        );
+    }
+
     // Helper: Validate attendee registration creation payload
     function isValidRegistration(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 100
-        && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
-        && data.phone is string && data.phone.size() >= 10 && data.phone.size() <= 15
+      return data.keys().hasAll(['name', 'email', 'phone', 'college', 'role', 'status', 'createdAt'])
+        && data.keys().hasOnly([
+          'id', 'registrationId', 'emailHash', 'sequenceNumber',
+          'name', 'email', 'phone', 'college', 'course', 'year',
+          'role', 'city', 'notes', 'wantsToPitch', 'startupName',
+          'startupPitch', 'pitchStatus', 'status', 'createdAt'
+        ])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.email is string && data.email.size() > 0 && data.email.size() <= 120
+        && data.phone is string && data.phone.matches('^[0-9]{10}$')
         && data.college is string && data.college.size() > 0 && data.college.size() <= 150
+        && data.role is string && data.role in ['Student', 'Founder', 'Professional', 'Other']
         && data.status is string && data.status == 'registered'
+        && data.createdAt == request.time
+        && (!('id' in data) || (data.id is string && data.id.size() <= 128))
+        && (!('registrationId' in data) || (data.registrationId is string && data.registrationId.size() <= 64))
+        && (!('emailHash' in data) || (data.emailHash is string && data.emailHash.size() <= 128))
+        && (!('sequenceNumber' in data) || data.sequenceNumber is int)
         && (!('course' in data) || (data.course is string && data.course.size() <= 100))
         && (!('year' in data) || (data.year is string && data.year.size() <= 50))
-        && (!('role' in data) || (data.role is string && data.role.size() <= 50))
-        && (!('city' in data) || (data.city is string && data.city.size() <= 100))
+        && (!('city' in data) || (data.city is string && data.city.size() <= 80))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500))
         && (!('wantsToPitch' in data) || data.wantsToPitch is bool)
         && (!('startupName' in data) || (data.startupName is string && data.startupName.size() <= 150))
         && (!('startupPitch' in data) || (data.startupPitch is string && data.startupPitch.size() <= 1000))
-        && (!('id' in data) || (data.id is string && data.id.size() <= 50))
-        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+        && (!('pitchStatus' in data) || (data.pitchStatus is string && data.pitchStatus.size() <= 50));
     }
 
-    // Helper: Validate pitch data creation payload
-    function isValidPitch(data) {
-      return data.startupName is string && data.startupName.size() > 0 && data.startupName.size() <= 150
-        && data.startupPitch is string && data.startupPitch.size() > 0 && data.startupPitch.size() <= 1000
-        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
-        && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
-        && (!('status' in data) || data.status == 'applied' || data.status == 'registered' || data.status == 'new')
-        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 25))
-        && (!('id' in data) || (data.id is string && data.id.size() <= 50))
-        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+    // Helper: Validate phone index creation payload for deterministic deduplication
+    function isValidPhoneIndex(data) {
+      return data.keys().hasAll(['registrationId', 'createdAt'])
+        && data.keys().hasOnly(['registrationId', 'emailHash', 'phoneHash', 'createdAt'])
+        && data.registrationId is string && data.registrationId.size() <= 128
+        && (!('emailHash' in data) || (data.emailHash is string && data.emailHash.size() <= 128))
+        && (!('phoneHash' in data) || (data.phoneHash is string && data.phoneHash.size() <= 128))
+        && data.createdAt == request.time;
     }
 
-    // Helper: Validate partner inquiry creation payload
+    // Helper: Validate partner enquiry creation payload
     function isValidPartnerEnquiry(data) {
-      return data.company is string && data.company.size() > 0 && data.company.size() <= 150
+      return data.keys().hasAll(['company', 'contactName', 'email', 'status', 'createdAt'])
+        && data.keys().hasOnly([
+          'id', 'company', 'contactName', 'email', 'phone', 'message',
+          'notes', 'status', 'createdAt'
+        ])
+        && data.company is string && data.company.size() > 0 && data.company.size() <= 150
         && data.contactName is string && data.contactName.size() > 0 && data.contactName.size() <= 100
-        && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
+        && data.email is string && data.email.size() > 0 && data.email.size() <= 120
         && data.status is string && data.status == 'new'
-        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 25))
-        && (!('message' in data) || (data.message is string && data.message.size() <= 2000))
-        && (!('id' in data) || (data.id is string && data.id.size() <= 50))
-        && (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+        && data.createdAt == request.time
+        && (!('id' in data) || (data.id is string && data.id.size() <= 128))
+        && (!('phone' in data) || data.phone == '' || (data.phone is string && data.phone.matches('^[0-9]{10}$')))
+        && (!('message' in data) || (data.message is string && data.message.size() <= 500))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
     }
 
-    // 1. Registrations Collection (including Pitch applications with wantsToPitch: true)
+    // 1. Counter Collection for sequential atomic ID allocation (SC1-00001, etc.)
+    match /counters/{counterId} {
+      // Public users can read the current counter
+      allow read: if true;
+
+      // Public users may ONLY initialize to 1 or increment by exactly 1 in a transaction
+      allow create: if isValidCounter(request.resource.data, null);
+      allow update: if isValidCounter(request.resource.data, resource.data);
+
+      // Deletes restricted to administrators
+      allow delete: if isAdmin();
+    }
+
+    // 2. Registrations Collection (keyed by email hash)
     match /registrations/{registrationId} {
-      // Public users can only CREATE with validated fields and status fixed to 'registered'
+      // Public users may ONLY create documents with strict validation; never read, update, or delete
       allow create: if isValidRegistration(request.resource.data);
 
-      // Only signed-in users whose email is in the admin list may READ, UPDATE or DELETE
+      // Only signed-in users whose email is in the admin roster may read, update, or delete
       allow read, update, delete: if isAdmin();
     }
 
-    // 2. Pitch Data Collections
-    match /pitches/{pitchId} {
-      // Public users can only CREATE with validated pitch fields
-      allow create: if isValidPitch(request.resource.data);
+    // 3. Phone Index Collection (keyed by phone hash for deterministic duplicate detection)
+    match /phoneIndex/{phoneHash} {
+      // Public users may ONLY create entries in the same batch; updates and deletes are disallowed
+      allow create: if isValidPhoneIndex(request.resource.data);
 
-      // Only signed-in users whose email is in the admin list may READ, UPDATE or DELETE
+      // Only signed-in administrators may read, update, or delete
       allow read, update, delete: if isAdmin();
     }
 
-    match /pitchApplications/{pitchId} {
-      // Public users can only CREATE with validated pitch fields
-      allow create: if isValidPitch(request.resource.data);
-
-      // Only signed-in users whose email is in the admin list may READ, UPDATE or DELETE
-      allow read, update, delete: if isAdmin();
-    }
-
-    // 3. Partner Enquiries Collection
+    // 4. Partner Enquiries Collection
     match /partnerEnquiries/{enquiryId} {
-      // Public users can only CREATE with validated fields and status fixed to 'new'
+      // Public users may ONLY create documents with strict validation; never read, update, or delete
       allow create: if isValidPartnerEnquiry(request.resource.data);
 
-      // Only signed-in users whose email is in the admin list may READ, UPDATE or DELETE
+      // Only signed-in users whose email is in the admin roster may read, update, or delete
       allow read, update, delete: if isAdmin();
     }
 
-    // Deny all other access by default
+    // 5. Settings Document
+    match /settings/{settingId} {
+      // Public users can only read the necessary event status fields (registration open/closed)
+      allow read: if resource.data.keys().hasOnly(['registrationStatus', 'showCount', 'status', 'updatedAt']);
+
+      // Only verified administrators can write or modify settings
+      allow write: if isAdmin();
+    }
+
+    // Default deny for all other unmatched collections and paths
     match /{document=**} {
       allow read, write: if false;
     }

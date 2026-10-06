@@ -17,6 +17,13 @@ export interface SpeakerItem {
 }
 
 export const CONFIG = {
+  // Contact details & Social URLs (all initially empty strings)
+  contactEmail: "",
+  contactPhone: "",
+  instagramUrl: "",
+  linkedinUrl: "",
+  xUrl: "",
+
   event: {
     name: "Startup Conclave 1.0",
     edition: "1.0",
@@ -39,7 +46,7 @@ export const CONFIG = {
     sectionNum: "01",
     headline: "A 2-day startup conclave at DVSIET, Meerut.",
     introText:
-      "Bringing together students, early-stage founders, investors, and mentors on one campus.",
+      "Bringing together students, early-stage founders, and mentors on one campus.",
     pillars: [
       {
         tag: "BUILD",
@@ -68,7 +75,7 @@ export const CONFIG = {
       { title: "Keynotes", note: "Founder and operator talks" },
       { title: "Founder Firesides", note: "Real campus startup journeys" },
       { title: "Panels", note: "Debates on startup building" },
-      { title: "Investor Sessions", note: "What makes startups investable" },
+      { title: "Building & Scale Sessions", note: "Practical discussions on early-stage building" },
       { title: "Startup Pitch Arena", note: "Live competition for finalists" },
       { title: "Workshops", note: "Hands-on MVP building sessions" },
       { title: "Mentorship", note: "1-on-1 pitch deck feedback" },
@@ -97,9 +104,9 @@ export const CONFIG = {
     day2: {
       title: 'Day 2: "Pitch & Scale"',
       bullets: [
-        "Investor Keynote",
-        "VC vs Angel Panel",
-        "What Makes a Startup Investable",
+        "Keynote Session",
+        "Funding & Capital Discussion",
+        "Building an Investable Business",
         "Startup Mentorship",
         "Startup Pitch Arena",
         "Awards and Closing",
@@ -163,7 +170,7 @@ export const CONFIG = {
     },
     {
       q: "Is there a registration fee to attend?",
-      a: "Registration fee is to be announced. Subsidized student passes will be available.",
+      a: "To be announced.",
     },
     {
       q: "Can I attend for only one day?",
@@ -184,8 +191,8 @@ export const CONFIG = {
   ],
 
   contact: {
-    email: "contact@example.com",
-    phone: "+91 ..........",
+    email: "",
+    phone: "",
     campus: "Dewan V.S. Institute of Engineering & Technology (DVSIET)",
     city: "Meerut, Uttar Pradesh, India",
     socials: {

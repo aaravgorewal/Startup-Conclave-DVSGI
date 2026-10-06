@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowRight,
   Calendar,
@@ -29,6 +29,11 @@ import {
   getRegistrationsCount,
   RegistrationInput,
 } from '../../services/registrations.ts';
+import {
+  checkFormFillTime,
+  checkBrowserRateLimit,
+  recordBrowserSubmission,
+} from '../../services/botProtection.ts';
 
 // Custom Vector-Style Neo-Brutalist Illustration representing 'Building, Connecting, Pitching, and Scaling'
 const HeroVectorIllustration: React.FC = () => {
@@ -283,13 +288,111 @@ const HeroVectorIllustration: React.FC = () => {
 };
 
 export const SinglePage: React.FC = () => {
+  // Scroll progress percentage (0 - 100)
+  const [scrollProgress, setScrollProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalHeight > 0) {
+        const progress = Math.min(100, Math.max(0, (scrollY / totalHeight) * 100));
+        setScrollProgress(progress);
+      } else {
+        setScrollProgress(0);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Schema.org Structured Data (JSON-LD) for FAQ & Conclave Event Details
+  const structuredData = useMemo(() => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+    const canonicalUrl = `${origin}${currentPath}`;
+
+    return {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'Event',
+          '@id': `${canonicalUrl}#event`,
+          name: CONFIG.event.name,
+          description: `${CONFIG.event.subline} ${CONFIG.event.tagline}`,
+          eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+          eventStatus: 'https://schema.org/EventScheduled',
+          location: {
+            '@type': 'Place',
+            name: 'Dewan V.S. Institute of Engineering & Technology (DVSIET)',
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: 'NH-58, By-Pass Road, Partapur',
+              addressLocality: 'Meerut',
+              addressRegion: 'Uttar Pradesh',
+              postalCode: '250103',
+              addressCountry: 'IN',
+            },
+          },
+          organizer: {
+            '@type': 'Organization',
+            name: 'Dewan V.S. Institute of Engineering & Technology (DVSIET)',
+            url: canonicalUrl,
+          },
+          offers: {
+            '@type': 'Offer',
+            url: `${canonicalUrl}#register`,
+            availability: 'https://schema.org/InStock',
+            price: '0',
+            priceCurrency: 'INR',
+          },
+        },
+        {
+          '@type': 'FAQPage',
+          '@id': `${canonicalUrl}#faq`,
+          mainEntity: CONFIG.faq.map((item) => ({
+            '@type': 'Question',
+            name: item.q,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: item.a,
+            },
+          })),
+        },
+      ],
+    };
+  }, []);
+
+  // Inject or update JSON-LD structured data in document head
+  useEffect(() => {
+    const scriptId = 'conclave-faq-event-jsonld';
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement('script');
+      script.id = scriptId;
+      script.type = 'application/ld+json';
+      document.head.appendChild(script);
+    }
+    script.textContent = JSON.stringify(structuredData);
+
+    return () => {
+      const el = document.getElementById(scriptId);
+      if (el) {
+        el.remove();
+      }
+    };
+  }, [structuredData]);
+
   // Mobile navigation drawer state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Registration Status & Counter Settings from config
   const [regStatus, setRegStatus] = useState<'open' | 'closed'>(CONFIG.registration.status);
   const [showCounter, setShowCounter] = useState<boolean>(CONFIG.registration.showCount);
-  const [registrationCount, setRegistrationCount] = useState<number>(38);
+  const [registrationCount, setRegistrationCount] = useState<number>(() => getRegistrationsCount());
 
   useEffect(() => {
     setRegistrationCount(getRegistrationsCount());
@@ -358,9 +461,34 @@ export const SinglePage: React.FC = () => {
     });
   };
 
+  // Anti-Bot Protection & Honeypot states
+  const [regFormStartTime, setRegFormStartTime] = useState<number>(() => Date.now());
+  const [partnerFormStartTime, setPartnerFormStartTime] = useState<number>(() => Date.now());
+  const [partnerHoneypot, setPartnerHoneypot] = useState('');
+
   // Partner Form Submit Handler
   const handlePartnerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Honeypot Check (Silently reject bot submissions)
+    if (partnerHoneypot.trim() !== '') {
+      return;
+    }
+
+    // 2. Minimum 3-second form-fill time check
+    const timeCheck = checkFormFillTime(partnerFormStartTime);
+    if (!timeCheck.valid) {
+      setPartnerError(timeCheck.error || 'Form submitted too quickly. Please take a moment to review your details.');
+      return;
+    }
+
+    // 3. Browser rate limit check (3 submissions per hour)
+    const rateCheck = checkBrowserRateLimit('partner');
+    if (!rateCheck.allowed) {
+      setPartnerError(rateCheck.error || 'Submission limit reached. Please try again later.');
+      return;
+    }
+
     if (!partnerData.company.trim() || !partnerData.contactName.trim() || !partnerData.email.trim()) {
       setPartnerError('Please provide company name, contact person, and email.');
       return;
@@ -373,6 +501,8 @@ export const SinglePage: React.FC = () => {
     setPartnerSubmitting(false);
 
     if (res.success) {
+      // Record rate limit timestamp
+      recordBrowserSubmission('partner');
       setPartnerSuccess(true);
       setTimeout(() => {
         setPartnerModalOpen(false);
@@ -384,6 +514,7 @@ export const SinglePage: React.FC = () => {
           phone: '',
           message: '',
         });
+        setPartnerHoneypot('');
       }, 2000);
     } else {
       setPartnerError(res.error || 'Failed to submit partner inquiry. Please retry.');
@@ -394,7 +525,22 @@ export const SinglePage: React.FC = () => {
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // 1. Honeypot Check (Silently reject bot submissions)
     if (honeypot.trim() !== '') {
+      return;
+    }
+
+    // 2. Minimum 3-second form-fill time check
+    const timeCheck = checkFormFillTime(regFormStartTime);
+    if (!timeCheck.valid) {
+      setErrors({ form: timeCheck.error || 'Form submitted too quickly. Please take a moment to review your details.' });
+      return;
+    }
+
+    // 3. Browser rate limit check (3 submissions per hour)
+    const rateCheck = checkBrowserRateLimit('registration');
+    if (!rateCheck.allowed) {
+      setErrors({ form: rateCheck.error || 'Submission limit reached (maximum 3 per hour). Please try again later.' });
       return;
     }
 
@@ -408,14 +554,14 @@ export const SinglePage: React.FC = () => {
     if (!emailTrim || !isValidEmail(emailTrim)) {
       newErrors.email = 'Please provide a valid email address.';
     } else if (isEmailRegistered(emailTrim)) {
-      newErrors.email = 'This email is already registered for Startup Conclave 1.0.';
+      newErrors.email = 'This email or phone is already registered.';
     }
 
     const phoneTrim = phone.replace(/\D/g, '').slice(-10);
     if (!phoneTrim || !isValidIndianPhone(phoneTrim)) {
       newErrors.phone = 'Please enter a valid 10-digit phone number.';
     } else if (isPhoneRegistered(phoneTrim)) {
-      newErrors.phone = 'This phone number is already registered for Startup Conclave 1.0.';
+      newErrors.phone = 'This email or phone is already registered.';
     }
 
     if (!college.trim()) {
@@ -457,6 +603,8 @@ export const SinglePage: React.FC = () => {
     setIsSubmitting(false);
 
     if (res.success && res.id) {
+      // Record rate limit timestamp
+      recordBrowserSubmission('registration');
       setSubmittedRecord({
         id: res.id,
         name: fullName.trim(),
@@ -471,7 +619,7 @@ export const SinglePage: React.FC = () => {
       });
       setRegistrationCount((prev) => prev + 1);
     } else {
-      setErrors({ form: res.error || 'Registration failed. Please try again.' });
+      setErrors({ form: res.error || 'This email or phone is already registered.' });
     }
   };
 
@@ -489,11 +637,27 @@ export const SinglePage: React.FC = () => {
     setStartupPitch('');
     setConsentAgreed(false);
     setErrors({});
+    setRegFormStartTime(Date.now());
   };
 
   return (
     <div className="min-h-screen bg-[#FFF8EC] text-[#111111] font-sans selection:bg-[#FF6B1A] selection:text-white pb-20 md:pb-0 overflow-x-clip text-base">
       
+      {/* Subtle Scroll Progress Bar at the very top of the page */}
+      <div
+        className="fixed top-0 left-0 right-0 z-50 h-[3.5px] bg-[#111111]/10 pointer-events-none"
+        role="progressbar"
+        aria-valuenow={Math.round(scrollProgress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Reading scroll progress"
+      >
+        <div
+          className="h-full bg-[#FF6B1A] transition-[width] duration-75 ease-out shadow-[0_1px_3px_rgba(255,107,26,0.35)]"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+
       {/* =================================================================== */}
       {/* 1. STICKY TOP BAR                                                   */}
       {/* =================================================================== */}
@@ -716,23 +880,23 @@ export const SinglePage: React.FC = () => {
             </p>
 
             {/* Quick Info Strip */}
-            <div className="p-3 sm:p-3.5 lg:p-4 bg-white brutal-border brutal-shadow-sm flex flex-wrap lg:flex-nowrap items-center gap-x-3 sm:gap-x-4 lg:gap-x-3.5 gap-y-2.5 font-mono text-xs sm:text-sm font-bold text-[#111111] w-full max-w-full">
-              <span className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
-                <Calendar className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+            <div className="p-2.5 sm:p-3.5 lg:px-3 lg:py-2.5 xl:p-3.5 bg-white brutal-border brutal-shadow-sm flex flex-wrap md:flex-nowrap items-center gap-x-2 sm:gap-x-3 lg:gap-x-2 xl:gap-x-3 gap-y-2 font-mono text-xs sm:text-[13px] xl:text-sm font-bold text-[#111111] w-full max-w-full">
+              <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
                 <span>Date: {CONFIG.event.date}</span>
               </span>
-              <span className="text-[#111111]/30 hidden sm:inline">|</span>
-              <span className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
-                <MapPin className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+              <span className="text-[#111111]/30 hidden md:inline shrink-0">|</span>
+              <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
                 <span>{CONFIG.event.venue}</span>
               </span>
-              <span className="text-[#111111]/30 hidden sm:inline">|</span>
-              <span className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
-                <Clock className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+              <span className="text-[#111111]/30 hidden md:inline shrink-0">|</span>
+              <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
                 <span>{CONFIG.event.duration}</span>
               </span>
-              <span className="text-[#111111]/30 hidden sm:inline">|</span>
-              <span className="bg-[#FFD400] px-2.5 py-1 border border-[#111111] text-xs uppercase font-black shrink-0 whitespace-nowrap">
+              <span className="text-[#111111]/30 hidden md:inline shrink-0">|</span>
+              <span className="bg-[#FFD400] px-2 py-0.5 sm:px-2.5 sm:py-1 border border-[#111111] text-[11px] sm:text-xs uppercase font-black shrink-0 whitespace-nowrap">
                 {CONFIG.event.mode}
               </span>
             </div>
@@ -1075,15 +1239,17 @@ export const SinglePage: React.FC = () => {
             {CONFIG.speakersInvestors.description}
           </p>
 
-          <div className="pt-2 border-t-2 border-[#111111]">
-            <a
-              href={`mailto:${CONFIG.contact.email}?subject=Speaking%20Inquiry%20-%20Startup%20Conclave%201.0`}
-              className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
-            >
-              <span>Interested in speaking? Contact us</span>
-              <span aria-hidden="true">→</span>
-            </a>
-          </div>
+          {Boolean((CONFIG.contactEmail || CONFIG.contact?.email)?.trim()) && (
+            <div className="pt-2 border-t-2 border-[#111111]">
+              <a
+                href={`mailto:${(CONFIG.contactEmail || CONFIG.contact.email).trim()}?subject=Speaking%20Inquiry%20-%20Startup%20Conclave%201.0`}
+                className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
+              >
+                <span>Interested in speaking? Contact us</span>
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          )}
 
           {/* If speakers array in src/config.ts is non-empty, only items with status "confirmed" may render */}
           {(() => {
@@ -1145,7 +1311,12 @@ export const SinglePage: React.FC = () => {
             </div>
 
             <button
-              onClick={() => setPartnerModalOpen(true)}
+              onClick={() => {
+                setPartnerFormStartTime(Date.now());
+                setPartnerHoneypot('');
+                setPartnerError('');
+                setPartnerModalOpen(true);
+              }}
               className="brutal-btn bg-[#111111] text-[#FFD400] px-6 py-3 font-display font-bold text-sm sm:text-base uppercase tracking-wider rounded-[2px] cursor-pointer shrink-0 min-h-[46px]"
             >
               Become a Partner
@@ -1206,14 +1377,16 @@ export const SinglePage: React.FC = () => {
             <p className="text-base font-sans text-[#111111]/80 max-w-md mx-auto">
               Delegate registrations for Startup Conclave 1.0 are currently closed. For inquiries, please reach out to the secretariat.
             </p>
-            <div className="pt-2">
-              <a
-                href={`mailto:${CONFIG.contact.email}`}
-                className="brutal-btn bg-[#FFD400] text-[#111111] px-5 py-3 font-mono text-sm font-bold uppercase inline-block min-h-[46px] flex items-center justify-center mx-auto"
-              >
-                Contact Secretariat ({CONFIG.contact.email})
-              </a>
-            </div>
+            {Boolean((CONFIG.contactEmail || CONFIG.contact?.email)?.trim()) && (
+              <div className="pt-2">
+                <a
+                  href={`mailto:${(CONFIG.contactEmail || CONFIG.contact.email).trim()}`}
+                  className="brutal-btn bg-[#FFD400] text-[#111111] px-5 py-3 font-mono text-sm font-bold uppercase inline-block min-h-[46px] flex items-center justify-center mx-auto"
+                >
+                  Contact Secretariat ({(CONFIG.contactEmail || CONFIG.contact.email).trim()})
+                </a>
+              </div>
+            )}
           </div>
         ) : submittedRecord ? (
           /* =============================================================== */
@@ -1415,7 +1588,7 @@ export const SinglePage: React.FC = () => {
                       setPhone(val);
                       if (errors.phone) setErrors({ ...errors, phone: '' });
                     }}
-                    placeholder=".........."
+                    placeholder="10-digit number"
                     className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white font-mono min-h-[46px] text-base"
                   />
                   {errors.phone && <p className="text-xs text-red-600 font-bold">{errors.phone}</p>}
@@ -1606,6 +1779,11 @@ export const SinglePage: React.FC = () => {
       {/* 10. FAQ ACCORDION (6 Questions)                                     */}
       {/* =================================================================== */}
       <section id="faq" className="px-4 sm:px-8 py-16 sm:py-24 max-w-4xl mx-auto text-left border-b-2 border-[#111111]">
+        {/* In-page Schema.org JSON-LD for Search Engine FAQ Rich Snippets */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
         
         <div className="flex items-center gap-3 mb-6">
           <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
@@ -1669,29 +1847,46 @@ export const SinglePage: React.FC = () => {
 
           <div className="space-y-2 font-mono text-xs sm:text-sm">
             <span className="font-black text-[#111111] uppercase block mb-1">Secretariat Desk</span>
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-              <a href={`mailto:${CONFIG.contact.email}`} className="hover:underline">
-                {CONFIG.contact.email}
-              </a>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-              <span>{CONFIG.contact.phone}</span>
-            </div>
-            <div className="text-[#111111]/70 pt-1">
-              {CONFIG.contact.city}
-            </div>
+            {(() => {
+              const email = (CONFIG.contactEmail || CONFIG.contact?.email || '').trim();
+              const phone = (CONFIG.contactPhone || CONFIG.contact?.phone || '').trim();
+
+              return (
+                <>
+                  {email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                      <a href={`mailto:${email}`} className="hover:underline">
+                        {email}
+                      </a>
+                    </div>
+                  )}
+                  {phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                      <a href={`tel:${phone}`} className="hover:underline">
+                        {phone}
+                      </a>
+                    </div>
+                  )}
+                  {CONFIG.contact?.city && (
+                    <div className="text-[#111111]/70 pt-1">
+                      {CONFIG.contact.city}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           <div className="space-y-2">
             <span className="font-mono font-black text-[#111111] uppercase block text-xs sm:text-sm">Social & Community</span>
             {(() => {
-              const hasLinkedin = Boolean(CONFIG.contact.socials?.linkedin && CONFIG.contact.socials.linkedin.trim() !== '');
-              const hasTwitter = Boolean(CONFIG.contact.socials?.twitter && CONFIG.contact.socials.twitter.trim() !== '');
-              const hasInstagram = Boolean(CONFIG.contact.socials?.instagram && CONFIG.contact.socials.instagram.trim() !== '');
+              const linkedin = (CONFIG.linkedinUrl || CONFIG.contact?.socials?.linkedin || '').trim();
+              const xTwitter = (CONFIG.xUrl || CONFIG.contact?.socials?.twitter || '').trim();
+              const instagram = (CONFIG.instagramUrl || CONFIG.contact?.socials?.instagram || '').trim();
 
-              if (!hasLinkedin && !hasTwitter && !hasInstagram) {
+              if (!linkedin && !xTwitter && !instagram) {
                 return (
                   <span className="font-mono text-xs text-[#111111]/60 block pt-1">
                     Announcing soon
@@ -1701,9 +1896,9 @@ export const SinglePage: React.FC = () => {
 
               return (
                 <div className="flex flex-wrap items-center gap-3">
-                  {hasLinkedin && (
+                  {linkedin && (
                     <a
-                      href={CONFIG.contact.socials.linkedin}
+                      href={linkedin}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2.5 brutal-border bg-white hover:bg-[#FFD400] transition-colors min-h-[44px] flex items-center text-xs font-mono font-bold"
@@ -1712,20 +1907,20 @@ export const SinglePage: React.FC = () => {
                       LinkedIn
                     </a>
                   )}
-                  {hasTwitter && (
+                  {xTwitter && (
                     <a
-                      href={CONFIG.contact.socials.twitter}
+                      href={xTwitter}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2.5 brutal-border bg-white hover:bg-[#FFD400] transition-colors min-h-[44px] flex items-center text-xs font-mono font-bold"
-                      aria-label="Twitter"
+                      aria-label="X (Twitter)"
                     >
                       X (Twitter)
                     </a>
                   )}
-                  {hasInstagram && (
+                  {instagram && (
                     <a
-                      href={CONFIG.contact.socials.instagram}
+                      href={instagram}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2.5 brutal-border bg-white hover:bg-[#FFD400] transition-colors min-h-[44px] flex items-center text-xs font-mono font-bold"
@@ -1799,6 +1994,19 @@ export const SinglePage: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handlePartnerSubmit} className="space-y-3 font-sans text-sm">
+                {/* Anti-Bot Honeypot Field */}
+                <div className="hidden" aria-hidden="true">
+                  <label htmlFor="partner_nickname">Do not fill this</label>
+                  <input
+                    id="partner_nickname"
+                    type="text"
+                    value={partnerHoneypot}
+                    onChange={(e) => setPartnerHoneypot(e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
+
                 {partnerError && (
                   <div className="p-2.5 bg-red-100 border border-red-500 text-red-700 text-xs font-bold">
                     {partnerError}
@@ -1835,7 +2043,7 @@ export const SinglePage: React.FC = () => {
                       type="tel"
                       value={partnerData.phone}
                       onChange={(e) => setPartnerData({ ...partnerData, phone: e.target.value })}
-                      placeholder="+91 ..... ....."
+                      placeholder="Enter 10-digit number"
                       className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
                     />
                   </div>
