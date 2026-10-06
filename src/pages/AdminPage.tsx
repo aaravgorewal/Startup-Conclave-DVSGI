@@ -46,6 +46,8 @@ import {
   bulkUpdateStatus,
   updatePartnerEnquiry,
   exportToCSV,
+  getEventSettings,
+  saveEventSettings,
 } from '../services/admin.ts';
 
 export const AdminPage: React.FC = () => {
@@ -122,10 +124,22 @@ export const AdminPage: React.FC = () => {
   const [activeDetailItem, setActiveDetailItem] = useState<AdminRegistration | null>(null);
   const [detailNotes, setDetailNotes] = useState('');
 
-  // Event Settings State (Config Overrides)
+  // Event Settings State (Config Overrides & Firestore settings/event)
+  const [registrationCapSetting, setRegistrationCapSetting] = useState<number>(500);
   const [regStatusSetting, setRegStatusSetting] = useState<'open' | 'closed'>(CONFIG.registration.status);
   const [showCountSetting, setShowCountSetting] = useState<boolean>(CONFIG.registration.showCount);
   const [settingsSavedToast, setSettingsSavedToast] = useState(false);
+
+  // Load Firestore settings/event on mount
+  useEffect(() => {
+    getEventSettings().then((s) => {
+      if (s) {
+        setRegistrationCapSetting(s.registrationCap || 500);
+        setRegStatusSetting(s.registrationStatus || s.status || 'open');
+        setShowCountSetting(s.showCount !== undefined ? s.showCount : true);
+      }
+    }).catch((err) => console.warn('Notice loading settings/event:', err));
+  }, []);
 
   // Monitor Firebase Auth State
   useEffect(() => {
@@ -280,10 +294,16 @@ export const AdminPage: React.FC = () => {
     setSelectedIds([]);
   };
 
-  // Settings Save
-  const handleSaveSettings = () => {
+  // Settings Save to Firestore "settings/event"
+  const handleSaveSettings = async () => {
     CONFIG.registration.status = regStatusSetting;
     CONFIG.registration.showCount = showCountSetting;
+    await saveEventSettings({
+      registrationCap: registrationCapSetting,
+      registrationStatus: regStatusSetting,
+      showCount: showCountSetting,
+      status: regStatusSetting,
+    });
     setSettingsSavedToast(true);
     setTimeout(() => setSettingsSavedToast(false), 2500);
   };
@@ -295,11 +315,12 @@ export const AdminPage: React.FC = () => {
     const founders = registrations.filter((r) => r.role === 'Founder').length;
     const others = total - (students + founders);
     const wantsToPitch = registrations.filter((r) => r.wantsToPitch).length;
+    const waitlist = registrations.filter((r) => r.status === 'waitlist').length;
 
     const todayStr = new Date().toISOString().slice(0, 10);
     const today = registrations.filter((r) => r.createdAt && r.createdAt.slice(0, 10) === todayStr).length;
 
-    return { total, students, founders, others, wantsToPitch, today };
+    return { total, students, founders, others, wantsToPitch, waitlist, today };
   }, [registrations]);
 
   // Filtered & Sorted Registrations
@@ -598,7 +619,7 @@ export const AdminPage: React.FC = () => {
                   {stats.total}
                 </div>
                 <span className="text-[10px] font-mono text-[#FF6B1A]">
-                  Live database count
+                  {stats.waitlist > 0 ? `${stats.waitlist} on waitlist` : `Cap: ${registrationCapSetting}`}
                 </span>
               </div>
 
@@ -695,8 +716,9 @@ export const AdminPage: React.FC = () => {
                   }}
                   className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
                 >
-                  <option value="All">All Statuses</option>
+                  <option value="All">All Statuses ({registrations.length})</option>
                   <option value="registered">Registered</option>
+                  <option value="waitlist">Waitlist ({stats.waitlist})</option>
                   <option value="confirmed">Confirmed</option>
                   <option value="checked_in">Checked-in</option>
                   <option value="cancelled">Cancelled</option>
@@ -723,6 +745,12 @@ export const AdminPage: React.FC = () => {
                     className="px-3 py-1 bg-white border border-[#111111] hover:bg-emerald-50 text-emerald-900"
                   >
                     Mark Confirmed
+                  </button>
+                  <button
+                    onClick={() => handleBulkStatus('waitlist')}
+                    className="px-3 py-1 bg-white border border-[#111111] hover:bg-amber-50 text-amber-950 font-bold"
+                  >
+                    Mark Waitlist
                   </button>
                   <button
                     onClick={() => handleBulkStatus('checked_in')}
@@ -844,12 +872,15 @@ export const AdminPage: React.FC = () => {
                               ? 'bg-emerald-100 text-emerald-900'
                               : reg.status === 'checked_in'
                               ? 'bg-blue-100 text-blue-900'
+                              : reg.status === 'waitlist'
+                              ? 'bg-amber-200 text-amber-950 font-black'
                               : reg.status === 'cancelled'
                               ? 'bg-red-100 text-red-900'
                               : 'bg-[#FFF8EC] text-[#111111]'
                           }`}
                         >
                           <option value="registered">Registered</option>
+                          <option value="waitlist">Waitlist</option>
                           <option value="confirmed">Confirmed</option>
                           <option value="checked_in">Checked-in</option>
                           <option value="cancelled">Cancelled</option>
@@ -1167,6 +1198,32 @@ export const AdminPage: React.FC = () => {
                 </button>
               </div>
 
+              {/* Capacity Setting: Registration Cap in Firestore settings/event */}
+              <div className="p-4 bg-[#FFF8EC] border-2 border-[#111111] space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <strong className="text-sm font-display block text-[#111111]">
+                      Registration Capacity Cap (registrationCap)
+                    </strong>
+                    <span className="text-[#111111]/70 text-xs block">
+                      Stored in Firestore "settings/event". When registration count reaches this cap, new sign-ups are automatically assigned status "waitlist".
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <input
+                      type="number"
+                      min={1}
+                      max={50000}
+                      value={registrationCapSetting}
+                      onChange={(e) => setRegistrationCapSetting(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-28 p-2 bg-white border-2 border-[#111111] font-mono text-sm font-black text-center"
+                    />
+                    <span className="font-mono text-xs text-[#111111] font-bold">seats</span>
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-2">
                 <button
                   onClick={handleSaveSettings}
@@ -1213,13 +1270,15 @@ export const AdminPage: React.FC = () => {
                 Current Status:
               </label>
               <div className="grid grid-cols-2 gap-2 font-mono text-xs">
-                {(['registered', 'confirmed', 'checked_in', 'cancelled'] as const).map((st) => (
+                {(['registered', 'waitlist', 'confirmed', 'checked_in', 'cancelled'] as const).map((st) => (
                   <button
                     key={st}
                     onClick={() => handleStatusChange(activeDetailItem.id, st)}
                     className={`p-2 border border-[#111111] uppercase font-bold text-[11px] ${
                       activeDetailItem.status === st
                         ? 'bg-[#111111] text-[#FFD400]'
+                        : st === 'waitlist'
+                        ? 'bg-amber-100 hover:bg-amber-200 text-amber-950'
                         : 'bg-[#FFF8EC] hover:bg-white'
                     }`}
                   >

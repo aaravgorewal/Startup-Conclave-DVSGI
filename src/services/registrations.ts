@@ -151,10 +151,11 @@ export const generateRegistrationId = (): string => {
 
 /**
  * Create a new attendee registration in Firestore & Local Cache
+ * Honest flow: success screen ONLY after Firestore confirms the transaction.
  */
 export const createRegistration = async (
   input: RegistrationInput
-): Promise<{ success: boolean; id?: string; error?: string }> => {
+): Promise<{ success: boolean; id?: string; status?: 'registered' | 'waitlist'; error?: string; isNetworkError?: boolean }> => {
   const emailClean = input.email.trim().toLowerCase();
   const phoneClean = cleanPhoneNumber(input.phone);
 
@@ -182,7 +183,16 @@ export const createRegistration = async (
     return { success: false, error: 'Course name and year are required for student delegates.' };
   }
 
-  // 2. Duplicate Check
+  // 2. Client-side internet connectivity check
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return {
+      success: false,
+      isNetworkError: true,
+      error: 'Could not submit. Check your internet and try again.',
+    };
+  }
+
+  // 3. Local quick-duplicate check
   if (isEmailRegistered(emailClean) || isPhoneRegistered(phoneClean)) {
     return {
       success: false,
@@ -190,7 +200,7 @@ export const createRegistration = async (
     };
   }
 
-  // 3. Compute deterministic hashes for email and phone
+  // 4. Compute deterministic hashes for email and phone
   const emailHash = await hashString(emailClean);
   const phoneHash = await hashString(phoneClean);
   const nowIso = new Date().toISOString();
@@ -212,17 +222,19 @@ export const createRegistration = async (
     createdAt: nowIso,
   };
 
-  // 4. Store in Firestore database using an atomic transaction on counter document
-  // Increments /counters/registrations to assign SC1-00001, SC1-00002... safely.
-  // Registrations doc keyed by emailHash; phoneIndex doc keyed by phoneHash.
-  // If either doc already exists, Firestore security rules reject the write and transaction aborts.
+  // 5. Store in Firestore database using an atomic transaction on counter document.
+  // The success screen is ONLY shown after Firestore confirms the transaction.
   let assignedId = '';
+  let finalStatus: 'registered' | 'waitlist' = 'registered';
+
   try {
     const counterRef = doc(db, 'counters', 'registrations');
     const regDocRef = doc(db, 'registrations', emailHash);
     const phoneDocRef = doc(db, 'phoneIndex', phoneHash);
+    const settingsRef = doc(db, 'settings', 'event');
 
-    assignedId = await runTransaction(db, async (transaction) => {
+    const result = await runTransaction(db, async (transaction) => {
+      // 5a. Read atomic counter
       const counterSnap = await transaction.get(counterRef);
       let nextCount = 1;
       if (counterSnap.exists()) {
@@ -231,6 +243,20 @@ export const createRegistration = async (
         nextCount = current + 1;
       }
       const idCode = `SC1-${nextCount.toString().padStart(5, '0')}`;
+
+      // 5b. Read settings/event for registration capacity cap (default 500)
+      const settingsSnap = await transaction.get(settingsRef);
+      let registrationCap = 500;
+      if (settingsSnap.exists()) {
+        const sData = settingsSnap.data();
+        if (typeof sData?.registrationCap === 'number') {
+          registrationCap = sData.registrationCap;
+        }
+      }
+
+      // 5c. When registration count reaches the cap, assign status "waitlist"
+      const assignedStatus: 'registered' | 'waitlist' =
+        nextCount > registrationCap ? 'waitlist' : 'registered';
 
       transaction.set(counterRef, {
         currentCount: nextCount,
@@ -253,7 +279,7 @@ export const createRegistration = async (
         wantsToPitch: record.wantsToPitch,
         startupName: record.startupName,
         startupPitch: record.startupPitch,
-        status: 'registered',
+        status: assignedStatus,
         createdAt: serverTimestamp(),
       });
 
@@ -264,20 +290,48 @@ export const createRegistration = async (
         createdAt: serverTimestamp(),
       });
 
-      return idCode;
+      return { idCode, status: assignedStatus };
     });
+
+    assignedId = result.idCode;
+    finalStatus = result.status;
   } catch (firestoreError: any) {
     console.warn('Firestore registration transaction error:', firestoreError);
+    const code = firestoreError?.code || '';
+    const msg = (firestoreError?.message || '').toLowerCase();
+    const isNetwork =
+      (typeof navigator !== 'undefined' && navigator.onLine === false) ||
+      code === 'unavailable' ||
+      code === 'deadline-exceeded' ||
+      code === 'network-request-failed' ||
+      code === 'failed-precondition' ||
+      msg.includes('offline') ||
+      msg.includes('network') ||
+      msg.includes('failed to fetch') ||
+      msg.includes('transport') ||
+      msg.includes('could not reach') ||
+      msg.includes('client is offline');
+
+    if (isNetwork) {
+      return {
+        success: false,
+        isNetworkError: true,
+        error: 'Could not submit. Check your internet and try again.',
+      };
+    }
+
     // Write failed due to existing document, duplicate conflict, or rule restriction
     return {
       success: false,
+      isNetworkError: false,
       error: 'This email or phone is already registered.',
     };
   }
 
   record.id = assignedId;
+  record.status = finalStatus;
 
-  // 5. Update local cache for deduplication & offline resilience
+  // 6. Update local cache ONLY after verified successful Firestore confirmation
   try {
     const rawList = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
     const list: any[] = rawList ? JSON.parse(rawList) : [];
@@ -297,15 +351,16 @@ export const createRegistration = async (
     console.warn('Local storage cache write notice:', storageError);
   }
 
-  return { success: true, id: assignedId };
+  return { success: true, id: assignedId, status: finalStatus };
 };
 
 /**
  * Create a new partner inquiry in Firestore & Local Cache
+ * Honest flow: success ONLY after Firestore confirms the write.
  */
 export const createPartnerEnquiry = async (
   input: PartnerEnquiryInput
-): Promise<{ success: boolean; id?: string; error?: string }> => {
+): Promise<{ success: boolean; id?: string; error?: string; isNetworkError?: boolean }> => {
   if (!input.company.trim() || !input.contactName.trim() || !input.email.trim()) {
     return { success: false, error: 'Please fill in company, contact name, and email.' };
   }
@@ -318,19 +373,17 @@ export const createPartnerEnquiry = async (
     };
   }
 
+  // Network check
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return {
+      success: false,
+      isNetworkError: true,
+      error: 'Could not submit. Check your internet and try again.',
+    };
+  }
+
   const enquiryId = `PARTNER-${Date.now().toString(36).toUpperCase()}`;
   const nowIso = new Date().toISOString();
-
-  const data = {
-    id: enquiryId,
-    company: input.company.trim(),
-    contactName: input.contactName.trim(),
-    email: input.email.trim().toLowerCase(),
-    phone: cleanedPhone,
-    message: input.message?.trim() || '',
-    status: 'new',
-    createdAt: nowIso,
-  };
 
   try {
     const docRef = doc(db, 'partnerEnquiries', enquiryId);
@@ -344,14 +397,46 @@ export const createPartnerEnquiry = async (
       status: 'new',
       createdAt: serverTimestamp(),
     });
-  } catch (firestoreError) {
-    console.warn('Firestore partner write notice:', firestoreError);
+  } catch (firestoreError: any) {
+    console.warn('Firestore partner write error:', firestoreError);
+    const code = firestoreError?.code || '';
+    const msg = (firestoreError?.message || '').toLowerCase();
+    const isNetwork =
+      (typeof navigator !== 'undefined' && navigator.onLine === false) ||
+      code === 'unavailable' ||
+      code === 'deadline-exceeded' ||
+      code === 'network-request-failed' ||
+      code === 'failed-precondition' ||
+      msg.includes('offline') ||
+      msg.includes('network') ||
+      msg.includes('failed to fetch') ||
+      msg.includes('transport') ||
+      msg.includes('could not reach') ||
+      msg.includes('client is offline');
+
+    return {
+      success: false,
+      isNetworkError: isNetwork,
+      error: isNetwork
+        ? 'Could not submit. Check your internet and try again.'
+        : 'Failed to submit partner inquiry. Please retry.',
+    };
   }
 
+  // Save to local cache ONLY after verified successful Firestore write
   try {
     const raw = localStorage.getItem('sc1_partner_enquiries');
     const list: any[] = raw ? JSON.parse(raw) : [];
-    list.push(data);
+    list.push({
+      id: enquiryId,
+      company: input.company.trim(),
+      contactName: input.contactName.trim(),
+      email: input.email.trim().toLowerCase(),
+      phone: cleanedPhone,
+      message: input.message?.trim() || '',
+      status: 'new',
+      createdAt: nowIso,
+    });
     localStorage.setItem('sc1_partner_enquiries', JSON.stringify(list));
   } catch (storageError) {
     console.warn('Local storage partner cache notice:', storageError);

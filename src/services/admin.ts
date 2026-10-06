@@ -1,14 +1,25 @@
 import {
   collection,
   getDocs,
+  getDoc,
+  setDoc,
   doc,
   updateDoc,
   query,
   orderBy,
   deleteDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './firebase.ts';
 import { RegistrationRecord } from './registrations.ts';
+
+export interface EventSettings {
+  registrationCap: number;
+  registrationStatus: 'open' | 'closed';
+  showCount: boolean;
+  status: 'open' | 'closed';
+  updatedAt?: any;
+}
 
 export interface AdminRegistration extends RegistrationRecord {
   pitchStatus?: 'Applied' | 'Shortlisted' | 'Finalist' | 'Rejected' | string;
@@ -219,4 +230,72 @@ export const exportToCSV = (data: Record<string, any>[], filename: string) => {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+};
+
+/**
+ * Retrieve event settings from Firestore settings/event
+ */
+export const getEventSettings = async (): Promise<EventSettings> => {
+  const defaultSettings: EventSettings = {
+    registrationCap: 500,
+    registrationStatus: 'open',
+    showCount: true,
+    status: 'open',
+  };
+
+  try {
+    const docRef = doc(db, 'settings', 'event');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      return {
+        registrationCap: typeof data.registrationCap === 'number' ? data.registrationCap : 500,
+        registrationStatus: data.registrationStatus === 'closed' || data.status === 'closed' ? 'closed' : 'open',
+        showCount: data.showCount !== undefined ? Boolean(data.showCount) : true,
+        status: data.status === 'closed' || data.registrationStatus === 'closed' ? 'closed' : 'open',
+      };
+    }
+  } catch (err) {
+    console.warn('Notice reading settings/event from Firestore:', err);
+  }
+
+  try {
+    const raw = localStorage.getItem('sc1_event_settings');
+    if (raw) return { ...defaultSettings, ...JSON.parse(raw) };
+  } catch {}
+
+  return defaultSettings;
+};
+
+/**
+ * Save event settings to Firestore settings/event
+ */
+export const saveEventSettings = async (settings: Partial<EventSettings>): Promise<boolean> => {
+  const current = await getEventSettings();
+  const cap = typeof settings.registrationCap === 'number' ? settings.registrationCap : current.registrationCap;
+  const regStatus = settings.registrationStatus || settings.status || current.registrationStatus;
+  const showCount = settings.showCount !== undefined ? settings.showCount : current.showCount;
+
+  const payload: EventSettings = {
+    registrationCap: cap,
+    registrationStatus: regStatus,
+    showCount: showCount,
+    status: regStatus,
+  };
+
+  try {
+    const docRef = doc(db, 'settings', 'event');
+    await setDoc(docRef, {
+      ...payload,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.warn('Notice writing settings/event to Firestore:', err);
+  }
+
+  try {
+    localStorage.setItem('sc1_event_settings', JSON.stringify(payload));
+  } catch {}
+
+  return true;
 };

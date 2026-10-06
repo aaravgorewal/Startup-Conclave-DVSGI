@@ -39,7 +39,7 @@ service cloud.firestore {
         && data.phone is string && data.phone.matches('^[0-9]{10}$')
         && data.college is string && data.college.size() > 0 && data.college.size() <= 150
         && data.role is string && data.role in ['Student', 'Founder', 'Professional', 'Other']
-        && data.status is string && data.status == 'registered'
+        && data.status is string && data.status in ['registered', 'waitlist']
         && data.createdAt == request.time
         && (!('id' in data) || (data.id is string && data.id.size() <= 128))
         && (!('registrationId' in data) || (data.registrationId is string && data.registrationId.size() <= 64))
@@ -125,8 +125,8 @@ service cloud.firestore {
 
     // 5. Settings Document
     match /settings/{settingId} {
-      // Public users can only read the necessary event status fields (registration open/closed)
-      allow read: if resource.data.keys().hasOnly(['registrationStatus', 'showCount', 'status', 'updatedAt']);
+      // Public users can read event status and registration cap settings
+      allow read: if true;
 
       // Only verified administrators can write or modify settings
       allow write: if isAdmin();

@@ -17,6 +17,7 @@ import {
   Handshake,
   Check,
   Lock,
+  RotateCw,
 } from 'lucide-react';
 import { CONFIG } from '../../config.ts';
 import {
@@ -29,6 +30,7 @@ import {
   getRegistrationsCount,
   RegistrationInput,
 } from '../../services/registrations.ts';
+import { getEventSettings } from '../../services/admin.ts';
 import {
   checkFormFillTime,
   checkBrowserRateLimit,
@@ -389,13 +391,19 @@ export const SinglePage: React.FC = () => {
   // Mobile navigation drawer state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Registration Status & Counter Settings from config
+  // Registration Status & Counter Settings from config & Firestore settings/event
   const [regStatus, setRegStatus] = useState<'open' | 'closed'>(CONFIG.registration.status);
   const [showCounter, setShowCounter] = useState<boolean>(CONFIG.registration.showCount);
   const [registrationCount, setRegistrationCount] = useState<number>(() => getRegistrationsCount());
 
   useEffect(() => {
     setRegistrationCount(getRegistrationsCount());
+    getEventSettings().then((s) => {
+      if (s) {
+        setRegStatus(s.registrationStatus || s.status || 'open');
+        setShowCounter(s.showCount !== undefined ? s.showCount : true);
+      }
+    }).catch(() => {});
   }, []);
 
   // Partner Modal State
@@ -440,6 +448,7 @@ export const SinglePage: React.FC = () => {
     wantsToPitch: boolean;
     startupName?: string;
     startupPitch?: string;
+    status?: string;
   } | null>(null);
 
   // FAQ Accordion Open State
@@ -465,10 +474,13 @@ export const SinglePage: React.FC = () => {
   const [regFormStartTime, setRegFormStartTime] = useState<number>(() => Date.now());
   const [partnerFormStartTime, setPartnerFormStartTime] = useState<number>(() => Date.now());
   const [partnerHoneypot, setPartnerHoneypot] = useState('');
+  const [isNetworkError, setIsNetworkError] = useState(false);
+  const [partnerNetworkError, setPartnerNetworkError] = useState(false);
 
   // Partner Form Submit Handler
   const handlePartnerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (partnerSubmitting) return;
 
     // 1. Honeypot Check (Silently reject bot submissions)
     if (partnerHoneypot.trim() !== '') {
@@ -496,11 +508,14 @@ export const SinglePage: React.FC = () => {
 
     setPartnerSubmitting(true);
     setPartnerError('');
+    setPartnerNetworkError(false);
 
     const res = await createPartnerEnquiry(partnerData);
     setPartnerSubmitting(false);
 
     if (res.success) {
+      setPartnerNetworkError(false);
+      setPartnerError('');
       // Record rate limit timestamp
       recordBrowserSubmission('partner');
       setPartnerSuccess(true);
@@ -517,13 +532,15 @@ export const SinglePage: React.FC = () => {
         setPartnerHoneypot('');
       }, 2000);
     } else {
-      setPartnerError(res.error || 'Failed to submit partner inquiry. Please retry.');
+      setPartnerNetworkError(Boolean(res.isNetworkError));
+      setPartnerError(res.error || 'Could not submit. Check your internet and try again.');
     }
   };
 
   // Registration Form Submit Handler
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     // 1. Honeypot Check (Silently reject bot submissions)
     if (honeypot.trim() !== '') {
@@ -584,6 +601,7 @@ export const SinglePage: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    setIsNetworkError(false);
 
     const inputData: RegistrationInput = {
       name: fullName.trim(),
@@ -605,6 +623,8 @@ export const SinglePage: React.FC = () => {
     if (res.success && res.id) {
       // Record rate limit timestamp
       recordBrowserSubmission('registration');
+      setIsNetworkError(false);
+      setErrors({});
       setSubmittedRecord({
         id: res.id,
         name: fullName.trim(),
@@ -616,10 +636,14 @@ export const SinglePage: React.FC = () => {
         wantsToPitch,
         startupName: startupName.trim(),
         startupPitch: startupPitch.trim(),
+        status: res.status || 'registered',
       });
       setRegistrationCount((prev) => prev + 1);
     } else {
-      setErrors({ form: res.error || 'This email or phone is already registered.' });
+      // Keep all form data intact and surface clear error message with Retry option
+      const isNet = Boolean(res.isNetworkError || res.error?.includes('internet') || res.error?.includes('network'));
+      setIsNetworkError(isNet);
+      setErrors({ form: res.error || (isNet ? 'Could not submit. Check your internet and try again.' : 'This email or phone is already registered.') });
     }
   };
 
@@ -637,6 +661,7 @@ export const SinglePage: React.FC = () => {
     setStartupPitch('');
     setConsentAgreed(false);
     setErrors({});
+    setIsNetworkError(false);
     setRegFormStartTime(Date.now());
   };
 
@@ -1419,8 +1444,12 @@ export const SinglePage: React.FC = () => {
               {/* Status and ID */}
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-xs font-black uppercase tracking-wider text-[#FF6B1A] bg-white px-2 py-0.5 border border-[#111111]">
-                    REGISTRATION CONFIRMED
+                  <span className={`font-mono text-xs font-black uppercase tracking-wider px-2 py-0.5 border border-[#111111] ${
+                    submittedRecord.status === 'waitlist'
+                      ? 'bg-amber-300 text-amber-950'
+                      : 'bg-white text-[#FF6B1A]'
+                  }`}>
+                    {submittedRecord.status === 'waitlist' ? 'WAITLIST ENTRY' : 'REGISTRATION CONFIRMED'}
                   </span>
                   <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-[#111111] bg-[#FFF2D6] px-2 py-0.5 border border-[#111111]">
                     <span className="w-2 h-2 rounded-full bg-emerald-600 animate-sync-glow shrink-0" />
@@ -1429,7 +1458,9 @@ export const SinglePage: React.FC = () => {
                 </div>
 
                 <h3 className="font-display font-extrabold text-2xl text-[#111111] leading-tight">
-                  You're registered for the conclave.
+                  {submittedRecord.status === 'waitlist'
+                    ? 'You are on the waitlist.'
+                    : "You're registered for the conclave."}
                 </h3>
                 
                 <p className="text-sm font-mono font-bold text-[#111111]">
@@ -1441,7 +1472,11 @@ export const SinglePage: React.FC = () => {
             {/* Mandatory Entry Line */}
             <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] font-sans font-bold text-sm sm:text-base text-[#111111] flex items-center gap-2.5">
               <Calendar className="w-5 h-5 text-[#FF6B1A] shrink-0" />
-              <span>Date and entry details will be shared on your email/WhatsApp.</span>
+              <span>
+                {submittedRecord.status === 'waitlist'
+                  ? 'Capacity reached. Waitlist updates and seat release details will be shared on email/WhatsApp.'
+                  : 'Date and entry details will be shared on your email/WhatsApp.'}
+              </span>
             </div>
 
             {/* Summary of what they entered */}
@@ -1470,6 +1505,12 @@ export const SinglePage: React.FC = () => {
                 <div>
                   <span className="text-[#111111]/70 text-xs block">Category:</span>
                   <span className="font-bold text-[#111111]">{submittedRecord.role} · {submittedRecord.city}</span>
+                </div>
+                <div>
+                  <span className="text-[#111111]/70 text-xs block">Status:</span>
+                  <span className={`font-bold ${submittedRecord.status === 'waitlist' ? 'text-amber-800' : 'text-emerald-800'}`}>
+                    {submittedRecord.status === 'waitlist' ? 'Waitlist (Capacity reached)' : 'Registered'}
+                  </span>
                 </div>
                 <div>
                   <span className="text-[#111111]/70 text-xs block">Pitch Arena Aspirant:</span>
@@ -1520,9 +1561,22 @@ export const SinglePage: React.FC = () => {
             </div>
 
             {errors.form && (
-              <div className="p-3.5 bg-red-100 border-2 border-red-500 text-red-700 text-sm font-bold flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 shrink-0" />
-                <span>{errors.form}</span>
+              <div className="p-3.5 sm:p-4 bg-red-100 border-2 border-red-500 text-red-800 text-sm font-bold flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
+                  <span>{errors.form}</span>
+                </div>
+                {isNetworkError && (
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={(e) => handleRegisterSubmit(e)}
+                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-mono font-bold text-xs uppercase tracking-wider border border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 self-start sm:self-auto cursor-pointer flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <RotateCw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
+                    <span>Retry</span>
+                  </button>
+                )}
               </div>
             )}
 
@@ -1752,10 +1806,17 @@ export const SinglePage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full brutal-btn bg-[#FF6B1A] text-white p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] cursor-pointer flex items-center justify-center gap-2 min-h-[50px]"
+                  className={`w-full brutal-btn bg-[#FF6B1A] text-white p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${
+                    isSubmitting
+                      ? 'opacity-60 cursor-not-allowed pointer-events-none'
+                      : 'cursor-pointer hover:bg-[#E05307]'
+                  }`}
                 >
                   {isSubmitting ? (
-                    <span>Registering...</span>
+                    <span className="flex items-center gap-2">
+                      <RotateCw className="w-5 h-5 animate-spin" />
+                      <span>Submitting...</span>
+                    </span>
                   ) : (
                     <>
                       <span>Register for Startup Conclave 1.0</span>
@@ -2008,8 +2069,22 @@ export const SinglePage: React.FC = () => {
                 </div>
 
                 {partnerError && (
-                  <div className="p-2.5 bg-red-100 border border-red-500 text-red-700 text-xs font-bold">
-                    {partnerError}
+                  <div className="p-3 bg-red-100 border border-red-500 text-red-700 text-xs font-bold flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                      <span>{partnerError}</span>
+                    </div>
+                    {partnerNetworkError && (
+                      <button
+                        type="button"
+                        disabled={partnerSubmitting}
+                        onClick={(e) => handlePartnerSubmit(e)}
+                        className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-mono text-[11px] font-bold uppercase border border-[#111111] shrink-0 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        <RotateCw className={`w-3 h-3 ${partnerSubmitting ? 'animate-spin' : ''}`} />
+                        <span>Retry</span>
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -2083,9 +2158,18 @@ export const SinglePage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={partnerSubmitting}
-                    className="brutal-btn bg-[#FF6B1A] text-white px-5 py-2 font-display font-bold text-xs uppercase min-h-[44px]"
+                    className={`brutal-btn bg-[#FF6B1A] text-white px-5 py-2 font-display font-bold text-xs uppercase min-h-[44px] ${
+                      partnerSubmitting ? 'opacity-60 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
+                    }`}
                   >
-                    {partnerSubmitting ? 'Sending...' : 'Submit Inquiry'}
+                    {partnerSubmitting ? (
+                      <span className="flex items-center gap-1.5">
+                        <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Submitting...</span>
+                      </span>
+                    ) : (
+                      'Submit Inquiry'
+                    )}
                   </button>
                 </div>
               </form>
