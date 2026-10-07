@@ -113,6 +113,28 @@ describe('Firestore Security Rules Unit Tests', () => {
     await assertFails(setDoc(settingsRef, { registrationCap: 1000 }));
   });
 
+  it('public client cannot create or access any document in the mail collection (P2)', async () => {
+    const db = testEnv.unauthenticatedContext().firestore();
+    const mailRef = doc(db, 'mail', 'unauthorized_spam_relay');
+
+    // Create fails
+    await assertFails(
+      setDoc(mailRef, {
+        to: ['victim@example.com'],
+        message: { subject: 'Spam Relay Attempt', text: 'Spam body' },
+      })
+    );
+
+    // Read fails
+    await assertFails(getDoc(mailRef));
+
+    // Update fails
+    await assertFails(updateDoc(mailRef, { status: 'sent' }));
+
+    // Delete fails
+    await assertFails(deleteDoc(mailRef));
+  });
+
   it('a signed-in user WITHOUT an admins/{uid} document cannot read registrations', async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       const adminDb = ctx.firestore();

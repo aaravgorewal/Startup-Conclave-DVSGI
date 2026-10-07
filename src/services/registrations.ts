@@ -166,14 +166,6 @@ export const fetchPublicRegistrationCount = async (): Promise<number> => {
   }
 };
 
-const escapeHtml = (s: string): string =>
-  s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
 /**
  * Create a new attendee registration in Firestore & Local Cache
  * Honest flow: success screen ONLY after Firestore confirms the transaction.
@@ -373,87 +365,9 @@ export const createRegistration = async (
   record.id = assignedId;
   record.status = finalStatus;
 
-  // 6. Queue confirmation email for Firebase Trigger Email extension / Cloud Function
-  try {
-    const contactEmail = (CONFIG.contactEmail || CONFIG.contact?.email || '').trim();
-    const contactPhone = (CONFIG.contactPhone || CONFIG.contact?.phone || '').trim();
-    const safeName = escapeHtml(record.name);
-    const safeCollege = escapeHtml(record.college);
-    const mailDocId = `confirm-${assignedId}-${Date.now().toString(36)}`;
-    const mailDocRef = doc(db, 'mail', mailDocId);
-
-    const subject = `Startup Conclave 1.0 — Registration Confirmation (${assignedId})`;
-    const plainText = [
-      `Hello ${record.name},`,
-      ``,
-      `Your registration for Startup Conclave 1.0 is confirmed.`,
-      ``,
-      `Registration Details:`,
-      `• Registration ID: ${assignedId}`,
-      `• Event: Startup Conclave 1.0`,
-      `• Venue: DVSIET, Meerut`,
-      `• Category: ${record.role} · ${record.city}`,
-      `• College / Organisation: ${record.college}`,
-      ``,
-      `Date and entry details will be shared by email and WhatsApp.`,
-      ``,
-      ...(contactEmail || contactPhone ? [`Organiser Contact:`] : []),
-      ...(contactEmail ? [`• Email: ${contactEmail}`] : []),
-      ...(contactPhone ? [`• Phone: ${contactPhone}`] : []),
-      `• Address: Dewan V.S. Institute of Engineering & Technology, Meerut, Uttar Pradesh`,
-      ``,
-      `Please save this email or take a screenshot of your Registration ID for venue entry.`,
-    ].join('\n');
-
-    const htmlBody = [
-      `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 16px; color: #111111; line-height: 1.5;">`,
-      `  <div style="border: 2px solid #111111; padding: 20px; background-color: #FFF8EC;">`,
-      `    <h2 style="margin: 0 0 6px 0; font-size: 22px; color: #111111;">Startup Conclave 1.0</h2>`,
-      `    <p style="margin: 0 0 16px 0; font-size: 13px; color: #555555;">Official Registration Confirmation</p>`,
-      `    <div style="background-color: #FFD400; border: 2px solid #111111; padding: 12px; margin-bottom: 16px;">`,
-      `      <p style="margin: 0; font-size: 11px; font-weight: bold; text-transform: uppercase;">Registration ID</p>`,
-      `      <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; font-family: monospace; color: #111111;">${assignedId}</p>`,
-      `    </div>`,
-      `    <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 16px;">`,
-      `      <tr><td style="padding: 6px 0; color: #555;">Attendee:</td><td style="padding: 6px 0; font-weight: bold;">${safeName}</td></tr>`,
-      `      <tr><td style="padding: 6px 0; color: #555;">Venue:</td><td style="padding: 6px 0; font-weight: bold;">DVSIET, Meerut</td></tr>`,
-      `      <tr><td style="padding: 6px 0; color: #555;">College:</td><td style="padding: 6px 0; font-weight: bold;">${safeCollege}</td></tr>`,
-      `      <tr><td style="padding: 6px 0; color: #555;">Status:</td><td style="padding: 6px 0; font-weight: bold;">${finalStatus === 'waitlist' ? 'Waitlist' : 'Confirmed'}</td></tr>`,
-      `    </table>`,
-      `    <div style="background-color: #FFF2D6; border: 1px solid #111111; padding: 12px; margin-bottom: 16px; font-weight: bold; font-size: 13px;">`,
-      `      Date and entry details will be shared by email and WhatsApp.`,
-      `    </div>`,
-      ...(contactEmail || contactPhone
-        ? [
-            `    <div style="border-top: 1px solid #ddd; padding-top: 12px; font-size: 12px; color: #555;">`,
-            `      <p style="margin: 0 0 4px 0; font-weight: bold; color: #111;">Organiser Contact:</p>`,
-            contactEmail ? `      <p style="margin: 0 0 2px 0;">Email: <a href="mailto:${escapeHtml(contactEmail)}" style="color: #FF6B1A;">${escapeHtml(contactEmail)}</a></p>` : '',
-            contactPhone ? `      <p style="margin: 0 0 2px 0;">Phone: ${escapeHtml(contactPhone)}</p>` : '',
-            `      <p style="margin: 0;">Dewan V.S. Institute of Engineering & Technology, Meerut</p>`,
-            `    </div>`,
-          ].filter(Boolean)
-        : [
-            `    <div style="border-top: 1px solid #ddd; padding-top: 12px; font-size: 12px; color: #555;">`,
-            `      <p style="margin: 0;">Dewan V.S. Institute of Engineering & Technology, Meerut</p>`,
-            `    </div>`,
-          ]),
-      `  </div>`,
-      `</div>`,
-    ].join('\n');
-
-    await setDoc(mailDocRef, {
-      to: [emailClean],
-      registrationId: assignedId,
-      message: {
-        subject,
-        text: plainText,
-        html: htmlBody,
-      },
-      createdAt: serverTimestamp(),
-    });
-  } catch (mailError) {
-    console.info('Trigger email queue notice (extension may not be active yet):', mailError);
-  }
+  // 6. Security (P2): Direct client writes to /mail are disabled in firestore.rules.
+  // Confirmation emails are dispatched server-side via Cloud Functions on document creation.
+  // Registration succeeds immediately and safely even when email services are unavailable.
 
   // 7. Update local cache ONLY after verified successful Firestore confirmation
   try {
