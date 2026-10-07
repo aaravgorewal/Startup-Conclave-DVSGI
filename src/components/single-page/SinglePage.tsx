@@ -25,11 +25,7 @@ import {
   Download,
   QrCode,
 } from 'lucide-react';
-<<<<<<< HEAD
-import { CONFIG } from '../../config.ts';
-=======
 import { CONFIG, type LogoItem } from '../../config.ts';
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
 import {
   createRegistration,
   createPartnerEnquiry,
@@ -37,11 +33,7 @@ import {
   isPhoneRegistered,
   isValidEmail,
   isValidIndianPhone,
-<<<<<<< HEAD
-  getRegistrationsCount,
-=======
   fetchPublicRegistrationCount,
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
   RegistrationInput,
 } from '../../services/registrations.ts';
 import { getEventSettings } from '../../services/admin.ts';
@@ -303,12 +295,14 @@ const HeroVectorIllustration: React.FC = () => {
   );
 };
 
-<<<<<<< HEAD
-=======
-// Logo tile: equal-height white box with brutalist border so mixed-colour logos feel uniform
-const LogoTile: React.FC<{ item: LogoItem; heightClass?: string }> = ({ item, heightClass = 'h-16 sm:h-20' }) => {
+// Logo tile: equal-height white box with 2px #111111 border and hard offset shadow
+const LogoTile: React.FC<{ item: LogoItem; heightClass?: string; tileClass?: string }> = ({
+  item,
+  heightClass = 'h-12 sm:h-14',
+  tileClass = 'p-2.5 sm:p-3 min-h-[56px] sm:min-h-[64px]',
+}) => {
   const [failed, setFailed] = useState(false);
-  if (failed) return null; // hide tile gracefully if the image is missing
+  if (failed) return null; // hide tile if image fails to load
   const img = (
     <img
       src={item.logo}
@@ -320,7 +314,7 @@ const LogoTile: React.FC<{ item: LogoItem; heightClass?: string }> = ({ item, he
     />
   );
   return (
-    <div className="bg-white brutal-border brutal-shadow-sm p-2.5 sm:p-3 flex items-center justify-center">
+    <div className={`bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center ${tileClass}`}>
       {item.url ? (
         <a href={item.url} target="_blank" rel="noopener noreferrer" aria-label={item.name}>
           {img}
@@ -331,8 +325,6 @@ const LogoTile: React.FC<{ item: LogoItem; heightClass?: string }> = ({ item, he
     </div>
   );
 };
-
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
 export const SinglePage: React.FC = () => {
   // Scroll progress percentage (0 - 100)
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -388,16 +380,6 @@ export const SinglePage: React.FC = () => {
             name: 'Dewan V.S. Institute of Engineering & Technology (DVSIET)',
             url: canonicalUrl,
           },
-<<<<<<< HEAD
-          offers: {
-            '@type': 'Offer',
-            url: `${canonicalUrl}#register`,
-            availability: 'https://schema.org/InStock',
-            price: '0',
-            priceCurrency: 'INR',
-          },
-=======
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
         },
         {
           '@type': 'FAQPage',
@@ -441,16 +423,6 @@ export const SinglePage: React.FC = () => {
   // Registration Status & Counter Settings from config & Firestore settings/event
   const [regStatus, setRegStatus] = useState<'open' | 'closed'>(CONFIG.registration.status);
   const [showCounter, setShowCounter] = useState<boolean>(CONFIG.registration.showCount);
-<<<<<<< HEAD
-  const [registrationCount, setRegistrationCount] = useState<number>(() => getRegistrationsCount());
-
-  useEffect(() => {
-    setRegistrationCount(getRegistrationsCount());
-    getEventSettings().then((s) => {
-      if (s) {
-        setRegStatus(s.registrationStatus || s.status || 'open');
-        setShowCounter(s.showCount !== undefined ? s.showCount : true);
-=======
   const [registrationCount, setRegistrationCount] = useState<number>(0);
 
   useEffect(() => {
@@ -459,7 +431,6 @@ export const SinglePage: React.FC = () => {
       if (s) {
         setRegStatus(s.registrationStatus || s.status || 'open');
         setShowCounter(s.showCount === true);
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
       }
     }).catch(() => {});
   }, []);
@@ -901,14 +872,6 @@ export const SinglePage: React.FC = () => {
       ctx.fillText('Dewan V.S. Institute of Engineering & Technology, NH-58, Meerut, UP', 95, 582);
 
       // Organiser Contact
-<<<<<<< HEAD
-      const contactEmail = (CONFIG.contactEmail || CONFIG.contact?.email || 'conclave@dvsiet.ac.in').trim();
-      const contactPhone = (CONFIG.contactPhone || CONFIG.contact?.phone || '+91 98765 43210').trim();
-
-      ctx.fillStyle = '#111111';
-      ctx.font = '600 15px monospace';
-      ctx.fillText(`Organiser Contact: ${contactEmail}   |   ${contactPhone}`, 70, 650);
-=======
       const contactEmail = (CONFIG.contactEmail || CONFIG.contact?.email || '').trim();
       const contactPhone = (CONFIG.contactPhone || CONFIG.contact?.phone || '').trim();
 
@@ -918,7 +881,6 @@ export const SinglePage: React.FC = () => {
         ctx.font = '600 15px monospace';
         ctx.fillText(`Organiser Contact: ${contactParts.join('   |   ')}`, 70, 650);
       }
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
 
       ctx.font = 'italic 13px sans-serif';
       ctx.fillStyle = '#666666';
@@ -1241,8 +1203,6 @@ export const SinglePage: React.FC = () => {
         </div>
       </section>
 
-<<<<<<< HEAD
-=======
       {/* ORGANISED BY strip: college units only (confirmed) */}
       {CONFIG.organisers.some((o) => o.confirmed) && (
         <section aria-label="Organised by" className="px-4 sm:px-8 pb-10 max-w-6xl mx-auto">
@@ -1258,8 +1218,6 @@ export const SinglePage: React.FC = () => {
           </div>
         </section>
       )}
-
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
       {/* Marquee Ticker Strip directly under hero */}
       <div className="w-full bg-[#111111] text-[#FFD400] border-y-2 border-[#111111] py-3.5 overflow-hidden font-display font-black text-sm sm:text-base tracking-widest uppercase select-none">
         <div className="animate-marquee whitespace-nowrap">
@@ -1663,9 +1621,6 @@ export const SinglePage: React.FC = () => {
               ))}
             </div>
           </div>
-<<<<<<< HEAD
-=======
-
           {/* SUPPORTED BY: renders only for supporters with written confirmation */}
           {CONFIG.supporters.some((s) => s.confirmed) && (
             <div className="pt-4 border-t-2 border-[#111111]">
@@ -1681,7 +1636,6 @@ export const SinglePage: React.FC = () => {
               </div>
             </div>
           )}
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
         </div>
       </section>
 
@@ -1879,24 +1833,6 @@ export const SinglePage: React.FC = () => {
               </div>
 
               <div className="font-mono text-xs text-[#111111]/85 pt-1.5 border-t border-[#111111]/20 flex flex-wrap items-center gap-x-4 gap-y-1">
-<<<<<<< HEAD
-                <span className="font-black text-[#111111]">Organiser Contact:</span>
-                <a
-                  href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || 'conclave@dvsiet.ac.in').trim()}`}
-                  className="underline font-bold text-[#FF6B1A] hover:text-[#111111]"
-                >
-                  {(CONFIG.contactEmail || CONFIG.contact?.email || 'conclave@dvsiet.ac.in').trim()}
-                </a>
-                <span>•</span>
-                <a
-                  href={`tel:${(CONFIG.contactPhone || CONFIG.contact?.phone || '+91 98765 43210').trim()}`}
-                  className="underline font-bold text-[#111111] hover:text-[#FF6B1A]"
-                >
-                  {(CONFIG.contactPhone || CONFIG.contact?.phone || '+91 98765 43210').trim()}
-                </a>
-                <span>•</span>
-                <span className="text-[#111111]/70">Dewan V.S. Institute of Engineering & Technology, Meerut</span>
-=======
                 {(() => {
                   const e = (CONFIG.contactEmail || CONFIG.contact?.email || '').trim();
                   const ph = (CONFIG.contactPhone || CONFIG.contact?.phone || '').trim();
@@ -1919,7 +1855,6 @@ export const SinglePage: React.FC = () => {
                     </>
                   );
                 })()}
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
               </div>
             </div>
 
@@ -2452,8 +2387,6 @@ export const SinglePage: React.FC = () => {
 
         </div>
 
-<<<<<<< HEAD
-=======
         {CONFIG.organisers.some((o) => o.confirmed) && (
           <div className="py-6 border-b-2 border-[#111111] flex flex-wrap items-center gap-3">
             <span className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70 mr-1">
@@ -2462,12 +2395,10 @@ export const SinglePage: React.FC = () => {
             {CONFIG.organisers
               .filter((o) => o.confirmed)
               .map((o) => (
-                <LogoTile key={o.name} item={o} heightClass="h-10" />
+                <LogoTile key={o.name} item={o} heightClass="h-6 sm:h-7" tileClass="h-10 px-3" />
               ))}
           </div>
         )}
-
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm font-mono text-[#111111]/70">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>© {new Date().getFullYear()} Startup Conclave 1.0. All rights reserved.</span>
@@ -2777,20 +2708,8 @@ export const SinglePage: React.FC = () => {
                 <p className="text-xs sm:text-sm text-[#111111]/85">
                   You retain full control over your submitted information. If you wish to update your details, request a copy of your information, or have your registration permanently erased from our records at any time, please contact the organising committee:
                 </p>
-                <div className="p-3 bg-white border border-[#111111] font-mono text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-<<<<<<< HEAD
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                    <a
-                      href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || 'conclave@dvsiet.ac.in').trim()}?subject=Privacy%20Data%20Deletion%20Request`}
-                      className="font-bold text-[#FF6B1A] hover:underline"
-                    >
-                      {(CONFIG.contactEmail || CONFIG.contact?.email || 'conclave@dvsiet.ac.in').trim()}
-                    </a>
-                  </div>
-                  <span className="text-[#111111]/60 text-xs">Response within 48 hours</span>
-=======
-                  {(CONFIG.contactEmail || CONFIG.contact?.email || '').trim() ? (
+                {Boolean((CONFIG.contactEmail || CONFIG.contact?.email || '').trim()) && (
+                  <div className="p-3 bg-white border border-[#111111] font-mono text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4 text-[#FF6B1A] shrink-0" />
                       <a
@@ -2800,11 +2719,9 @@ export const SinglePage: React.FC = () => {
                         {(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()}
                       </a>
                     </div>
-                  ) : (
-                    <span className="font-bold text-[#111111]/70">Organiser contact email will be announced soon.</span>
-                  )}
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
-                </div>
+                    <span className="text-[#111111]/60 text-xs">Response within 48 hours</span>
+                  </div>
+                )}
               </div>
 
             </div>

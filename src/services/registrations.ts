@@ -1,11 +1,6 @@
-<<<<<<< HEAD
-import { doc, setDoc, addDoc, collection, serverTimestamp, writeBatch, runTransaction } from 'firebase/firestore';
-import { db } from './firebase.ts';
-=======
 import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db } from './firebase.ts';
 import { CONFIG } from '../config.ts';
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
 
 export interface RegistrationInput {
   name: string;
@@ -157,35 +152,6 @@ export const isPhoneRegistered = (phone: string): boolean => {
 };
 
 /**
-<<<<<<< HEAD
- * Get registration counter for display
- */
-export const getRegistrationsCount = (): number => {
-  try {
-    const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
-    const list: any[] = raw ? JSON.parse(raw) : [];
-    return Math.max(list.length, 38); // Base count + live local count
-  } catch {
-    return 38;
-  }
-};
-
-/**
- * Generate formatted Registration ID (e.g., SC1-00042)
- */
-export const generateRegistrationId = (): string => {
-  try {
-    const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
-    const list: any[] = raw ? JSON.parse(raw) : [];
-    const count = list.length + 42; // Starting sequence for realism
-    const padded = count.toString().padStart(5, '0');
-    return `SC1-${padded}`;
-  } catch {
-    const rand = Math.floor(10 + Math.random() * 900);
-    return `SC1-00${rand}`;
-  }
-};
-=======
  * Real public registration count (counters/registrations is publicly readable).
  * Returns 0 when nothing is registered yet or the read fails. Never inflated.
  */
@@ -207,7 +173,6 @@ const escapeHtml = (s: string): string =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
 
 /**
  * Create a new attendee registration in Firestore & Local Cache
@@ -409,15 +374,10 @@ export const createRegistration = async (
 
   // 6. Queue confirmation email for Firebase Trigger Email extension / Cloud Function
   try {
-<<<<<<< HEAD
-    const contactEmail = 'conclave@dvsiet.ac.in';
-    const contactPhone = '+91 98765 43210';
-=======
     const contactEmail = (CONFIG.contactEmail || CONFIG.contact?.email || '').trim();
     const contactPhone = (CONFIG.contactPhone || CONFIG.contact?.phone || '').trim();
     const safeName = escapeHtml(record.name);
     const safeCollege = escapeHtml(record.college);
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
     const mailDocId = `confirm-${assignedId}-${Date.now().toString(36)}`;
     const mailDocRef = doc(db, 'mail', mailDocId);
 
@@ -436,14 +396,9 @@ export const createRegistration = async (
       ``,
       `Date and entry details will be shared by email and WhatsApp.`,
       ``,
-      `Organiser Contact:`,
-<<<<<<< HEAD
-      `• Email: ${contactEmail}`,
-      `• Phone: ${contactPhone}`,
-=======
+      ...(contactEmail || contactPhone ? [`Organiser Contact:`] : []),
       ...(contactEmail ? [`• Email: ${contactEmail}`] : []),
       ...(contactPhone ? [`• Phone: ${contactPhone}`] : []),
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
       `• Address: Dewan V.S. Institute of Engineering & Technology, Meerut, Uttar Pradesh`,
       ``,
       `Please save this email or take a screenshot of your Registration ID for venue entry.`,
@@ -459,31 +414,28 @@ export const createRegistration = async (
       `      <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: bold; font-family: monospace; color: #111111;">${assignedId}</p>`,
       `    </div>`,
       `    <table style="width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 16px;">`,
-<<<<<<< HEAD
-      `      <tr><td style="padding: 6px 0; color: #555;">Attendee:</td><td style="padding: 6px 0; font-weight: bold;">${record.name}</td></tr>`,
-      `      <tr><td style="padding: 6px 0; color: #555;">Venue:</td><td style="padding: 6px 0; font-weight: bold;">DVSIET, Meerut</td></tr>`,
-      `      <tr><td style="padding: 6px 0; color: #555;">College:</td><td style="padding: 6px 0; font-weight: bold;">${record.college}</td></tr>`,
-=======
       `      <tr><td style="padding: 6px 0; color: #555;">Attendee:</td><td style="padding: 6px 0; font-weight: bold;">${safeName}</td></tr>`,
       `      <tr><td style="padding: 6px 0; color: #555;">Venue:</td><td style="padding: 6px 0; font-weight: bold;">DVSIET, Meerut</td></tr>`,
       `      <tr><td style="padding: 6px 0; color: #555;">College:</td><td style="padding: 6px 0; font-weight: bold;">${safeCollege}</td></tr>`,
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
       `      <tr><td style="padding: 6px 0; color: #555;">Status:</td><td style="padding: 6px 0; font-weight: bold;">${finalStatus === 'waitlist' ? 'Waitlist' : 'Confirmed'}</td></tr>`,
       `    </table>`,
       `    <div style="background-color: #FFF2D6; border: 1px solid #111111; padding: 12px; margin-bottom: 16px; font-weight: bold; font-size: 13px;">`,
       `      Date and entry details will be shared by email and WhatsApp.`,
       `    </div>`,
-      `    <div style="border-top: 1px solid #ddd; padding-top: 12px; font-size: 12px; color: #555;">`,
-      `      <p style="margin: 0 0 4px 0; font-weight: bold; color: #111;">Organiser Contact:</p>`,
-<<<<<<< HEAD
-      `      <p style="margin: 0 0 2px 0;">Email: <a href="mailto:${contactEmail}" style="color: #FF6B1A;">${contactEmail}</a></p>`,
-      `      <p style="margin: 0 0 2px 0;">Phone: ${contactPhone}</p>`,
-=======
-      contactEmail ? `      <p style="margin: 0 0 2px 0;">Email: <a href="mailto:${escapeHtml(contactEmail)}" style="color: #FF6B1A;">${escapeHtml(contactEmail)}</a></p>` : '',
-      contactPhone ? `      <p style="margin: 0 0 2px 0;">Phone: ${escapeHtml(contactPhone)}</p>` : '',
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
-      `      <p style="margin: 0;">Dewan V.S. Institute of Engineering & Technology, Meerut</p>`,
-      `    </div>`,
+      ...(contactEmail || contactPhone
+        ? [
+            `    <div style="border-top: 1px solid #ddd; padding-top: 12px; font-size: 12px; color: #555;">`,
+            `      <p style="margin: 0 0 4px 0; font-weight: bold; color: #111;">Organiser Contact:</p>`,
+            contactEmail ? `      <p style="margin: 0 0 2px 0;">Email: <a href="mailto:${escapeHtml(contactEmail)}" style="color: #FF6B1A;">${escapeHtml(contactEmail)}</a></p>` : '',
+            contactPhone ? `      <p style="margin: 0 0 2px 0;">Phone: ${escapeHtml(contactPhone)}</p>` : '',
+            `      <p style="margin: 0;">Dewan V.S. Institute of Engineering & Technology, Meerut</p>`,
+            `    </div>`,
+          ].filter(Boolean)
+        : [
+            `    <div style="border-top: 1px solid #ddd; padding-top: 12px; font-size: 12px; color: #555;">`,
+            `      <p style="margin: 0;">Dewan V.S. Institute of Engineering & Technology, Meerut</p>`,
+            `    </div>`,
+          ]),
       `  </div>`,
       `</div>`,
     ].join('\n');

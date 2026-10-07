@@ -1,8 +1,6 @@
 // STARTUP CONCLAVE 1.0 — CENTRAL CONFIGURATION FILE
 // All editable text, dates, venue, schedule bullets, FAQs, and status flags live here.
 
-<<<<<<< HEAD
-=======
 import dewanVsLogo from './assets/dewan-vs-group.png';
 import diifLogo from './assets/diif.jpeg';
 import iicLogo from './assets/iic.webp';
@@ -17,7 +15,6 @@ export interface LogoItem {
   confirmed: boolean;
 }
 
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
 export const ADMIN_EMAILS: string[] = [
   'aaravgorewal@gmail.com',
   'admin@dvsiet.ac.in',
@@ -34,23 +31,18 @@ export interface SpeakerItem {
 }
 
 export const CONFIG = {
-<<<<<<< HEAD
-=======
-  // Organisers: the college's own units. Confirm IIC usage with the IIC coordinator.
+  // Organisers: the college's own units.
   organisers: [
     { name: 'Dewan VS Group of Institutions', logo: dewanVsLogo, confirmed: true },
     { name: 'Dewan Innovation & Incubation Forum', logo: diifLogo, confirmed: true },
     { name: "Institution's Innovation Council", logo: iicLogo, confirmed: true },
   ] as LogoItem[],
 
-  // Supporters: government / ecosystem logos. Keep confirmed:false until you hold
-  // written permission (MSME logo also contains the State Emblem of India).
+  // Supporters: government / ecosystem logos. Keep confirmed:false until written approval is granted.
   supporters: [
-    { name: 'Ministry of MSME, Govt. of India', logo: msmeLogo, confirmed: false },
+    { name: 'Ministry of MSME', logo: msmeLogo, confirmed: false },
     { name: 'StartInUP', logo: startInUpLogo, confirmed: false },
   ] as LogoItem[],
-
->>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
   // Contact details & Social URLs (all initially empty strings)
   contactEmail: "",
   contactPhone: "",
