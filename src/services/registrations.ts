@@ -297,6 +297,7 @@ export const createRegistration = async (
 
       transaction.set(counterRef, {
         currentCount: nextCount,
+        lastEmailHash: emailHash,
         updatedAt: serverTimestamp(),
       });
 

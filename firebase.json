@@ -4,5 +4,13 @@
       "database": "ai-studio-startupconclave1-48bd595b-1a33-4516-97c8-0ee21a786c4c",
       "rules": "firestore.rules"
     }
-  ]
+  ],
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    }
+  }
 }

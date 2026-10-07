@@ -2,23 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper: Verify if user is signed in and their email is in the designated admin roster
+    // Helper: Verify if user is signed in and their uid exists in the admins collection
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email != null
-        && (request.auth.token.email in [
-          'aaravgorewal@gmail.com',
-          'admin@dvsiet.ac.in',
-          'conclave@dvsiet.ac.in'
-        ]);
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // Helper: Validate counter increment for sequential unique IDs
+    // Helper: Validate counter increment for sequential unique IDs with atomic registration match
     function isValidCounter(incoming, existing) {
-      return incoming.keys().hasAll(['currentCount', 'updatedAt'])
-        && incoming.keys().hasOnly(['currentCount', 'updatedAt'])
+      return incoming.keys().hasAll(['currentCount', 'updatedAt', 'lastEmailHash'])
+        && incoming.keys().hasOnly(['currentCount', 'updatedAt', 'lastEmailHash'])
         && incoming.currentCount is int
         && incoming.updatedAt == request.time
+        && existsAfter(/databases/$(database)/documents/registrations/$(incoming.lastEmailHash))
+        && getAfter(/databases/$(database)/documents/registrations/$(incoming.lastEmailHash)).data.sequenceNumber == incoming.currentCount
         && (
           (existing == null && incoming.currentCount == 1)
           || (existing != null && incoming.currentCount == existing.currentCount + 1)
@@ -88,30 +85,14 @@ service cloud.firestore {
         && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
     }
 
-    // Helper: Validate trigger email document for Firebase Trigger Email extension
-    function isValidMail(data) {
-      return data.keys().hasAll(['to', 'message', 'createdAt'])
-        && data.keys().hasOnly(['to', 'message', 'registrationId', 'createdAt'])
-        && data.to is list
-        && data.to.size() >= 1 && data.to.size() <= 3
-        && data.to[0] is string && data.to[0].size() > 0 && data.to[0].size() <= 120
-        && data.message is map
-        && data.message.keys().hasAll(['subject', 'text'])
-        && data.message.subject is string && data.message.subject.size() <= 200
-        && data.message.text is string && data.message.text.size() <= 4000
-        && (!('html' in data.message) || (data.message.html is string && data.message.html.size() <= 10000))
-        && (!('registrationId' in data) || (data.registrationId is string && data.registrationId.size() <= 64))
-        && data.createdAt == request.time;
-    }
-
     // 1. Counter Collection for sequential atomic ID allocation (SC1-00001, etc.)
     match /counters/{counterId} {
       // Public users can read the current counter
       allow read: if true;
 
-      // Public users may ONLY initialize to 1 or increment by exactly 1 in a transaction
-      allow create: if isValidCounter(request.resource.data, null);
-      allow update: if isValidCounter(request.resource.data, resource.data);
+      // Public users may ONLY increment when tied to a matching registration; admins can write directly
+      allow create: if isAdmin() || isValidCounter(request.resource.data, null);
+      allow update: if isAdmin() || isValidCounter(request.resource.data, resource.data);
 
       // Deletes restricted to administrators
       allow delete: if isAdmin();
@@ -122,7 +103,7 @@ service cloud.firestore {
       // Public users may ONLY create documents with strict validation; never read, update, or delete
       allow create: if isValidRegistration(request.resource.data);
 
-      // Only signed-in users whose email is in the admin roster may read, update, or delete
+      // Only signed-in users whose uid is in the admins collection may read, update, or delete
       allow read, update, delete: if isAdmin();
     }
 
@@ -140,7 +121,7 @@ service cloud.firestore {
       // Public users may ONLY create documents with strict validation; never read, update, or delete
       allow create: if isValidPartnerEnquiry(request.resource.data);
 
-      // Only signed-in users whose email is in the admin roster may read, update, or delete
+      // Only signed-in administrators may read, update, or delete
       allow read, update, delete: if isAdmin();
     }
 
@@ -153,13 +134,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 6. Trigger Email Collection (for Firebase Trigger Email extension)
+    // 6. Trigger Email Collection (restricted to administrators and cloud functions)
     match /mail/{mailId} {
-      // Public users may create email jobs with strict validation
-      allow create: if isValidMail(request.resource.data);
+      allow read, write: if isAdmin();
+    }
 
-      // Only administrators can read, update, or purge email logs
-      allow read, update, delete: if isAdmin();
+    // 7. Admins Collection (restricted to administrators)
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
     }
 
     // Default deny for all other unmatched collections and paths

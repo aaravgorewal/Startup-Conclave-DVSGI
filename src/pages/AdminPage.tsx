@@ -51,7 +51,7 @@ import {
 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { auth } from '../services/firebase.ts';
-import { ADMIN_EMAILS, CONFIG } from '../config.ts';
+import { CONFIG } from '../config.ts';
 import {
   AdminRegistration,
   AdminPartnerEnquiry,
@@ -65,6 +65,7 @@ import {
   exportToCSV,
   getEventSettings,
   saveEventSettings,
+  checkIsAdmin,
 } from '../services/admin.ts';
 
 export const AdminPage: React.FC = () => {
@@ -215,11 +216,11 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const userEmail = user.email?.toLowerCase() || '';
-        if (ADMIN_EMAILS.includes(userEmail)) {
+        const isAdmin = await checkIsAdmin(user.uid);
+        if (isAdmin) {
           setCurrentUser(user);
         } else {
-          // If signed in user is not in the admin list, sign out immediately and show "Access denied"
+          // If signed in user does not have an admin document in Firestore, sign out immediately and show "Access denied"
           await signOut(auth);
           setCurrentUser(null);
           setAuthError('Access denied');
@@ -279,15 +280,15 @@ export const AdminPage: React.FC = () => {
 
     try {
       const cred = await signInWithEmailAndPassword(auth, emailTrim, authPassword);
-      const signedInEmail = cred.user.email?.toLowerCase() || '';
+      const isAdmin = await checkIsAdmin(cred.user.uid);
       
-      // Verify email is in the admin roster
-      if (ADMIN_EMAILS.includes(signedInEmail)) {
+      // Verify user has an active admin document in Firestore (/admins/{uid})
+      if (isAdmin) {
         setCurrentUser(cred.user);
         setFailedAttempts(0);
         setLockoutSeconds(0);
       } else {
-        // After login, if the email is not in the admin list, sign out immediately and show "Access denied"
+        // If the user does not have an admin document in Firestore, sign out immediately and show "Access denied"
         await signOut(auth);
         setCurrentUser(null);
         setAuthError('Access denied');

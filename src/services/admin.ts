@@ -82,6 +82,19 @@ const INITIAL_DEMO_REGISTRATIONS: AdminRegistration[] = [];
 const INITIAL_DEMO_PARTNERS: AdminPartnerEnquiry[] = [];
 
 /**
+ * Verify whether a signed-in user has an active admin record in Firestore (/admins/{uid})
+ */
+export const checkIsAdmin = async (uid: string): Promise<boolean> => {
+  if (!uid) return false;
+  try {
+    const snap = await getDoc(doc(db, 'admins', uid));
+    return snap.exists();
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Fetch all registrations from Firestore, merging with local cache
  */
 export const fetchRegistrations = async (): Promise<AdminRegistration[]> => {
