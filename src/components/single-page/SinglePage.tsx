@@ -24,6 +24,7 @@ import {
   Camera,
   Download,
   QrCode,
+  ExternalLink,
 } from 'lucide-react';
 import { CONFIG, type LogoItem } from '../../config.ts';
 import {
@@ -33,6 +34,7 @@ import {
   isPhoneRegistered,
   isValidEmail,
   isValidIndianPhone,
+  isValidPitchDeckUrl,
   fetchPublicRegistrationCount,
   RegistrationInput,
 } from '../../services/registrations.ts';
@@ -429,8 +431,8 @@ export const SinglePage: React.FC = () => {
     fetchPublicRegistrationCount().then(setRegistrationCount).catch(() => {});
     getEventSettings().then((s) => {
       if (s) {
-        setRegStatus(s.registrationStatus || s.status || 'open');
-        setShowCounter(s.showCount === true);
+        setRegStatus(s.registrationStatus || s.status || CONFIG.registration.status);
+        setShowCounter(typeof s.showCount === 'boolean' ? s.showCount : CONFIG.registration.showCount);
       }
     }).catch(() => {});
   }, []);
@@ -538,6 +540,10 @@ export const SinglePage: React.FC = () => {
     status?: string;
   } | null>(null);
 
+  if (import.meta.env.DEV && typeof window !== 'undefined') {
+    (window as any).__setTestSubmittedRecord = setSubmittedRecord;
+  }
+
   // FAQ Accordion Open State
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
@@ -634,20 +640,6 @@ export const SinglePage: React.FC = () => {
       return;
     }
 
-    // 2. Minimum 3-second form-fill time check
-    const timeCheck = checkFormFillTime(regFormStartTime);
-    if (!timeCheck.valid) {
-      setErrors({ form: timeCheck.error || 'Form submitted too quickly. Please take a moment to review your details.' });
-      return;
-    }
-
-    // 3. Browser rate limit check (3 submissions per hour)
-    const rateCheck = checkBrowserRateLimit('registration');
-    if (!rateCheck.allowed) {
-      setErrors({ form: rateCheck.error || 'Submission limit reached (maximum 3 per hour). Please try again later.' });
-      return;
-    }
-
     const newErrors: Record<string, string> = {};
 
     if (!fullName.trim()) {
@@ -677,13 +669,32 @@ export const SinglePage: React.FC = () => {
       if (!year.trim()) newErrors.year = 'Current year is required.';
     }
 
+    if (wantsToPitch && pitchDeckLink.trim()) {
+      if (!isValidPitchDeckUrl(pitchDeckLink.trim())) {
+        newErrors.pitchDeckLink = 'Pitch deck link must be a Google Drive (drive.google.com) or Canva (canva.com) URL.';
+      }
+    }
+
     if (!consentAgreed) {
       newErrors.consent = 'You must agree to be contacted about this event.';
     }
 
-    setErrors(newErrors);
-
     if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // 2. Minimum 3-second form-fill time check (only for non-empty submissions)
+    const timeCheck = checkFormFillTime(regFormStartTime);
+    if (!timeCheck.valid) {
+      setErrors({ form: timeCheck.error || 'Form submitted too quickly. Please take a moment to review your details.' });
+      return;
+    }
+
+    // 3. Browser rate limit check (3 submissions per hour)
+    const rateCheck = checkBrowserRateLimit('registration');
+    if (!rateCheck.allowed) {
+      setErrors({ form: rateCheck.error || 'Submission limit reached (maximum 3 per hour). Please try again later.' });
       return;
     }
 
@@ -700,8 +711,12 @@ export const SinglePage: React.FC = () => {
       role,
       city: city.trim() || 'Meerut',
       wantsToPitch,
-      startupName: wantsToPitch ? startupName.trim() : undefined,
-      startupPitch: wantsToPitch ? startupPitch.trim() : undefined,
+      startupName: wantsToPitch && startupName.trim() ? startupName.trim() : undefined,
+      startupPitch: wantsToPitch && startupPitch.trim() ? startupPitch.trim() : undefined,
+      sector: wantsToPitch && pitchSector ? pitchSector : undefined,
+      stage: wantsToPitch && pitchStage ? pitchStage : undefined,
+      pitchDeckLink: wantsToPitch && pitchDeckLink.trim() ? pitchDeckLink.trim() : undefined,
+      teamSize: wantsToPitch && pitchTeamSize ? pitchTeamSize : undefined,
     };
 
     const res = await createRegistration(inputData);
@@ -723,6 +738,10 @@ export const SinglePage: React.FC = () => {
         wantsToPitch,
         startupName: startupName.trim(),
         startupPitch: startupPitch.trim(),
+        sector: wantsToPitch ? pitchSector : undefined,
+        stage: wantsToPitch ? pitchStage : undefined,
+        pitchDeckLink: wantsToPitch ? pitchDeckLink.trim() : undefined,
+        teamSize: wantsToPitch ? pitchTeamSize : undefined,
         status: res.status || 'registered',
       });
       setRegistrationCount((prev) => prev + 1);
@@ -730,7 +749,7 @@ export const SinglePage: React.FC = () => {
       // Keep all form data intact and surface clear error message with Retry option
       const isNet = Boolean(res.isNetworkError || res.error?.includes('internet') || res.error?.includes('network'));
       setIsNetworkError(isNet);
-      setErrors({ form: res.error || (isNet ? 'Could not submit. Check your internet and try again.' : 'This email or phone is already registered.') });
+      setErrors({ form: res.error || (isNet ? 'Could not submit. Check your internet and try again.' : 'This email or phone may already be registered. If you are sure you have not registered, contact the organisers.') });
     }
   };
 
@@ -746,6 +765,10 @@ export const SinglePage: React.FC = () => {
     setWantsToPitch(false);
     setStartupName('');
     setStartupPitch('');
+    setPitchSector('');
+    setPitchStage('');
+    setPitchDeckLink('');
+    setPitchTeamSize('');
     setConsentAgreed(false);
     setErrors({});
     setIsNetworkError(false);
@@ -761,7 +784,18 @@ export const SinglePage: React.FC = () => {
     if (!submittedRecord?.id) return;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(submittedRecord.id);
+        try {
+          await navigator.clipboard.writeText(submittedRecord.id);
+        } catch {
+          const textarea = document.createElement('textarea');
+          textarea.value = submittedRecord.id;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+        }
       } else {
         const textarea = document.createElement('textarea');
         textarea.value = submittedRecord.id;
@@ -776,6 +810,8 @@ export const SinglePage: React.FC = () => {
       setTimeout(() => setCopiedId(false), 2500);
     } catch (e) {
       console.warn('Copy notice:', e);
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2500);
     }
   };
 
@@ -1528,7 +1564,7 @@ export const SinglePage: React.FC = () => {
           {Boolean((CONFIG.contactEmail || CONFIG.contact?.email)?.trim()) && (
             <div className="pt-2 border-t-2 border-[#111111]">
               <a
-                href={`mailto:${(CONFIG.contactEmail || CONFIG.contact.email).trim()}?subject=Speaking%20Inquiry%20-%20Startup%20Conclave%201.0`}
+                href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()}?subject=Speaking%20Inquiry%20-%20Startup%20Conclave%201.0`}
                 className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
               >
                 <span>Interested in speaking? Contact us</span>
@@ -1681,10 +1717,10 @@ export const SinglePage: React.FC = () => {
             {Boolean((CONFIG.contactEmail || CONFIG.contact?.email)?.trim()) && (
               <div className="pt-2">
                 <a
-                  href={`mailto:${(CONFIG.contactEmail || CONFIG.contact.email).trim()}`}
+                  href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()}`}
                   className="brutal-btn bg-[#FFD400] text-[#111111] px-5 py-3 font-mono text-sm font-bold uppercase inline-block min-h-[46px] flex items-center justify-center mx-auto"
                 >
-                  Contact Secretariat ({(CONFIG.contactEmail || CONFIG.contact.email).trim()})
+                  Contact Secretariat ({(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()})
                 </a>
               </div>
             )}
@@ -1899,13 +1935,61 @@ export const SinglePage: React.FC = () => {
                 </div>
               </div>
 
-              {submittedRecord.wantsToPitch && submittedRecord.startupName && (
-                <div className="pt-2 border-t border-[#111111]/20">
-                  <span className="text-[#111111]/70 text-xs block">Startup Pitch Deck Entry:</span>
-                  <span className="font-bold text-[#111111]">{submittedRecord.startupName}</span>
-                  {submittedRecord.startupPitch && (
-                    <p className="text-sm text-[#111111]/80 mt-0.5 italic">"{submittedRecord.startupPitch}"</p>
+              {submittedRecord.wantsToPitch && (
+                <div className="pt-3 border-t border-[#111111]/20 space-y-2 text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF6B1A]">
+                      🎤 Pitch Arena Application
+                    </span>
+                    {submittedRecord.stage && (
+                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-[#FFF8EC] border border-[#111111]">
+                        {submittedRecord.stage} Stage
+                      </span>
+                    )}
+                  </div>
+
+                  {submittedRecord.startupName && (
+                    <div>
+                      <span className="text-[#111111]/70 text-xs block">Startup Name:</span>
+                      <span className="font-bold text-base text-[#111111]">{submittedRecord.startupName}</span>
+                    </div>
                   )}
+
+                  {submittedRecord.startupPitch && (
+                    <div>
+                      <span className="text-[#111111]/70 text-xs block">Pitch Summary:</span>
+                      <p className="text-sm text-[#111111]/80 italic">"{submittedRecord.startupPitch}"</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 font-mono text-xs">
+                    {submittedRecord.sector && (
+                      <div className="p-2 bg-[#FFF8EC] border border-[#111111]">
+                        <span className="text-[#111111]/60 block text-[10px]">SECTOR</span>
+                        <strong className="text-[#111111]">{submittedRecord.sector}</strong>
+                      </div>
+                    )}
+                    {submittedRecord.teamSize && (
+                      <div className="p-2 bg-[#FFF8EC] border border-[#111111]">
+                        <span className="text-[#111111]/60 block text-[10px]">TEAM SIZE</span>
+                        <strong className="text-[#111111]">{submittedRecord.teamSize} {submittedRecord.teamSize === '1' ? 'Founder' : 'Members'}</strong>
+                      </div>
+                    )}
+                    {submittedRecord.pitchDeckLink && (
+                      <div className="p-2 bg-[#FFF8EC] border border-[#111111] col-span-2 sm:col-span-1">
+                        <span className="text-[#111111]/60 block text-[10px]">PITCH DECK</span>
+                        <a
+                          href={submittedRecord.pitchDeckLink.startsWith('http') ? submittedRecord.pitchDeckLink : `https://${submittedRecord.pitchDeckLink}`}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="font-bold text-[#FF6B1A] underline hover:text-[#111111] inline-flex items-center gap-1"
+                        >
+                          <span>Open Deck</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1959,7 +2043,7 @@ export const SinglePage: React.FC = () => {
               </div>
             )}
 
-            <form onSubmit={handleRegisterSubmit} className="space-y-4 font-sans text-sm">
+            <form onSubmit={handleRegisterSubmit} noValidate className="space-y-4 font-sans text-sm">
               
               {/* Anti-Bot Honeypot Field (Hidden from humans) */}
               <div className="hidden" aria-hidden="true">
@@ -2155,6 +2239,95 @@ export const SinglePage: React.FC = () => {
                         className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans min-h-[44px] text-base"
                       />
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Sector Dropdown */}
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                          Sector (Optional)
+                        </label>
+                        <select
+                          value={pitchSector}
+                          onChange={(e) => setPitchSector(e.target.value)}
+                          className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans min-h-[44px] text-base cursor-pointer"
+                        >
+                          <option value="">Select Sector</option>
+                          <option value="AgriTech">AgriTech</option>
+                          <option value="FinTech">FinTech</option>
+                          <option value="EdTech">EdTech</option>
+                          <option value="HealthTech">HealthTech</option>
+                          <option value="AI/ML">AI/ML</option>
+                          <option value="SaaS">SaaS</option>
+                          <option value="E-commerce">E-commerce</option>
+                          <option value="Social Impact">Social Impact</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      {/* Stage Dropdown */}
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                          Stage (Optional)
+                        </label>
+                        <select
+                          value={pitchStage}
+                          onChange={(e) => setPitchStage(e.target.value as any)}
+                          className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans min-h-[44px] text-base cursor-pointer"
+                        >
+                          <option value="">Select Stage</option>
+                          <option value="Idea">Idea</option>
+                          <option value="Prototype">Prototype</option>
+                          <option value="Launched">Launched</option>
+                          <option value="Revenue">Revenue</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Team Size Dropdown */}
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                          Team Size (Optional)
+                        </label>
+                        <select
+                          value={pitchTeamSize}
+                          onChange={(e) => setPitchTeamSize(e.target.value)}
+                          className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans min-h-[44px] text-base cursor-pointer"
+                        >
+                          <option value="">Select Team Size</option>
+                          <option value="1">1 (Solo Founder)</option>
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                          <option value="4">4</option>
+                          <option value="5">5</option>
+                          <option value="6">6</option>
+                          <option value="7">7</option>
+                          <option value="8">8</option>
+                          <option value="9">9</option>
+                          <option value="10">10</option>
+                        </select>
+                      </div>
+
+                      {/* Pitch Deck Link */}
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                          Pitch Deck Link (Optional)
+                        </label>
+                        <input
+                          type="url"
+                          value={pitchDeckLink}
+                          onChange={(e) => {
+                            setPitchDeckLink(e.target.value);
+                            if (errors.pitchDeckLink) setErrors({ ...errors, pitchDeckLink: '' });
+                          }}
+                          placeholder="Google Drive or Canva link"
+                          className={`w-full p-2.5 bg-[#FFF8EC] border-2 ${errors.pitchDeckLink ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base`}
+                        />
+                        {errors.pitchDeckLink && (
+                          <p className="text-xs text-red-600 font-bold mt-1">{errors.pitchDeckLink}</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -2296,56 +2469,50 @@ export const SinglePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-2 font-mono text-xs sm:text-sm">
-            <span className="font-black text-[#111111] uppercase block mb-1">Secretariat Desk</span>
-            {(() => {
-              const email = (CONFIG.contactEmail || CONFIG.contact?.email || '').trim();
-              const phone = (CONFIG.contactPhone || CONFIG.contact?.phone || '').trim();
+          {(() => {
+            const email = (CONFIG.contactEmail || CONFIG.contact?.email || '').trim();
+            const phone = (CONFIG.contactPhone || CONFIG.contact?.phone || '').trim();
 
-              return (
-                <>
-                  {email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                      <a href={`mailto:${email}`} className="hover:underline">
-                        {email}
-                      </a>
-                    </div>
-                  )}
-                  {phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                      <a href={`tel:${phone}`} className="hover:underline">
-                        {phone}
-                      </a>
-                    </div>
-                  )}
-                  {CONFIG.contact?.city && (
-                    <div className="text-[#111111]/70 pt-1">
-                      {CONFIG.contact.city}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
+            if (!email && !phone) return null;
 
-          <div className="space-y-2">
-            <span className="font-mono font-black text-[#111111] uppercase block text-xs sm:text-sm">Social & Community</span>
-            {(() => {
-              const linkedin = (CONFIG.linkedinUrl || CONFIG.contact?.socials?.linkedin || '').trim();
-              const xTwitter = (CONFIG.xUrl || CONFIG.contact?.socials?.twitter || '').trim();
-              const instagram = (CONFIG.instagramUrl || CONFIG.contact?.socials?.instagram || '').trim();
+            return (
+              <div className="space-y-2 font-mono text-xs sm:text-sm">
+                <span className="font-black text-[#111111] uppercase block mb-1">Secretariat Desk</span>
+                {email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                    <a href={`mailto:${email}`} className="hover:underline">
+                      {email}
+                    </a>
+                  </div>
+                )}
+                {phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                    <a href={`tel:${phone}`} className="hover:underline">
+                      {phone}
+                    </a>
+                  </div>
+                )}
+                {CONFIG.contact?.city && (
+                  <div className="text-[#111111]/70 pt-1">
+                    {CONFIG.contact.city}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
-              if (!linkedin && !xTwitter && !instagram) {
-                return (
-                  <span className="font-mono text-xs text-[#111111]/60 block pt-1">
-                    Announcing soon
-                  </span>
-                );
-              }
+          {(() => {
+            const linkedin = (CONFIG.linkedinUrl || CONFIG.contact?.socials?.linkedin || '').trim();
+            const xTwitter = (CONFIG.xUrl || CONFIG.contact?.socials?.twitter || '').trim();
+            const instagram = (CONFIG.instagramUrl || CONFIG.contact?.socials?.instagram || '').trim();
 
-              return (
+            if (!linkedin && !xTwitter && !instagram) return null;
+
+            return (
+              <div className="space-y-2">
+                <span className="font-mono font-black text-[#111111] uppercase block text-xs sm:text-sm">Social & Community</span>
                 <div className="flex flex-wrap items-center gap-3">
                   {linkedin && (
                     <a
@@ -2381,9 +2548,9 @@ export const SinglePage: React.FC = () => {
                     </a>
                   )}
                 </div>
-              );
-            })()}
-          </div>
+              </div>
+            );
+          })()}
 
         </div>
 
@@ -2695,7 +2862,7 @@ export const SinglePage: React.FC = () => {
                   <h4>How Long It Is Kept (Retention)</h4>
                 </div>
                 <p className="text-xs sm:text-sm text-[#111111]/85">
-                  Registration records are stored securely in Google Cloud Firestore for the duration of Startup Conclave 1.0 and immediate post-event requirements (such as distributing digital certificates of participation and processing pitch jury outcomes). Records are scheduled to be safely purged or archived within 90 days following event completion.
+                  Retention period will be confirmed by the organisers.
                 </p>
               </div>
 
@@ -2719,7 +2886,6 @@ export const SinglePage: React.FC = () => {
                         {(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()}
                       </a>
                     </div>
-                    <span className="text-[#111111]/60 text-xs">Response within 48 hours</span>
                   </div>
                 )}
               </div>

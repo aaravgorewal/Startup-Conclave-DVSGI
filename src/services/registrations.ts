@@ -221,7 +221,8 @@ export const createRegistration = async (
   if (isEmailRegistered(emailClean) || isPhoneRegistered(phoneClean)) {
     return {
       success: false,
-      error: 'This email or phone is already registered.',
+      isNetworkError: false,
+      error: 'This email or phone may already be registered. If you are sure you have not registered, contact the organisers.',
     };
   }
 
@@ -330,15 +331,15 @@ export const createRegistration = async (
     assignedId = result.idCode;
     finalStatus = result.status;
   } catch (firestoreError: any) {
-    console.warn('Firestore registration transaction error:', firestoreError);
     const code = firestoreError?.code || '';
     const msg = (firestoreError?.message || '').toLowerCase();
+
+    // Check for network errors (failed-precondition is NOT a network error per P4)
     const isNetwork =
       (typeof navigator !== 'undefined' && navigator.onLine === false) ||
       code === 'unavailable' ||
       code === 'deadline-exceeded' ||
       code === 'network-request-failed' ||
-      code === 'failed-precondition' ||
       msg.includes('offline') ||
       msg.includes('network') ||
       msg.includes('failed to fetch') ||
@@ -354,11 +355,29 @@ export const createRegistration = async (
       };
     }
 
-    // Write failed due to existing document, duplicate conflict, or rule restriction
+    if (code === 'permission-denied') {
+      return {
+        success: false,
+        isNetworkError: false,
+        error:
+          'This email or phone may already be registered. If you are sure you have not registered, contact the organisers.',
+      };
+    }
+
+    if (code === 'failed-precondition') {
+      return {
+        success: false,
+        isNetworkError: false,
+        error: 'Something went wrong. Please try again in a minute.',
+      };
+    }
+
+    // Anything else → generic message and console.error (no personal data in logs)
+    console.error('Registration failed with error code:', code);
     return {
       success: false,
       isNetworkError: false,
-      error: 'This email or phone is already registered.',
+      error: 'Something went wrong. Please try again in a minute.',
     };
   }
 
@@ -436,7 +455,6 @@ export const createPartnerEnquiry = async (
       createdAt: serverTimestamp(),
     });
   } catch (firestoreError: any) {
-    console.warn('Firestore partner write error:', firestoreError);
     const code = firestoreError?.code || '';
     const msg = (firestoreError?.message || '').toLowerCase();
     const isNetwork =
@@ -444,7 +462,6 @@ export const createPartnerEnquiry = async (
       code === 'unavailable' ||
       code === 'deadline-exceeded' ||
       code === 'network-request-failed' ||
-      code === 'failed-precondition' ||
       msg.includes('offline') ||
       msg.includes('network') ||
       msg.includes('failed to fetch') ||
@@ -452,12 +469,35 @@ export const createPartnerEnquiry = async (
       msg.includes('could not reach') ||
       msg.includes('client is offline');
 
+    if (isNetwork) {
+      return {
+        success: false,
+        isNetworkError: true,
+        error: 'Could not submit. Check your internet and try again.',
+      };
+    }
+
+    if (code === 'failed-precondition') {
+      return {
+        success: false,
+        isNetworkError: false,
+        error: 'Something went wrong. Please try again in a minute.',
+      };
+    }
+
+    if (code === 'permission-denied') {
+      return {
+        success: false,
+        isNetworkError: false,
+        error: 'Submission not allowed. Please contact the organisers directly.',
+      };
+    }
+
+    console.error('Partner enquiry submission failed with error code:', code);
     return {
       success: false,
-      isNetworkError: isNetwork,
-      error: isNetwork
-        ? 'Could not submit. Check your internet and try again.'
-        : 'Failed to submit partner inquiry. Please retry.',
+      isNetworkError: false,
+      error: 'Something went wrong. Please try again in a minute.',
     };
   }
 

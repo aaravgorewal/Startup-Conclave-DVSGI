@@ -48,6 +48,7 @@ import {
   CheckCheck,
   BarChart3,
   GraduationCap,
+  ExternalLink,
 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { auth } from '../services/firebase.ts';
@@ -176,6 +177,24 @@ export const AdminPage: React.FC = () => {
     }, 1000);
     return () => clearTimeout(timer);
   }, [undoToast?.secondsRemaining]);
+
+  // Action Error Toast State for Failed Admin Operations (P5)
+  const [adminActionError, setAdminActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!adminActionError) return;
+    const timer = setTimeout(() => setAdminActionError(null), 5000);
+    return () => clearTimeout(timer);
+  }, [adminActionError]);
+
+  // Action Success Toast State for Confirmed Admin Operations (P5)
+  const [adminSuccessToast, setAdminSuccessToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!adminSuccessToast) return;
+    const timer = setTimeout(() => setAdminSuccessToast(null), 4000);
+    return () => clearTimeout(timer);
+  }, [adminSuccessToast]);
 
   // Event Settings State (Config Overrides & Firestore settings/event)
   const [registrationCapSetting, setRegistrationCapSetting] = useState<number>(500);
@@ -312,11 +331,16 @@ export const AdminPage: React.FC = () => {
     const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
     const timestamp = new Date().toISOString();
 
-    await updateRegistration(id, {
+    const ok = await updateRegistration(id, {
       status: newStatus,
       updatedBy: adminEmail,
       updatedAt: timestamp,
     });
+
+    if (!ok) {
+      setAdminActionError('Could not save. Check your connection or permissions');
+      return;
+    }
 
     setRegistrations((prev) =>
       prev.map((item) =>
@@ -375,11 +399,16 @@ export const AdminPage: React.FC = () => {
     const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
     const timestamp = new Date().toISOString();
 
-    await updateRegistration(id, {
+    const ok = await updateRegistration(id, {
       status: previousStatus,
       updatedBy: adminEmail,
       updatedAt: timestamp,
     });
+
+    if (!ok) {
+      setAdminActionError('Could not save. Check your connection or permissions');
+      return;
+    }
 
     setRegistrations((prev) =>
       prev.map((item) =>
@@ -403,11 +432,15 @@ export const AdminPage: React.FC = () => {
   const handlePitchStatusChange = async (id: string, newPitchStatus: string) => {
     const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
     const timestamp = new Date().toISOString();
-    await updateRegistration(id, {
+    const ok = await updateRegistration(id, {
       pitchStatus: newPitchStatus,
       updatedBy: adminEmail,
       updatedAt: timestamp,
     });
+    if (!ok) {
+      setAdminActionError('Could not save. Check your connection or permissions');
+      return;
+    }
     setRegistrations((prev) =>
       prev.map((item) =>
         item.id === id
@@ -425,7 +458,11 @@ export const AdminPage: React.FC = () => {
   };
 
   const handlePartnerStatusChange = async (id: string, newStatus: string) => {
-    await updatePartnerEnquiry(id, { status: newStatus });
+    const ok = await updatePartnerEnquiry(id, { status: newStatus });
+    if (!ok) {
+      setAdminActionError('Could not save. Check your connection or permissions');
+      return;
+    }
     setPartnerEnquiries((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     );
@@ -435,11 +472,15 @@ export const AdminPage: React.FC = () => {
     if (!activeDetailItem) return;
     const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
     const timestamp = new Date().toISOString();
-    await updateRegistration(activeDetailItem.id, {
+    const ok = await updateRegistration(activeDetailItem.id, {
       notes: detailNotes,
       updatedBy: adminEmail,
       updatedAt: timestamp,
     });
+    if (!ok) {
+      setAdminActionError('Could not save. Check your connection or permissions');
+      return;
+    }
     setRegistrations((prev) =>
       prev.map((item) =>
         item.id === activeDetailItem.id
@@ -465,7 +506,11 @@ export const AdminPage: React.FC = () => {
       variant: 'danger',
       onConfirm: async () => {
         setConfirmDialog(null);
-        await deleteRegistration(reg.id, reg.docId);
+        const ok = await deleteRegistration(reg.id, reg.docId);
+        if (!ok) {
+          setAdminActionError('Could not save. Check your connection or permissions');
+          return;
+        }
         setRegistrations((prev) => prev.filter((item) => item.id !== reg.id));
         if (activeDetailItem?.id === reg.id) {
           setActiveDetailItem(null);
@@ -486,11 +531,25 @@ export const AdminPage: React.FC = () => {
       variant: 'danger',
       onConfirm: async () => {
         setConfirmDialog(null);
+        let succeededCount = 0;
+        const totalCount = selectedIds.length;
+        const deletedIds: string[] = [];
         for (const id of selectedIds) {
-          await deleteRegistration(id);
+          const ok = await deleteRegistration(id);
+          if (ok) {
+            succeededCount++;
+            deletedIds.push(id);
+          }
         }
-        setRegistrations((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
-        setSelectedIds([]);
+        if (deletedIds.length > 0) {
+          setRegistrations((prev) => prev.filter((item) => !deletedIds.includes(item.id)));
+          setSelectedIds([]);
+        }
+        if (succeededCount === totalCount) {
+          setAdminSuccessToast(`${succeededCount} of ${totalCount} updated`);
+        } else {
+          setAdminActionError(`${succeededCount} of ${totalCount} updated. Check your connection or permissions`);
+        }
       },
     });
   };
@@ -505,7 +564,11 @@ export const AdminPage: React.FC = () => {
       variant: 'danger',
       onConfirm: async () => {
         setConfirmDialog(null);
-        await deletePartnerEnquiry(enquiry.id);
+        const ok = await deletePartnerEnquiry(enquiry.id);
+        if (!ok) {
+          setAdminActionError('Could not save. Check your connection or permissions');
+          return;
+        }
         setPartnerEnquiries((prev) => prev.filter((item) => item.id !== enquiry.id));
       },
     });
@@ -529,15 +592,38 @@ export const AdminPage: React.FC = () => {
   const executeBulkStatus = async (status: string) => {
     const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
     const timestamp = new Date().toISOString();
-    await bulkUpdateStatus(selectedIds, status, adminEmail);
-    setRegistrations((prev) =>
-      prev.map((item) =>
-        selectedIds.includes(item.id)
-          ? { ...item, status, updatedBy: adminEmail, updatedAt: timestamp }
-          : item
-      )
-    );
-    setSelectedIds([]);
+    let succeededCount = 0;
+    const totalCount = selectedIds.length;
+    const successfulIds: string[] = [];
+
+    for (const id of selectedIds) {
+      const ok = await updateRegistration(id, {
+        status,
+        updatedBy: adminEmail,
+        updatedAt: timestamp,
+      });
+      if (ok) {
+        succeededCount++;
+        successfulIds.push(id);
+      }
+    }
+
+    if (successfulIds.length > 0) {
+      setRegistrations((prev) =>
+        prev.map((item) =>
+          successfulIds.includes(item.id)
+            ? { ...item, status, updatedBy: adminEmail, updatedAt: timestamp }
+            : item
+        )
+      );
+      setSelectedIds([]);
+    }
+
+    if (succeededCount === totalCount) {
+      setAdminSuccessToast(`${succeededCount} of ${totalCount} updated`);
+    } else {
+      setAdminActionError(`${succeededCount} of ${totalCount} updated. Check your connection or permissions`);
+    }
   };
 
   // Requirement: Add confirmation dialog for bulk status changes
@@ -566,12 +652,16 @@ export const AdminPage: React.FC = () => {
   const handleSaveSettings = async () => {
     CONFIG.registration.status = regStatusSetting;
     CONFIG.registration.showCount = showCountSetting;
-    await saveEventSettings({
+    const ok = await saveEventSettings({
       registrationCap: registrationCapSetting,
       registrationStatus: regStatusSetting,
       showCount: showCountSetting,
       status: regStatusSetting,
     });
+    if (!ok) {
+      setAdminActionError('Could not save. Check your connection or permissions');
+      return;
+    }
     setSettingsSavedToast(true);
     setTimeout(() => setSettingsSavedToast(false), 2500);
   };
@@ -724,6 +814,10 @@ export const AdminPage: React.FC = () => {
       'Wants to Pitch': r.wantsToPitch ? 'Yes' : 'No',
       'Startup Name': r.startupName || '',
       'Startup Pitch': r.startupPitch || '',
+      Sector: r.sector || '',
+      Stage: r.stage || '',
+      'Pitch Deck Link': r.pitchDeckLink || '',
+      'Team Size': r.teamSize || '',
       Status: r.status,
       'Pitch Status': r.pitchStatus || '',
       Notes: r.notes || '',
@@ -737,6 +831,10 @@ export const AdminPage: React.FC = () => {
       'Registration ID': r.id,
       'Startup Name': r.startupName || 'Untitled Venture',
       'One-Line Pitch': r.startupPitch || '',
+      Sector: r.sector || '',
+      Stage: r.stage || '',
+      'Pitch Deck Link': r.pitchDeckLink || '',
+      'Team Size': r.teamSize || '',
       'Founder Name': r.name,
       Email: r.email,
       Phone: r.phone,
@@ -959,7 +1057,12 @@ export const AdminPage: React.FC = () => {
       updatedBy: adminEmail,
     };
 
-    await updateRegistration(target.id, updates, target.docId);
+    const ok = await updateRegistration(target.id, updates, target.docId);
+    if (!ok) {
+      setAdminActionError('Could not save. Check your connection or permissions');
+      triggerCheckinFeedback('error');
+      return;
+    }
 
     const updatedRecord: AdminRegistration = {
       ...target,
@@ -1003,7 +1106,11 @@ export const AdminPage: React.FC = () => {
           updatedAt: timestamp,
           updatedBy: adminEmail,
         };
-        await updateRegistration(target.id, updates, target.docId);
+        const ok = await updateRegistration(target.id, updates, target.docId);
+        if (!ok) {
+          setAdminActionError('Could not save. Check your connection or permissions');
+          return;
+        }
         setRegistrations((prev) =>
           prev.map((item) => (item.id === target.id ? { ...item, ...updates } : item))
         );
@@ -2461,6 +2568,36 @@ export const AdminPage: React.FC = () => {
                     "{applicant.startupPitch || 'No pitch summary provided.'}"
                   </p>
 
+                  {(applicant.sector || applicant.stage || applicant.teamSize || applicant.pitchDeckLink) && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] font-mono">
+                      {applicant.sector && (
+                        <span className="px-2 py-0.5 bg-[#FFF8EC] border border-[#111111] font-semibold text-[#111111]">
+                          📁 {applicant.sector}
+                        </span>
+                      )}
+                      {applicant.stage && (
+                        <span className="px-2 py-0.5 bg-white border border-[#111111] font-semibold text-[#111111]">
+                          🚀 {applicant.stage}
+                        </span>
+                      )}
+                      {applicant.teamSize && (
+                        <span className="px-2 py-0.5 bg-white border border-[#111111] font-semibold text-[#111111]">
+                          👥 Team: {applicant.teamSize}
+                        </span>
+                      )}
+                      {applicant.pitchDeckLink && (
+                        <a
+                          href={applicant.pitchDeckLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#FF6B1A] text-white border border-[#111111] font-bold hover:bg-[#111111] transition-colors"
+                        >
+                          Deck <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  )}
+
                   <div className="pt-1 text-xs font-mono grid grid-cols-2 gap-1 text-[#111111]/70 border-t border-[#111111]/10">
                     <div>Founder: <strong className="text-[#111111]">{applicant.name}</strong></div>
                     <div>Phone: <strong className="text-[#111111]">{applicant.phone}</strong></div>
@@ -2820,6 +2957,33 @@ export const AdminPage: React.FC = () => {
                 <p className="text-xs text-[#111111]/85 italic">
                   "{activeDetailItem.startupPitch || 'No pitch summary'}"
                 </p>
+
+                {(activeDetailItem.sector || activeDetailItem.stage || activeDetailItem.teamSize || activeDetailItem.pitchDeckLink) && (
+                  <div className="pt-2 pb-1 border-t border-[#111111]/15 space-y-1 font-mono text-xs">
+                    {activeDetailItem.sector && (
+                      <div>Sector: <strong className="text-[#111111]">{activeDetailItem.sector}</strong></div>
+                    )}
+                    {activeDetailItem.stage && (
+                      <div>Stage: <strong className="text-[#111111]">{activeDetailItem.stage}</strong></div>
+                    )}
+                    {activeDetailItem.teamSize && (
+                      <div>Team Size: <strong className="text-[#111111]">{activeDetailItem.teamSize}</strong></div>
+                    )}
+                    {activeDetailItem.pitchDeckLink && (
+                      <div className="pt-1">
+                        <a
+                          href={activeDetailItem.pitchDeckLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#111111] text-white font-mono text-xs font-bold hover:bg-[#FF6B1A] transition-colors"
+                        >
+                          View Pitch Deck <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="pt-2">
                   <label className="font-mono text-[10px] block font-bold mb-1">Pitch Jury Status:</label>
                   <select
@@ -2975,6 +3139,65 @@ export const AdminPage: React.FC = () => {
               <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* 5-SECOND ERROR TOAST FOR FAILED ADMIN MUTATIONS (P5)               */}
+      {/* =================================================================== */}
+      {adminActionError && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="fixed bottom-6 left-6 z-50 max-w-md w-full bg-[#111111] text-white border-2 border-[#FF6B1A] shadow-[4px_4px_0px_#FF6B1A] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-5"
+        >
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF6B1A]">
+                Action Failed
+              </span>
+            </div>
+            <p className="font-sans text-xs text-white/90">
+              {adminActionError}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAdminActionError(null)}
+            className="text-white/60 hover:text-white p-1 cursor-pointer shrink-0"
+            aria-label="Dismiss error notification"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* 4-SECOND SUCCESS TOAST FOR BULK / CONFIRMED ADMIN MUTATIONS (P5)    */}
+      {/* =================================================================== */}
+      {adminSuccessToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 right-6 z-50 max-w-md w-full bg-[#111111] text-white border-2 border-[#FFD400] shadow-[4px_4px_0px_#FFD400] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-5"
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#FFD400] shrink-0" />
+            <p className="font-sans text-xs text-white/90">
+              {adminSuccessToast}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAdminSuccessToast(null)}
+            className="text-white/60 hover:text-white p-1 cursor-pointer shrink-0"
+            aria-label="Dismiss success notification"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 

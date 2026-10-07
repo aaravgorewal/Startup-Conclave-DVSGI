@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase.ts';
 import { RegistrationRecord } from './registrations.ts';
+import { CONFIG } from '../config.ts';
 
 export interface EventSettings {
   registrationCap: number;
@@ -185,28 +186,38 @@ export const updateRegistration = async (
 ): Promise<boolean> => {
   let resolvedDocId = docId;
 
-  // Update in local cache
-  try {
-    const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
-    const list: AdminRegistration[] = raw ? JSON.parse(raw) : [];
-    const index = list.findIndex((item) => item.id === id || item.docId === id);
-    if (index !== -1) {
-      resolvedDocId = resolvedDocId || list[index].docId;
-      list[index] = { ...list[index], ...updates };
-      localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(list));
-    }
-  } catch (e) {
-    console.warn('Cache update notice:', e);
+  if (!resolvedDocId) {
+    try {
+      const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
+      const list: AdminRegistration[] = raw ? JSON.parse(raw) : [];
+      const item = list.find((it) => it.id === id || it.docId === id);
+      if (item?.docId) {
+        resolvedDocId = item.docId;
+      }
+    } catch {}
   }
 
-  // Update in Firestore
+  // 1. Update in Firestore FIRST (source of truth)
   try {
     const target = resolvedDocId || id;
     const ref = doc(db, 'registrations', target);
     await updateDoc(ref, updates);
   } catch (e) {
-    console.warn('Firestore update notice:', e);
+    console.error('Firestore update failed:', e);
     return false;
+  }
+
+  // 2. Update local cache ONLY after confirmed Firestore success
+  try {
+    const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
+    const list: AdminRegistration[] = raw ? JSON.parse(raw) : [];
+    const index = list.findIndex((item) => item.id === id || item.docId === id);
+    if (index !== -1) {
+      list[index] = { ...list[index], ...updates };
+      localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(list));
+    }
+  } catch (e) {
+    console.warn('Cache update notice:', e);
   }
 
   return true;
@@ -221,14 +232,18 @@ export const bulkUpdateStatus = async (
   updatedBy?: string
 ): Promise<boolean> => {
   const timestamp = new Date().toISOString();
+  let allSucceeded = true;
   for (const id of ids) {
-    await updateRegistration(id, {
+    const ok = await updateRegistration(id, {
       status: newStatus,
       updatedBy: updatedBy || 'admin',
       updatedAt: timestamp,
     });
+    if (!ok) {
+      allSucceeded = false;
+    }
   }
-  return true;
+  return allSucceeded;
 };
 
 /**
@@ -237,27 +252,35 @@ export const bulkUpdateStatus = async (
 export const deleteRegistration = async (id: string, docId?: string): Promise<boolean> => {
   let resolvedDocId = docId;
 
-  // Remove from local cache
-  try {
-    const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
-    const list: AdminRegistration[] = raw ? JSON.parse(raw) : [];
-    const index = list.findIndex((item) => item.id === id || item.docId === id);
-    if (index !== -1) {
-      resolvedDocId = resolvedDocId || list[index].docId;
-      list.splice(index, 1);
-      localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(list));
-    }
-  } catch (e) {
-    console.warn('Cache delete notice:', e);
+  if (!resolvedDocId) {
+    try {
+      const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
+      const list: AdminRegistration[] = raw ? JSON.parse(raw) : [];
+      const item = list.find((it) => it.id === id || it.docId === id);
+      if (item?.docId) {
+        resolvedDocId = item.docId;
+      }
+    } catch {}
   }
 
-  // Remove from Firestore
+  // 1. Remove from Firestore FIRST
   try {
     const target = resolvedDocId || id;
     const ref = doc(db, 'registrations', target);
     await deleteDoc(ref);
   } catch (e) {
-    console.warn('Firestore delete notice:', e);
+    console.error('Firestore delete failed:', e);
+    return false;
+  }
+
+  // 2. Remove from local cache ONLY after confirmed Firestore success
+  try {
+    const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
+    const list: AdminRegistration[] = raw ? JSON.parse(raw) : [];
+    const filtered = list.filter((item) => item.id !== id && item.docId !== id);
+    localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(filtered));
+  } catch (e) {
+    console.warn('Cache delete notice:', e);
   }
 
   return true;
@@ -267,13 +290,16 @@ export const deleteRegistration = async (id: string, docId?: string): Promise<bo
  * Delete a partner enquiry from Firestore and local cache
  */
 export const deletePartnerEnquiry = async (id: string): Promise<boolean> => {
+  // 1. Remove from Firestore FIRST
   try {
     const ref = doc(db, 'partnerEnquiries', id);
     await deleteDoc(ref);
   } catch (e) {
-    console.warn('Firestore partner delete notice:', e);
+    console.error('Firestore partner delete failed:', e);
+    return false;
   }
 
+  // 2. Remove from local cache ONLY after confirmed Firestore success
   try {
     const raw = localStorage.getItem(LOCAL_PARTNER_KEY);
     const list: AdminPartnerEnquiry[] = raw ? JSON.parse(raw) : [];
@@ -293,14 +319,16 @@ export const updatePartnerEnquiry = async (
   id: string,
   updates: Partial<AdminPartnerEnquiry>
 ): Promise<boolean> => {
+  // 1. Update in Firestore FIRST
   try {
     const ref = doc(db, 'partnerEnquiries', id);
     await updateDoc(ref, updates);
   } catch (e) {
-    console.warn('Firestore partner update notice:', e);
+    console.error('Firestore partner update failed:', e);
     return false;
   }
 
+  // 2. Update local cache ONLY after confirmed Firestore success
   try {
     const raw = localStorage.getItem(LOCAL_PARTNER_KEY);
     const list: AdminPartnerEnquiry[] = raw ? JSON.parse(raw) : [];
@@ -350,9 +378,9 @@ export const exportToCSV = (data: Record<string, any>[], filename: string) => {
 export const getEventSettings = async (): Promise<EventSettings> => {
   const defaultSettings: EventSettings = {
     registrationCap: 500,
-    registrationStatus: 'open',
-    showCount: false,
-    status: 'open',
+    registrationStatus: CONFIG.registration.status,
+    showCount: CONFIG.registration.showCount,
+    status: CONFIG.registration.status,
   };
 
   try {
@@ -402,7 +430,8 @@ export const saveEventSettings = async (settings: Partial<EventSettings>): Promi
       updatedAt: serverTimestamp(),
     }, { merge: true });
   } catch (err) {
-    console.warn('Notice writing settings/event to Firestore:', err);
+    console.error('Firestore save settings failed:', err);
+    return false;
   }
 
   try {
