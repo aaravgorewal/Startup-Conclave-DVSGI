@@ -1,0 +1,8 @@
+# verify
+1. Run `npm run lint` and `npm run build`. Report errors with file and line.
+2. Search the code for hardcoded emails, phone numbers and the strings
+   "Register Free", "98765", "dvsiet.ac.in" outside src/config.ts and report them.
+3. Confirm every supporter in CONFIG.supporters is confirmed:false unless I said otherwise.
+4. Confirm firestore.rules has no public read/update/delete on registrations,
+   partnerEnquiries, phoneIndex, mail, admins.
+5. Print a pass/fail table.
