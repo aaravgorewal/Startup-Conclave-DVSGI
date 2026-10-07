@@ -235,7 +235,7 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const isAdmin = await checkIsAdmin(user.uid);
+        const isAdmin = await checkIsAdmin(user.uid, user.email);
         if (isAdmin) {
           setCurrentUser(user);
         } else {
@@ -299,7 +299,7 @@ export const AdminPage: React.FC = () => {
 
     try {
       const cred = await signInWithEmailAndPassword(auth, emailTrim, authPassword);
-      const isAdmin = await checkIsAdmin(cred.user.uid);
+      const isAdmin = await checkIsAdmin(cred.user.uid, cred.user.email);
       
       // Verify user has an active admin document in Firestore (/admins/{uid})
       if (isAdmin) {

@@ -17,6 +17,7 @@ export interface LogoItem {
 
 export const ADMIN_EMAILS: string[] = [
   'aaravgorewal@gmail.com',
+  'aarav@dewaninstitutes.org',
   'admin@dvsiet.ac.in',
   'conclave@dvsiet.ac.in',
 ];
