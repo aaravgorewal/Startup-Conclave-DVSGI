@@ -86,6 +86,10 @@ const INITIAL_DEMO_PARTNERS: AdminPartnerEnquiry[] = [];
  */
 export const fetchRegistrations = async (): Promise<AdminRegistration[]> => {
   let list: AdminRegistration[] = [];
+<<<<<<< HEAD
+=======
+  let fetched = false;
+>>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
 
   try {
     const q = query(collection(db, 'registrations'));
@@ -95,11 +99,29 @@ export const fetchRegistrations = async (): Promise<AdminRegistration[]> => {
       const displayId = data.registrationId || data.id || d.id;
       list.push({ ...data, id: displayId, docId: d.id });
     });
+<<<<<<< HEAD
+=======
+    fetched = true;
+>>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
   } catch (error) {
     console.warn('Firestore fetch notice (using cache):', error);
   }
 
+<<<<<<< HEAD
   // Merge with local cache
+=======
+  // Firestore is the source of truth. Merging the browser cache here resurrected
+  // records already deleted in the console (and polluted counts and CSV exports).
+  if (fetched) {
+    const fresh = list.sort(
+      (a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime()
+    );
+    try { localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(fresh)); } catch {}
+    return fresh;
+  }
+
+  // Offline fallback only
+>>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
   try {
     const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
     const cached: AdminRegistration[] = raw ? JSON.parse(raw) : [];
@@ -127,6 +149,10 @@ export const fetchRegistrations = async (): Promise<AdminRegistration[]> => {
  */
 export const fetchPartnerEnquiries = async (): Promise<AdminPartnerEnquiry[]> => {
   let list: AdminPartnerEnquiry[] = [];
+<<<<<<< HEAD
+=======
+  let fetched = false;
+>>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
 
   try {
     const q = query(collection(db, 'partnerEnquiries'));
@@ -135,10 +161,25 @@ export const fetchPartnerEnquiries = async (): Promise<AdminPartnerEnquiry[]> =>
       const data = d.data() as AdminPartnerEnquiry;
       list.push({ ...data, id: d.id });
     });
+<<<<<<< HEAD
+=======
+    fetched = true;
+>>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
   } catch (error) {
     console.warn('Firestore partner fetch notice (using cache):', error);
   }
 
+<<<<<<< HEAD
+=======
+  if (fetched) {
+    const fresh = list.sort(
+      (a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime()
+    );
+    try { localStorage.setItem(LOCAL_PARTNER_KEY, JSON.stringify(fresh)); } catch {}
+    return fresh;
+  }
+
+>>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
   try {
     const raw = localStorage.getItem(LOCAL_PARTNER_KEY);
     const cached: AdminPartnerEnquiry[] = raw ? JSON.parse(raw) : [];
@@ -190,6 +231,10 @@ export const updateRegistration = async (
     await updateDoc(ref, updates);
   } catch (e) {
     console.warn('Firestore update notice:', e);
+<<<<<<< HEAD
+=======
+    return false;
+>>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
   }
 
   return true;
@@ -281,6 +326,10 @@ export const updatePartnerEnquiry = async (
     await updateDoc(ref, updates);
   } catch (e) {
     console.warn('Firestore partner update notice:', e);
+<<<<<<< HEAD
+=======
+    return false;
+>>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
   }
 
   try {
@@ -333,7 +382,11 @@ export const getEventSettings = async (): Promise<EventSettings> => {
   const defaultSettings: EventSettings = {
     registrationCap: 500,
     registrationStatus: 'open',
+<<<<<<< HEAD
     showCount: true,
+=======
+    showCount: false,
+>>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
     status: 'open',
   };
 
@@ -345,7 +398,11 @@ export const getEventSettings = async (): Promise<EventSettings> => {
       return {
         registrationCap: typeof data.registrationCap === 'number' ? data.registrationCap : 500,
         registrationStatus: data.registrationStatus === 'closed' || data.status === 'closed' ? 'closed' : 'open',
+<<<<<<< HEAD
         showCount: data.showCount !== undefined ? Boolean(data.showCount) : true,
+=======
+        showCount: data.showCount === true,
+>>>>>>> c89faf2 (feat: initialize Startup Conclave 1.0 application with configuration, admin services, and components)
         status: data.status === 'closed' || data.registrationStatus === 'closed' ? 'closed' : 'open',
       };
     }
