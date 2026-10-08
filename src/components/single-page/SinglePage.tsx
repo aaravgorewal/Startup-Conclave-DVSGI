@@ -27,6 +27,15 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
+import {
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  signOut,
+  onAuthStateChanged,
+  type User,
+} from 'firebase/auth';
+import { auth, googleProvider } from '../../services/firebase.ts';
 import { CONFIG, type LogoItem } from '../../config.ts';
 import {
   createRegistration,
@@ -46,6 +55,28 @@ import {
   checkBrowserRateLimit,
   recordBrowserSubmission,
 } from '../../services/botProtection.ts';
+
+// Crisp Google Brand Icon
+const GoogleIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+      fill="#EA4335"
+    />
+  </svg>
+);
 
 // Custom Vector-Style Neo-Brutalist Illustration representing 'Building, Connecting, Pitching, and Scaling'
 const HeroVectorIllustration: React.FC = () => {
@@ -505,6 +536,9 @@ export const SinglePage: React.FC = () => {
   const [partnerError, setPartnerError] = useState('');
 
   // Registration Form State (id="register")
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
+  const [googleAuthError, setGoogleAuthError] = useState('');
   const [ticket, setTicket] = useState<'participant' | 'pitch'>('participant');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -569,6 +603,127 @@ export const SinglePage: React.FC = () => {
 
   // Schedule Active Tab (Day 1 vs Day 2)
   const [activeDay, setActiveDay] = useState<1 | 2>(1);
+
+  // Friendly error message mapper for Google Auth
+  const getFriendlyAuthErrorMessage = (error: any): string => {
+    const code = error?.code || '';
+    if (code === 'auth/popup-blocked') {
+      return 'Popup was blocked by your browser. Please allow popups or redirecting to sign-in...';
+    }
+    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+      return 'Google sign-in was closed or cancelled. Please click "Continue with Google" again when you are ready.';
+    }
+    if (code === 'auth/network-request-failed') {
+      return 'Network error connecting to Google. Please check your internet connection and try again.';
+    }
+    if (code === 'auth/unauthorized-domain') {
+      return 'This website domain is not authorized in Firebase Auth. Please add it to Authorized Domains in Firebase Console.';
+    }
+    if (code === 'auth/user-disabled') {
+      return 'This Google account has been disabled. Please try a different account.';
+    }
+    if (code === 'auth/operation-not-allowed') {
+      return 'Google sign-in is not enabled for this project. Please contact the organisers.';
+    }
+    return error?.message || 'Could not sign in with Google. Please try again.';
+  };
+
+  // Google Sign-In with popup + redirect fallback for mobile
+  const handleGoogleSignIn = async () => {
+    setIsGoogleSigningIn(true);
+    setGoogleAuthError('');
+    setErrors((prev) => ({ ...prev, email: '', form: '' }));
+
+    // Detect mobile browsers where popups are frequently blocked or restricted
+    const isMobile =
+      typeof navigator !== 'undefined' &&
+      /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      } catch (redirectErr: any) {
+        console.warn('Mobile signInWithRedirect failed, attempting popup fallback:', redirectErr);
+      }
+    }
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      if (result.user) {
+        setAuthUser(result.user);
+        if (result.user.email) {
+          setEmail(result.user.email.toLowerCase());
+          setFullName((prev) => prev.trim() || result.user.displayName || '');
+        }
+        setGoogleAuthError('');
+        setErrors((prev) => ({ ...prev, email: '', form: '' }));
+      }
+    } catch (err: any) {
+      const code = err?.code || '';
+      // Automatic fallback to redirect if popup was blocked by browser
+      if (code === 'auth/popup-blocked') {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        } catch (redirectErr: any) {
+          const friendly = getFriendlyAuthErrorMessage(redirectErr);
+          setGoogleAuthError(friendly);
+          setErrors((prev) => ({ ...prev, email: friendly, form: friendly }));
+        }
+      } else {
+        const friendly = getFriendlyAuthErrorMessage(err);
+        setGoogleAuthError(friendly);
+        setErrors((prev) => ({ ...prev, email: friendly, form: friendly }));
+      }
+    } finally {
+      setIsGoogleSigningIn(false);
+    }
+  };
+
+  // Google Sign-Out
+  const handleGoogleSignOut = async () => {
+    try {
+      await signOut(auth);
+      setAuthUser(null);
+      setEmail('');
+      setGoogleAuthError('');
+    } catch (err) {
+      console.error('Sign-out error:', err);
+    }
+  };
+
+  // Auth state listener and redirect result handler
+  useEffect(() => {
+    // 1. Process result from mobile redirect sign-in if returning from Google
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setAuthUser(result.user);
+          if (result.user.email) {
+            setEmail(result.user.email.toLowerCase());
+            setFullName((prev) => prev.trim() || result.user.displayName || '');
+          }
+          setGoogleAuthError('');
+          setErrors((prev) => ({ ...prev, email: '', form: '' }));
+        }
+      })
+      .catch((err) => {
+        const friendly = getFriendlyAuthErrorMessage(err);
+        setGoogleAuthError(friendly);
+      });
+
+    // 2. Continuous auth state observer
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      if (user?.email) {
+        setEmail(user.email.toLowerCase());
+        setFullName((prev) => prev.trim() || user.displayName || '');
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Smooth scroll handler for nav anchors with guaranteed mobile menu auto-close
   const handleNavClick = (anchor: string) => {
@@ -664,12 +819,23 @@ export const SinglePage: React.FC = () => {
 
     const newErrors: Record<string, string> = {};
 
+    // Google Sign-in Verification Enforcement (rules require request.auth.token.email_verified == true)
+    if (!authUser || !authUser.email) {
+      const msg = 'Please sign in with Google to verify your email address before submitting.';
+      setErrors({ email: msg, form: msg });
+      handleGoogleSignIn();
+      return;
+    }
+
     if (!fullName.trim()) {
       newErrors.fullName = 'Full name is required.';
     }
 
     const emailTrim = email.trim().toLowerCase();
-    if (!emailTrim || !isValidEmail(emailTrim)) {
+    const userEmailLower = authUser.email.trim().toLowerCase();
+    if (emailTrim !== userEmailLower) {
+      newErrors.email = `Registration email (${emailTrim}) must match your signed-in Google account (${userEmailLower}).`;
+    } else if (!emailTrim || !isValidEmail(emailTrim)) {
       newErrors.email = 'Please provide a valid email address.';
     } else if (isEmailRegistered(emailTrim)) {
       newErrors.email = 'This email or phone is already registered.';
@@ -772,6 +938,7 @@ export const SinglePage: React.FC = () => {
       pitchDeckLink: isPitch ? pitchDeckLink.trim() : undefined,
       teamSize: isPitch ? pitchTeamSize : undefined,
       paymentUtr: isPitch && paymentUtr.trim() ? paymentUtr.trim() : undefined,
+      emailVerified: true,
     };
 
     const res = await createRegistration(inputData);
@@ -817,7 +984,7 @@ export const SinglePage: React.FC = () => {
     setSubmittedRecord(null);
     setTicket('participant');
     setFullName('');
-    setEmail('');
+    setEmail(authUser?.email ? authUser.email.toLowerCase() : '');
     setPhone('');
     setPaymentUtr('');
     setCollege('');
@@ -2438,6 +2605,75 @@ export const SinglePage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Google Sign-In Verification Card */}
+              <div className="bg-white border-2 border-[#111111] p-4 shadow-[3px_3px_0px_#111111] space-y-3">
+                {authUser ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-100 border-2 border-[#111111] flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-5 h-5 text-green-700" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-display font-black text-sm uppercase text-[#111111]">
+                            Google Verified Account
+                          </span>
+                          <span className="bg-[#FFD400] text-[#111111] border border-[#111111] font-mono text-[10px] font-bold px-1.5 py-0.5">
+                            LOCKED
+                          </span>
+                        </div>
+                        <p className="font-mono text-xs text-[#111111] font-bold mt-0.5 break-all">
+                          {authUser.email}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGoogleSignOut}
+                      className="brutal-btn bg-[#FFF8EC] hover:bg-[#111111] hover:text-white text-[#111111] border-2 border-[#111111] px-3.5 py-2 font-mono text-xs font-black uppercase tracking-wider cursor-pointer shadow-[2px_2px_0px_#111111] min-h-[40px] shrink-0 self-start sm:self-auto transition-colors"
+                    >
+                      Change Account
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 font-display font-black text-sm uppercase text-[#111111]">
+                        <Shield className="w-4 h-4 text-[#FF6B1A]" />
+                        <span>Sign In with Google Required</span>
+                      </div>
+                      <p className="text-xs text-[#111111]/80 font-sans">
+                        Firebase security rules require a verified Google account to prevent spam & confirm tickets.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGoogleSignIn}
+                      disabled={isGoogleSigningIn}
+                      className="brutal-btn bg-[#FFD400] hover:bg-[#FFE55B] text-[#111111] border-2 border-[#111111] px-5 py-2.5 font-display font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer shadow-[2px_2px_0px_#111111] min-h-[44px] shrink-0 transition-all disabled:opacity-60"
+                    >
+                      {isGoogleSigningIn ? (
+                        <>
+                          <RotateCw className="w-4 h-4 animate-spin text-[#111111]" />
+                          <span>Connecting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <GoogleIcon className="w-4 h-4 shrink-0" />
+                          <span>Continue with Google</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+                {googleAuthError && (
+                  <div className="p-2.5 bg-red-100 border border-red-800 text-red-900 font-mono text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-700" />
+                    <span className="flex-1">{googleAuthError}</span>
+                  </div>
+                )}
+              </div>
+
               {/* 1. Full Name */}
               <div className="space-y-1.5">
                 <label className="font-bold text-[#111111] block">Full Name *</label>
@@ -2458,18 +2694,69 @@ export const SinglePage: React.FC = () => {
               {/* 2. Email & WhatsApp (10-digit Indian Number) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[#111111] block">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (errors.email) setErrors({ ...errors, email: '' });
-                    }}
-                    placeholder="aryan@example.com"
-                    className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white min-h-[46px] text-base"
-                  />
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-[#111111] block">Email Address *</label>
+                    {authUser ? (
+                      <span className="font-mono text-[10px] font-black uppercase text-green-800 bg-green-100 px-1.5 py-0.5 border border-green-800 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-green-700" />
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[10px] font-bold uppercase text-[#FF6B1A] bg-[#FFF8EC] px-1.5 py-0.5 border border-[#111111]">
+                        Google Sign-in
+                      </span>
+                    )}
+                  </div>
+                  {authUser ? (
+                    <div className="relative">
+                      <input
+                        type="email"
+                        required
+                        readOnly
+                        value={email}
+                        className="w-full p-3 bg-[#EFE9DC] border-2 border-[#111111] font-sans font-bold text-[#111111] cursor-not-allowed min-h-[46px] text-base"
+                        title="Locked to your verified Google account"
+                      />
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs font-mono font-bold text-[#111111]/70 pointer-events-none">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Locked</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <input
+                          type="email"
+                          required
+                          readOnly
+                          placeholder="Sign in with Google to prefill"
+                          onClick={handleGoogleSignIn}
+                          className="w-full p-3 bg-[#FFF8EC] border-2 border-dashed border-[#111111] font-sans focus:outline-none min-h-[46px] text-base cursor-pointer hover:bg-white transition-colors text-[#111111]/70"
+                        />
+                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs font-mono font-bold text-[#111111]/70 pointer-events-none">
+                          <Lock className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGoogleSignIn}
+                        disabled={isGoogleSigningIn}
+                        className="w-full brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] border-2 border-[#111111] p-2.5 font-display font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[2px_2px_0px_#111111] min-h-[42px] transition-all"
+                      >
+                        {isGoogleSigningIn ? (
+                          <>
+                            <RotateCw className="w-3.5 h-3.5 animate-spin text-[#FF6B1A]" />
+                            <span>Connecting with Google...</span>
+                          </>
+                        ) : (
+                          <>
+                            <GoogleIcon className="w-3.5 h-3.5" />
+                            <span>Continue with Google</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                   {errors.email && <p className="text-xs text-red-600 font-bold">{errors.email}</p>}
                 </div>
 
@@ -2975,6 +3262,11 @@ export const SinglePage: React.FC = () => {
                       <RotateCw className="w-5 h-5 animate-spin" />
                       <span>Submitting...</span>
                     </span>
+                  ) : !authUser ? (
+                    <>
+                      <span>Sign in with Google & Register</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </>
                   ) : (
                     <>
                       <span>{ticket === 'pitch' ? 'Submit Pitch Registration' : 'Register for Startup Conclave 1.0'}</span>

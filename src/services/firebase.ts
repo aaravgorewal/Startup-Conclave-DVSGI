@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -11,6 +11,11 @@ export const db = firebaseConfig.firestoreDatabaseId
   : getFirestore(app);
 
 export const auth = getAuth(app);
+
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account',
+});
 
 // Initialize Firebase App Check with reCAPTCHA v3 or Enterprise if site key is configured
 export let appCheck: any = null;

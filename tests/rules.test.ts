@@ -16,6 +16,12 @@ import {
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, it, before, after, beforeEach } from 'node:test';
+import assert from 'node:assert';
+import {
+  createRegistration,
+  hashString,
+  type RegistrationInput,
+} from '../src/services/registrations.ts';
 
 const PROJECT_ID = 'client-hunting-472203';
 const RULES_PATH = path.resolve(import.meta.dirname, '../firestore.rules');
@@ -508,6 +514,121 @@ describe('Firestore Security Rules Unit Tests', () => {
       const db = testEnv.unauthenticatedContext().firestore();
       const enquiryRef = doc(db, 'partnerEnquiries', 'enquiry_test_1');
       await assertFails(getDoc(enquiryRef));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 9. REAL CLIENT REGISTRATION FLOW (authenticated verified user via createRegistration)
+  // -------------------------------------------------------------------------
+  describe('9. Real client registration flow (authenticated verified user)', () => {
+    it('verified authenticated user can successfully register via createRegistration()', async () => {
+      const userUid = 'google_verified_user_1';
+      const userEmail = 'verified.student@gmail.com';
+      const authDb = testEnv.authenticatedContext(userUid, {
+        email: userEmail,
+        email_verified: true,
+      }).firestore();
+
+      const input: RegistrationInput = {
+        name: 'Aryan Sharma',
+        email: userEmail,
+        phone: '9876543210',
+        ticket: 'participant',
+        college: 'DVSIET Meerut',
+        course: 'B.Tech CSE',
+        year: '3rd Year',
+        role: 'Student',
+        city: 'Meerut',
+      };
+
+      const result = await createRegistration(input, authDb);
+
+      assert.strictEqual(result.success, true, `Expected success to be true, got error: ${result.error}`);
+      assert.ok(result.id && result.id.startsWith('SC1-'), `Expected SC1- ID, got ${result.id}`);
+      assert.strictEqual(result.status, 'registered');
+      assert.ok(result.ticketCode && result.ticketCode.length === 16, 'Expected 16-character ticketCode');
+
+      // Verify the registration document exists in Firestore and matches
+      const emailHash = await hashString(userEmail.toLowerCase());
+      let regDoc: any = null;
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        regDoc = await getDoc(doc(context.firestore(), 'registrations', emailHash));
+      });
+
+      assert.strictEqual(regDoc?.exists(), true);
+      const data = regDoc?.data();
+      assert.strictEqual(data?.emailLower, userEmail.toLowerCase());
+      assert.strictEqual(data?.sequenceNumber, 1);
+      assert.strictEqual(data?.ticketCode, result.ticketCode);
+      assert.strictEqual(data?.status, 'registered');
+    });
+
+    it('unauthenticated user is denied by rules when attempting createRegistration()', async () => {
+      const unauthDb = testEnv.unauthenticatedContext().firestore();
+      const input: RegistrationInput = {
+        name: 'Unauth User',
+        email: 'unauth.user@gmail.com',
+        phone: '9876543211',
+        ticket: 'participant',
+        college: 'DVSIET Meerut',
+        course: 'B.Tech CSE',
+        year: '3rd Year',
+        role: 'Student',
+        city: 'Meerut',
+      };
+
+      const result = await createRegistration(input, unauthDb);
+      assert.strictEqual(result.success, false);
+      assert.ok(result.error?.includes('denied') || result.error?.includes('registered'));
+    });
+
+    it('unverified user is denied by rules when attempting createRegistration()', async () => {
+      const unverifiedEmail = 'unverified.user@gmail.com';
+      const unverifiedDb = testEnv.authenticatedContext('unverified_user_1', {
+        email: unverifiedEmail,
+        email_verified: false,
+      }).firestore();
+
+      const input: RegistrationInput = {
+        name: 'Unverified Delegate',
+        email: unverifiedEmail,
+        phone: '9876543212',
+        ticket: 'participant',
+        college: 'DVSIET Meerut',
+        course: 'B.Tech CSE',
+        year: '3rd Year',
+        role: 'Student',
+        city: 'Meerut',
+      };
+
+      const result = await createRegistration(input, unverifiedDb);
+      assert.strictEqual(result.success, false);
+      assert.ok(result.error?.includes('denied') || result.error?.includes('registered'));
+    });
+
+    it('mismatched email between token and registration form is denied by rules', async () => {
+      const tokenEmail = 'token.owner@gmail.com';
+      const formEmail = 'imposter.email@gmail.com';
+      const db = testEnv.authenticatedContext('mismatched_user_1', {
+        email: tokenEmail,
+        email_verified: true,
+      }).firestore();
+
+      const input: RegistrationInput = {
+        name: 'Imposter Delegate',
+        email: formEmail,
+        phone: '9876543213',
+        ticket: 'participant',
+        college: 'DVSIET Meerut',
+        course: 'B.Tech CSE',
+        year: '3rd Year',
+        role: 'Student',
+        city: 'Meerut',
+      };
+
+      const result = await createRegistration(input, db);
+      assert.strictEqual(result.success, false);
+      assert.ok(result.error?.includes('denied') || result.error?.includes('registered'));
     });
   });
 });

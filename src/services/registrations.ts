@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
-import { db } from './firebase.ts';
+import { db, auth } from './firebase.ts';
 import { CONFIG, toPaise } from '../config.ts';
 
 export interface CollegeInfo {
@@ -246,10 +246,28 @@ export const fetchPublicRegistrationCount = async (): Promise<number> => {
  * Honest flow: success screen ONLY after Firestore confirms the transaction.
  */
 export const createRegistration = async (
-  input: RegistrationInput
+  input: RegistrationInput,
+  customDb: any = db
 ): Promise<{ success: boolean; id?: string; status?: 'registered' | 'waitlist'; ticketCode?: string; error?: string; isNetworkError?: boolean }> => {
   const emailClean = input.email.trim().toLowerCase();
   const phoneClean = cleanPhoneNumber(input.phone);
+
+  // In browser runtime with standard db, verify that user is signed in with Google
+  if (typeof window !== 'undefined' && customDb === db) {
+    const currentUser = auth.currentUser;
+    if (!currentUser || !currentUser.email) {
+      return {
+        success: false,
+        error: 'Please sign in with Google to verify your registration email before submitting.',
+      };
+    }
+    if (currentUser.email.trim().toLowerCase() !== emailClean) {
+      return {
+        success: false,
+        error: `Registration email (${emailClean}) must match your signed-in Google account (${currentUser.email.toLowerCase()}).`,
+      };
+    }
+  }
 
   // 1. Validation
   if (!isValidEmail(emailClean)) {
@@ -435,13 +453,13 @@ export const createRegistration = async (
   let finalStatus: 'registered' | 'waitlist' = 'registered';
 
   try {
-    const counterRef = doc(db, 'counters', 'registrations');
-    const regDocRef = doc(db, 'registrations', emailHash);
-    const phoneDocRef = doc(db, 'phoneIndex', phoneHash);
-    const utrDocRef = isPitch && cleanUtr ? doc(db, 'utrIndex', cleanUtr) : null;
-    const settingsRef = doc(db, 'settings', 'event');
+    const counterRef = doc(customDb, 'counters', 'registrations');
+    const regDocRef = doc(customDb, 'registrations', emailHash);
+    const phoneDocRef = doc(customDb, 'phoneIndex', phoneHash);
+    const utrDocRef = isPitch && cleanUtr ? doc(customDb, 'utrIndex', cleanUtr) : null;
+    const settingsRef = doc(customDb, 'settings', 'event');
 
-    const result = await runTransaction(db, async (transaction) => {
+    const result = await runTransaction(customDb, async (transaction) => {
       // 5a. Read atomic counter
       const counterSnap = await transaction.get(counterRef);
       let nextCount = 1;
@@ -558,8 +576,8 @@ export const createRegistration = async (
         success: false,
         isNetworkError: false,
         error: isPitch
-          ? 'This email, phone, or UPI reference (UTR) may already be registered. If you are sure you have not registered, contact the organisers.'
-          : 'This email or phone may already be registered. If you are sure you have not registered, contact the organisers.',
+          ? 'Registration was denied. Please ensure you are signed in with Google, or this email/phone/UTR may already be registered.'
+          : 'Registration was denied. Please ensure you are signed in with Google, or this email/phone may already be registered.',
       };
     }
 
