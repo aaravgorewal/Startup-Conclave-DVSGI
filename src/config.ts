@@ -58,8 +58,8 @@ export const CONFIG = {
   } as Record<'participant' | 'pitch', TicketConfig>,
 
   payment: {
-    upiId: '',
-    payeeName: '',
+    upiId: '9286153090@upi',
+    payeeName: 'Aarav Saini',
     refundPolicyText: '',
   } as PaymentConfig,
 
@@ -354,8 +354,8 @@ export const CONFIG = {
   ],
 
   contact: {
-    email: "",
-    phone: "",
+    email: 'aarav@dewaninstitutes.org',
+    phone: '9286153090',
     campus: "Dewan V.S. Institute of Engineering & Technology (DVSIET)",
     city: "Meerut, Uttar Pradesh, India",
     socials: {
