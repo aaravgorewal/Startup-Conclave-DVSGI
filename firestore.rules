@@ -10,7 +10,10 @@ service cloud.firestore {
     // Helper: Verify if user is signed in as a volunteer and checkin is active
     function isVolunteer() {
       return request.auth != null
-        && exists(/databases/$(database)/documents/volunteers/$(request.auth.uid))
+        && (
+          exists(/databases/$(database)/documents/volunteers/$(request.auth.uid))
+          || exists(/databases/$(database)/documents/Volunteers/$(request.auth.uid))
+        )
         && get(/databases/$(database)/documents/settings/event).data.checkinOpen == true;
     }
 
@@ -233,8 +236,12 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // 9. Volunteers Collection (keyed by Firebase Auth UID)
+    // 9. Volunteers Collection (keyed by Firebase Auth UID, supports both lower and upper case)
     match /volunteers/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+    match /Volunteers/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
       allow list, write: if false;
     }

@@ -267,14 +267,20 @@ export default function ScanPage() {
 
   // Check volunteer authorisation doc and settings/event
   const verifyVolunteerAndSettings = async (user: User): Promise<boolean> => {
-    // 1. Check volunteers/{uid}
+    // 1. Check volunteers/{uid} (or Volunteers/{uid} in case of title-cased collection)
     try {
-      const volRef = doc(db, 'volunteers', user.uid);
-      const volSnap = await getDoc(volRef);
+      let volSnap = await getDoc(doc(db, 'volunteers', user.uid));
       if (!volSnap.exists()) {
+        volSnap = await getDoc(doc(db, 'Volunteers', user.uid));
+      }
+
+      if (!volSnap.exists()) {
+        console.warn(`No volunteer document found for UID: ${user.uid} in 'volunteers' or 'Volunteers'`);
         await signOut(auth);
         setCurrentUser(null);
-        setLoginError('Not authorised');
+        setLoginError(
+          `Not authorised: No volunteer doc found for UID "${user.uid}". Verify that the document ID in 'volunteers' matches your Firebase Auth UID.`
+        );
         setPageState('login');
         return false;
       }
@@ -282,7 +288,18 @@ export default function ScanPage() {
       console.warn('Volunteer doc check failed:', err);
       await signOut(auth);
       setCurrentUser(null);
-      setLoginError('Not authorised');
+      const isPermDenied =
+        err?.code === 'permission-denied' ||
+        String(err?.message || '').includes('permission-denied') ||
+        String(err?.message || '').includes('Missing or insufficient permissions');
+
+      if (isPermDenied) {
+        setLoginError(
+          'Not authorised: Firestore rules denied access to the volunteers document. Please deploy or publish firestore.rules to Firebase.'
+        );
+      } else {
+        setLoginError(`Not authorised: ${err?.message || 'Access denied'}`);
+      }
       setPageState('login');
       return false;
     }
