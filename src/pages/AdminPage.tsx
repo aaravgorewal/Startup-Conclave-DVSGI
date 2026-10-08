@@ -63,11 +63,19 @@ import {
   deleteRegistration,
   deletePartnerEnquiry,
   updatePartnerEnquiry,
+  updatePaymentStatus,
   exportToCSV,
   getEventSettings,
   saveEventSettings,
   checkIsAdmin,
 } from '../services/admin.ts';
+import { CollegeInfo } from '../services/registrations.ts';
+
+const getCollegeName = (col: CollegeInfo | string | undefined | null): string => {
+  if (!col) return '';
+  if (typeof col === 'object') return col.name || '';
+  return String(col);
+};
 
 export const AdminPage: React.FC = () => {
   // Inject noindex meta tag on mount
@@ -235,14 +243,14 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const isAdmin = await checkIsAdmin(user.uid, user.email);
+        const isAdmin = await checkIsAdmin(user.uid);
         if (isAdmin) {
           setCurrentUser(user);
         } else {
-          // If signed in user does not have an admin document in Firestore, sign out immediately and show "Access denied"
+          // If signed in user does not have an admin document in Firestore, sign out immediately and show "Not authorised"
           await signOut(auth);
           setCurrentUser(null);
-          setAuthError('Access denied');
+          setAuthError('Not authorised');
         }
       } else {
         setCurrentUser(null);
@@ -299,7 +307,7 @@ export const AdminPage: React.FC = () => {
 
     try {
       const cred = await signInWithEmailAndPassword(auth, emailTrim, authPassword);
-      const isAdmin = await checkIsAdmin(cred.user.uid, cred.user.email);
+      const isAdmin = await checkIsAdmin(cred.user.uid);
       
       // Verify user has an active admin document in Firestore (/admins/{uid})
       if (isAdmin) {
@@ -307,10 +315,10 @@ export const AdminPage: React.FC = () => {
         setFailedAttempts(0);
         setLockoutSeconds(0);
       } else {
-        // If the user does not have an admin document in Firestore, sign out immediately and show "Access denied"
+        // If the user does not have an admin document in Firestore, sign out immediately and show "Not authorised"
         await signOut(auth);
         setCurrentUser(null);
-        setAuthError('Access denied');
+        setAuthError('Not authorised');
       }
     } catch {
       registerFailedAttempt();
@@ -732,7 +740,7 @@ export const AdminPage: React.FC = () => {
   const topColleges = useMemo(() => {
     const map: Record<string, number> = {};
     registrations.forEach((r) => {
-      const col = (r.college || '').trim();
+      const col = getCollegeName(r.college).trim();
       if (!col) return;
       map[col] = (map[col] || 0) + 1;
     });
@@ -753,14 +761,14 @@ export const AdminPage: React.FC = () => {
           r.name.toLowerCase().includes(query) ||
           r.email.toLowerCase().includes(query) ||
           r.phone.includes(query) ||
-          r.college.toLowerCase().includes(query) ||
+          getCollegeName(r.college).toLowerCase().includes(query) ||
           r.id.toLowerCase().includes(query);
 
         const matchesRole = roleFilter === 'All' || r.role === roleFilter;
         const matchesPitch =
           pitchFilter === 'All' ||
-          (pitchFilter === 'Yes' && r.wantsToPitch) ||
-          (pitchFilter === 'No' && !r.wantsToPitch);
+          (pitchFilter === 'Yes' && (r.ticket === 'pitch' || r.wantsToPitch)) ||
+          (pitchFilter === 'No' && !(r.ticket === 'pitch' || r.wantsToPitch));
         const matchesStatus = statusFilter === 'All' || r.status === statusFilter;
 
         return matchesQuery && matchesRole && matchesPitch && matchesStatus;
@@ -786,7 +794,7 @@ export const AdminPage: React.FC = () => {
 
   // Pitch Applicants List
   const pitchApplicants = useMemo(() => {
-    return registrations.filter((r) => r.wantsToPitch);
+    return registrations.filter((r) => r.ticket === 'pitch' || r.wantsToPitch);
   }, [registrations]);
 
   // Column Sort Handler
@@ -801,28 +809,48 @@ export const AdminPage: React.FC = () => {
 
   // CSV Exporters
   const handleExportRegistrations = () => {
-    const exportData = registrations.map((r) => ({
-      'Registration ID': r.id,
-      Name: r.name,
-      Email: r.email,
-      Phone: r.phone,
-      College: r.college,
-      Course: r.course || '',
-      Year: r.year || '',
-      Role: r.role,
-      City: r.city,
-      'Wants to Pitch': r.wantsToPitch ? 'Yes' : 'No',
-      'Startup Name': r.startupName || '',
-      'Startup Pitch': r.startupPitch || '',
-      Sector: r.sector || '',
-      Stage: r.stage || '',
-      'Pitch Deck Link': r.pitchDeckLink || '',
-      'Team Size': r.teamSize || '',
-      Status: r.status,
-      'Pitch Status': r.pitchStatus || '',
-      Notes: r.notes || '',
-      'Registered At': r.createdAt,
-    }));
+    const exportData = registrations.map((r) => {
+      const pStatus = r.payment?.status || r.paymentStatus || (r.ticket === 'pitch' ? 'pending' : 'not_required');
+      const pAmount = r.payment ? Math.round(r.payment.amountPaise / 100) : (r.paymentAmount ?? 0);
+      const pUtr = r.payment?.utr || r.paymentUtr || '';
+      return {
+        'Registration ID': r.id,
+        Ticket: r.ticket || (r.wantsToPitch ? 'pitch' : 'participant'),
+        Name: r.name,
+        Email: r.email,
+        'Email Verified': r.emailVerified ? 'Yes' : 'No',
+        'Verified At': r.verifiedAt || '',
+        Phone: r.phone,
+        College: getCollegeName(r.college),
+        'College State': typeof r.college === 'object' && r.college ? (r.college.state || '') : '',
+        'College City': typeof r.college === 'object' && r.college ? (r.college.city || '') : '',
+        'College Type': typeof r.college === 'object' && r.college ? (r.college.type || '') : '',
+        'College Listed': typeof r.college === 'object' && r.college ? (r.college.listed ? 'Yes' : 'No') : '',
+        Course: r.course || '',
+        Year: r.year || '',
+        Role: r.role,
+        City: r.city,
+        'Wants to Pitch': r.ticket === 'pitch' || r.wantsToPitch ? 'Yes' : 'No',
+        'Startup Name': r.startupName || '',
+        'Startup Pitch': r.startupPitch || '',
+        Sector: r.sector || '',
+        Stage: r.stage || '',
+        'Pitch Deck Link': r.pitchDeckLink || '',
+        'Team Size': r.teamSize || '',
+        Status: r.status,
+        'Pitch Status': r.pitchStatus || '',
+        'Payment Status': pStatus.toUpperCase(),
+        'Payment Required': (r.payment?.required ?? (r.ticket === 'pitch')) ? 'Yes' : 'No',
+        'Payment Amount (INR)': pAmount,
+        'Payment Amount (Paise)': r.payment?.amountPaise ?? (pAmount * 100),
+        'Payment UTR': pUtr,
+        'Payment Method': r.payment?.method || (pUtr ? 'upi' : ''),
+        'Payment Verified By': r.paymentVerifiedBy || '',
+        'Payment Verified At': r.paymentVerifiedAt || '',
+        Notes: r.notes || '',
+        'Registered At': r.createdAt,
+      };
+    });
     exportToCSV(exportData, 'StartupConclave-Registrations');
   };
 
@@ -838,7 +866,7 @@ export const AdminPage: React.FC = () => {
       'Founder Name': r.name,
       Email: r.email,
       Phone: r.phone,
-      College: r.college,
+      College: getCollegeName(r.college),
       Role: r.role,
       'Pitch Status': r.pitchStatus || 'Applied',
       Notes: r.notes || '',
@@ -1137,7 +1165,7 @@ export const AdminPage: React.FC = () => {
         (r.registrationId && r.registrationId.toLowerCase().includes(q));
       const nameMatch = r.name.toLowerCase().includes(q);
       const emailMatch = r.email.toLowerCase().includes(q);
-      const collegeMatch = r.college.toLowerCase().includes(q);
+      const collegeMatch = getCollegeName(r.college).toLowerCase().includes(q);
       const phoneMatch = phoneDigits.length >= 3 && r.phone.replace(/\D/g, '').includes(phoneDigits);
 
       return idMatch || nameMatch || emailMatch || collegeMatch || phoneMatch;
@@ -1747,6 +1775,7 @@ export const AdminPage: React.FC = () => {
                     <th className="p-3">Role</th>
                     <th className="p-3 text-center">Pitch</th>
                     <th className="p-3">Status</th>
+                    <th className="p-3 text-center">Payment</th>
                     <th onClick={() => handleSort('createdAt')} className="p-3 cursor-pointer hover:bg-[#FFD400]/50">
                       <div className="flex items-center gap-1">
                         <span>Date</span>
@@ -1785,8 +1814,8 @@ export const AdminPage: React.FC = () => {
                         <div>{reg.email}</div>
                         <div className="text-[10px] text-[#111111]/60">{reg.phone}</div>
                       </td>
-                      <td className="p-3 text-[11px] max-w-[150px] truncate" title={reg.college}>
-                        {reg.college}
+                      <td className="p-3 text-[11px] max-w-[150px] truncate" title={getCollegeName(reg.college)}>
+                        {getCollegeName(reg.college)}
                       </td>
                       <td className="p-3 text-[11px] text-[#111111]/70">
                         {reg.course ? `${reg.course} (${reg.year})` : '—'}
@@ -1797,12 +1826,14 @@ export const AdminPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-3 text-center">
-                        {reg.wantsToPitch ? (
-                          <span className="font-mono text-[10px] font-bold text-white bg-[#FF6B1A] px-1.5 py-0.5">
+                        {reg.ticket === 'pitch' || reg.wantsToPitch ? (
+                          <span className="font-mono text-[10px] font-bold text-white bg-[#FF6B1A] px-1.5 py-0.5 border border-[#111111]">
                             PITCH
                           </span>
                         ) : (
-                          <span className="text-[#111111]/40 text-xs">—</span>
+                          <span className="font-mono text-[10px] font-bold text-[#111111] bg-[#FFD400] px-1.5 py-0.5 border border-[#111111]">
+                            PARTICIPANT
+                          </span>
                         )}
                       </td>
                       <td className="p-3" onClick={(e) => e.stopPropagation()}>
@@ -1827,6 +1858,28 @@ export const AdminPage: React.FC = () => {
                           <option value="checked_in">Checked-in</option>
                           <option value="cancelled">Cancelled</option>
                         </select>
+                      </td>
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        {(() => {
+                          const pStatus = reg.payment?.status || reg.paymentStatus || (reg.ticket === 'pitch' ? 'pending' : 'not_required');
+                          const utrStr = reg.payment?.utr || reg.paymentUtr;
+                          return (
+                            <span
+                              className={`font-mono text-[10px] font-bold px-1.5 py-0.5 border border-[#111111] uppercase ${
+                                pStatus === 'verified'
+                                  ? 'bg-emerald-100 text-emerald-900 border-emerald-600'
+                                  : pStatus === 'pending'
+                                  ? 'bg-amber-100 text-amber-950 border-amber-600'
+                                  : pStatus === 'rejected'
+                                  ? 'bg-red-100 text-red-900 border-red-600'
+                                  : 'bg-stone-100 text-[#111111]/70'
+                              }`}
+                              title={utrStr ? `UTR: ${utrStr}` : undefined}
+                            >
+                              {pStatus === 'not_required' ? 'NOT REQUIRED' : pStatus}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="p-3 font-mono text-[10px] text-[#111111]/60 whitespace-nowrap">
                         {new Date(reg.createdAt).toLocaleDateString()}
@@ -2211,7 +2264,7 @@ export const AdminPage: React.FC = () => {
                     <div className="font-mono text-[11px] font-bold text-[#111111]/70">COLLEGE / INSTITUTION</div>
                     <div className="font-bold text-[#111111] flex items-center gap-1.5">
                       <Building className="w-3.5 h-3.5 text-[#FF6B1A] shrink-0" />
-                      <span>{activeCheckinAttendee.college}</span>
+                      <span>{getCollegeName(activeCheckinAttendee.college)}</span>
                     </div>
                     {(activeCheckinAttendee.course || activeCheckinAttendee.year) && (
                       <div className="text-xs text-[#111111]/80">
@@ -2408,7 +2461,7 @@ export const AdminPage: React.FC = () => {
                           <span className="text-[11px] font-mono text-[#111111]/60">· {reg.phone}</span>
                         </div>
                         <div className="text-xs text-[#111111]/75 truncate max-w-md">
-                          {reg.college} · {reg.role}
+                          {getCollegeName(reg.college)} · {reg.role}
                         </div>
                       </div>
 
@@ -2472,7 +2525,7 @@ export const AdminPage: React.FC = () => {
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span className="font-bold text-[#FF6B1A]">{item.id}</span>
                         <span className="font-bold text-[#111111] truncate">{item.name}</span>
-                        <span className="hidden sm:inline text-[#111111]/60 truncate">({item.college})</span>
+                        <span className="hidden sm:inline text-[#111111]/60 truncate">({getCollegeName(item.college)})</span>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
@@ -2601,7 +2654,7 @@ export const AdminPage: React.FC = () => {
                   <div className="pt-1 text-xs font-mono grid grid-cols-2 gap-1 text-[#111111]/70 border-t border-[#111111]/10">
                     <div>Founder: <strong className="text-[#111111]">{applicant.name}</strong></div>
                     <div>Phone: <strong className="text-[#111111]">{applicant.phone}</strong></div>
-                    <div>College: <span className="truncate block">{applicant.college}</span></div>
+                    <div>College: <span className="truncate block">{getCollegeName(applicant.college)}</span></div>
                     <div>Email: <span className="truncate block">{applicant.email}</span></div>
                   </div>
 
@@ -2938,11 +2991,217 @@ export const AdminPage: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Building className="w-3.5 h-3.5 text-[#FF6B1A]" />
-                <span>{activeDetailItem.college}</span>
+                <span>{getCollegeName(activeDetailItem.college)}</span>
               </div>
+              {typeof activeDetailItem.college === 'object' && activeDetailItem.college && (
+                <div className="text-[11px] text-[#111111]/70 pl-5.5 space-y-0.5">
+                  <div>City / State: {[activeDetailItem.college.city, activeDetailItem.college.state].filter(Boolean).join(', ') || '—'}</div>
+                  <div>Type: {activeDetailItem.college.type || '—'} {activeDetailItem.college.listed ? '(Listed)' : ''}</div>
+                </div>
+              )}
+              <div>Ticket: <strong>{activeDetailItem.ticket ? (activeDetailItem.ticket === 'pitch' ? 'Pitch Your Startup' : 'Participant') : (activeDetailItem.wantsToPitch ? 'Pitch' : 'Participant')}</strong></div>
+              <div>Email Verified: <strong>{activeDetailItem.emailVerified ? 'Yes' : 'No'}</strong></div>
               <div>Course: {activeDetailItem.course || '—'} ({activeDetailItem.year || '—'})</div>
               <div>Role: <strong>{activeDetailItem.role}</strong></div>
               <div>City: {activeDetailItem.city}</div>
+            </div>
+
+            {/* Payment & Fee Details */}
+            <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2.5 text-xs font-mono">
+              <div className="flex items-center justify-between border-b border-[#111111]/20 pb-1.5">
+                <span className="font-bold uppercase tracking-wider text-[#111111]">
+                  Payment & Fee Verification
+                </span>
+                {(() => {
+                  const pStatus = activeDetailItem.payment?.status || activeDetailItem.paymentStatus || (activeDetailItem.ticket === 'pitch' ? 'pending' : 'not_required');
+                  return (
+                    <span
+                      className={`px-2 py-0.5 border border-[#111111] font-bold uppercase text-[10px] ${
+                        pStatus === 'verified'
+                          ? 'bg-emerald-100 text-emerald-900 border-emerald-600'
+                          : pStatus === 'pending'
+                          ? 'bg-amber-100 text-amber-950 border-amber-600'
+                          : pStatus === 'rejected'
+                          ? 'bg-red-100 text-red-900 border-red-600'
+                          : 'bg-white text-[#111111]/70'
+                      }`}
+                    >
+                      {pStatus === 'not_required' ? 'NOT REQUIRED' : pStatus}
+                    </span>
+                  );
+                })()}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <span className="text-[#111111]/70 text-[11px] block">Amount:</span>
+                  <strong>₹{activeDetailItem.payment ? Math.round(activeDetailItem.payment.amountPaise / 100) : (activeDetailItem.paymentAmount ?? 0)}</strong>
+                </div>
+                <div>
+                  <span className="text-[#111111]/70 text-[11px] block">12-Digit UTR:</span>
+                  <span className="font-bold select-all bg-white px-1.5 py-0.5 border border-[#111111] inline-block truncate max-w-full">
+                    {activeDetailItem.payment?.utr || activeDetailItem.paymentUtr || 'None'}
+                  </span>
+                </div>
+              </div>
+
+              {activeDetailItem.paymentVerifiedBy && (
+                <div className="text-[11px] text-[#111111]/80 border-t border-[#111111]/20 pt-1.5 space-y-0.5">
+                  <div>Verified By: <strong>{activeDetailItem.paymentVerifiedBy}</strong></div>
+                  {activeDetailItem.paymentVerifiedAt && (
+                    <div>Verified On: <span>{new Date(activeDetailItem.paymentVerifiedAt).toLocaleString()}</span></div>
+                  )}
+                </div>
+              )}
+
+              {/* Quick Payment Action Buttons */}
+              <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-[#111111]/20">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
+                    const ok = await updatePaymentStatus(activeDetailItem.id, 'verified', adminEmail, activeDetailItem.docId, activeDetailItem.payment);
+                    if (ok) {
+                      setRegistrations((prev) =>
+                        prev.map((r) =>
+                          r.id === activeDetailItem.id
+                            ? {
+                                ...r,
+                                paymentStatus: 'verified',
+                                paymentVerifiedBy: adminEmail,
+                                paymentVerifiedAt: new Date().toISOString(),
+                                payment: {
+                                  ...(r.payment || {}),
+                                  required: r.payment?.required ?? true,
+                                  status: 'verified',
+                                  amountPaise: r.payment?.amountPaise ?? 99900,
+                                },
+                              }
+                            : r
+                        )
+                      );
+                      setActiveDetailItem((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              paymentStatus: 'verified',
+                              paymentVerifiedBy: adminEmail,
+                              paymentVerifiedAt: new Date().toISOString(),
+                              payment: {
+                                ...(prev.payment || {}),
+                                required: prev.payment?.required ?? true,
+                                status: 'verified',
+                                amountPaise: prev.payment?.amountPaise ?? 99900,
+                              },
+                            }
+                          : null
+                      );
+                      setAdminSuccessToast(`Marked ${activeDetailItem.id} as VERIFIED`);
+                    } else {
+                      setAdminActionError('Could not update payment status');
+                    }
+                  }}
+                  className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold border border-[#111111] text-[10px] uppercase cursor-pointer text-center"
+                >
+                  Mark Verified
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
+                    const ok = await updatePaymentStatus(activeDetailItem.id, 'rejected', adminEmail, activeDetailItem.docId, activeDetailItem.payment);
+                    if (ok) {
+                      setRegistrations((prev) =>
+                        prev.map((r) =>
+                          r.id === activeDetailItem.id
+                            ? {
+                                ...r,
+                                paymentStatus: 'rejected',
+                                paymentVerifiedBy: adminEmail,
+                                payment: {
+                                  ...(r.payment || {}),
+                                  required: r.payment?.required ?? true,
+                                  status: 'rejected',
+                                  amountPaise: r.payment?.amountPaise ?? 99900,
+                                },
+                              }
+                            : r
+                        )
+                      );
+                      setActiveDetailItem((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              paymentStatus: 'rejected',
+                              paymentVerifiedBy: adminEmail,
+                              payment: {
+                                ...(prev.payment || {}),
+                                required: prev.payment?.required ?? true,
+                                status: 'rejected',
+                                amountPaise: prev.payment?.amountPaise ?? 99900,
+                              },
+                            }
+                          : null
+                      );
+                      setAdminSuccessToast(`Payment marked as REJECTED for ${activeDetailItem.id}`);
+                    } else {
+                      setAdminActionError('Could not update payment status');
+                    }
+                  }}
+                  className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-950 font-bold border border-[#111111] text-[10px] uppercase cursor-pointer text-center"
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
+                    const ok = await updatePaymentStatus(activeDetailItem.id, 'pending', adminEmail, activeDetailItem.docId, activeDetailItem.payment);
+                    if (ok) {
+                      setRegistrations((prev) =>
+                        prev.map((r) =>
+                          r.id === activeDetailItem.id
+                            ? {
+                                ...r,
+                                paymentStatus: 'pending',
+                                paymentVerifiedBy: null,
+                                paymentVerifiedAt: null,
+                                payment: {
+                                  ...(r.payment || {}),
+                                  required: r.payment?.required ?? true,
+                                  status: 'pending',
+                                  amountPaise: r.payment?.amountPaise ?? 99900,
+                                },
+                              }
+                            : r
+                        )
+                      );
+                      setActiveDetailItem((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              paymentStatus: 'pending',
+                              paymentVerifiedBy: null,
+                              paymentVerifiedAt: null,
+                              payment: {
+                                ...(prev.payment || {}),
+                                required: prev.payment?.required ?? true,
+                                status: 'pending',
+                                amountPaise: prev.payment?.amountPaise ?? 99900,
+                              },
+                            }
+                          : null
+                      );
+                      setAdminSuccessToast(`Payment reset to PENDING for ${activeDetailItem.id}`);
+                    } else {
+                      setAdminActionError('Could not update payment status');
+                    }
+                  }}
+                  className="px-2 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold border border-[#111111] text-[10px] uppercase cursor-pointer text-center"
+                >
+                  Pending
+                </button>
+              </div>
             </div>
 
             {/* Pitch Information (If applied) */}

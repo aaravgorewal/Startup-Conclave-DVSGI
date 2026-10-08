@@ -1,32 +1,60 @@
 import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db } from './firebase.ts';
-import { CONFIG } from '../config.ts';
+import { CONFIG, toPaise } from '../config.ts';
+
+export interface CollegeInfo {
+  name: string;
+  state?: string;
+  city?: string;
+  type?: string;
+  listed: boolean;
+}
+
+export interface PaymentInfo {
+  required: boolean;
+  status: 'not_required' | 'pending' | 'verified' | 'rejected';
+  amountPaise: number;
+  utr?: string;
+  method?: 'upi' | 'razorpay';
+  orderId?: string;
+  paymentId?: string;
+}
 
 export interface RegistrationInput {
   name: string;
   email: string;
   phone: string;
-  college: string;
+  ticket?: 'participant' | 'pitch';
+  college: string | CollegeInfo;
+  collegeState?: string;
+  collegeCity?: string;
+  collegeType?: string;
+  collegeListed?: boolean;
   course?: string;
   year?: string;
   role: 'Student' | 'Founder' | 'Professional' | 'Other' | string;
   city?: string;
-  wantsToPitch: boolean;
+  wantsToPitch?: boolean;
   startupName?: string;
   startupPitch?: string;
   sector?: string;
   stage?: 'Idea' | 'Prototype' | 'Launched' | 'Revenue' | string;
   pitchDeckLink?: string;
   teamSize?: string | number;
+  paymentUtr?: string;
+  emailVerified?: boolean;
 }
 
 export interface RegistrationRecord {
   id: string;
   registrationId?: string;
+  ticket: 'participant' | 'pitch';
+  emailVerified: boolean;
+  verifiedAt?: string | null;
   name: string;
   email: string;
   phone: string;
-  college: string;
+  college: CollegeInfo | string;
   course: string;
   year: string;
   role: string;
@@ -38,6 +66,12 @@ export interface RegistrationRecord {
   stage?: string;
   pitchDeckLink?: string;
   teamSize?: string;
+  payment: PaymentInfo;
+  paymentStatus?: 'not_required' | 'pending' | 'verified' | 'rejected' | string;
+  paymentAmount?: number;
+  paymentUtr?: string;
+  paymentVerifiedAt?: string | null;
+  paymentVerifiedBy?: string | null;
   status: string;
   createdAt: string;
 }
@@ -125,6 +159,14 @@ export const isValidPitchDeckUrl = (url?: string): boolean => {
 };
 
 /**
+ * Validate standard 12-digit numeric Indian UPI Transaction Reference Number (UTR)
+ */
+export const isValidUtr = (utr?: string): boolean => {
+  if (!utr) return false;
+  return /^[0-9]{12}$/.test(utr.trim());
+};
+
+/**
  * Check if email is already registered locally
  */
 export const isEmailRegistered = (email: string): boolean => {
@@ -200,9 +242,29 @@ export const createRegistration = async (
     return { success: false, error: 'Please provide your full legal name.' };
   }
 
-  if (!input.college.trim()) {
+  const collegeName = typeof input.college === 'object' && input.college !== null
+    ? input.college.name.trim()
+    : String(input.college || '').trim();
+
+  if (!collegeName) {
     return { success: false, error: 'Please provide your college or organisation name.' };
   }
+
+  const collegeObj: CollegeInfo = typeof input.college === 'object' && input.college !== null
+    ? {
+        name: collegeName,
+        state: input.college.state?.trim() || '',
+        city: input.college.city?.trim() || input.city?.trim() || 'Meerut',
+        type: input.college.type?.trim() || (input.role === 'Student' ? 'College' : 'Organisation'),
+        listed: Boolean(input.college.listed),
+      }
+    : {
+        name: collegeName,
+        state: input.collegeState?.trim() || '',
+        city: input.collegeCity?.trim() || input.city?.trim() || 'Meerut',
+        type: input.collegeType?.trim() || (input.role === 'Student' ? 'College' : 'Organisation'),
+        listed: Boolean(input.collegeListed),
+      };
 
   if (input.role === 'Student' && (!input.course?.trim() || !input.year?.trim())) {
     return { success: false, error: 'Course name and year are required for student delegates.' };
@@ -226,6 +288,63 @@ export const createRegistration = async (
     };
   }
 
+  // 3b. Determine ticket type and validate pitch requirements
+  const ticket: 'participant' | 'pitch' =
+    input.ticket === 'pitch' || input.wantsToPitch ? 'pitch' : 'participant';
+  const isPitch = ticket === 'pitch';
+
+  if (isPitch) {
+    if (!input.startupName?.trim()) {
+      return { success: false, isNetworkError: false, error: 'Startup name is required for pitch registrations.' };
+    }
+    if (!input.startupPitch?.trim()) {
+      return { success: false, isNetworkError: false, error: 'Startup pitch description is required for pitch registrations.' };
+    }
+    if (!input.sector?.trim()) {
+      return { success: false, isNetworkError: false, error: 'Sector is required for pitch registrations.' };
+    }
+    if (!input.stage?.trim()) {
+      return { success: false, isNetworkError: false, error: 'Stage is required for pitch registrations.' };
+    }
+    if (!input.pitchDeckLink?.trim()) {
+      return { success: false, isNetworkError: false, error: 'Pitch deck link is required for pitch registrations.' };
+    }
+    if (!isValidPitchDeckUrl(input.pitchDeckLink.trim())) {
+      return { success: false, isNetworkError: false, error: 'Pitch deck link must be a Google Drive or Canva URL.' };
+    }
+    if (!input.teamSize) {
+      return { success: false, isNetworkError: false, error: 'Team size is required for pitch registrations.' };
+    }
+  }
+
+  // 3c. Payment info construction
+  const cleanUtr = input.paymentUtr ? input.paymentUtr.trim() : '';
+  let paymentInfo: PaymentInfo;
+
+  if (isPitch) {
+    const pitchFeePaise = toPaise(CONFIG.tickets.pitch.fee);
+    if (CONFIG.payment.upiId && !isValidUtr(cleanUtr)) {
+      return {
+        success: false,
+        isNetworkError: false,
+        error: 'Please enter a valid 12-digit UPI Transaction Reference Number (UTR).',
+      };
+    }
+    paymentInfo = {
+      required: true,
+      status: 'pending',
+      amountPaise: pitchFeePaise,
+      utr: cleanUtr || undefined,
+      method: 'upi',
+    };
+  } else {
+    paymentInfo = {
+      required: false,
+      status: 'not_required',
+      amountPaise: toPaise(CONFIG.tickets.participant.fee),
+    };
+  }
+
   // 4. Compute deterministic hashes for email and phone
   const emailHash = await hashString(emailClean);
   const phoneHash = await hashString(phoneClean);
@@ -233,21 +352,30 @@ export const createRegistration = async (
 
   const record: RegistrationRecord = {
     id: emailHash,
+    ticket,
+    emailVerified: Boolean(input.emailVerified),
+    verifiedAt: null,
     name: input.name.trim(),
     email: emailClean,
     phone: phoneClean,
-    college: input.college.trim(),
+    college: collegeObj,
     course: input.course?.trim() || '',
     year: input.year?.trim() || '',
     role: input.role,
     city: input.city?.trim() || 'Meerut',
-    wantsToPitch: Boolean(input.wantsToPitch),
-    startupName: input.wantsToPitch ? (input.startupName?.trim() || '') : '',
-    startupPitch: input.wantsToPitch ? (input.startupPitch?.trim() || '') : '',
-    sector: input.wantsToPitch ? (input.sector?.trim() || '') : '',
-    stage: input.wantsToPitch ? (input.stage?.trim() || '') : '',
-    pitchDeckLink: input.wantsToPitch ? (input.pitchDeckLink?.trim() || '') : '',
-    teamSize: input.wantsToPitch ? (input.teamSize ? String(input.teamSize).trim() : '') : '',
+    wantsToPitch: isPitch,
+    startupName: isPitch ? (input.startupName?.trim() || '') : '',
+    startupPitch: isPitch ? (input.startupPitch?.trim() || '') : '',
+    sector: isPitch ? (input.sector?.trim() || '') : '',
+    stage: isPitch ? (input.stage?.trim() || '') : '',
+    pitchDeckLink: isPitch ? (input.pitchDeckLink?.trim() || '') : '',
+    teamSize: isPitch ? (input.teamSize ? String(input.teamSize).trim() : '') : '',
+    payment: paymentInfo,
+    paymentStatus: paymentInfo.status,
+    paymentAmount: Math.round(paymentInfo.amountPaise / 100),
+    paymentUtr: paymentInfo.utr || '',
+    paymentVerifiedAt: null,
+    paymentVerifiedBy: null,
     status: 'registered',
     createdAt: nowIso,
   };
@@ -299,6 +427,9 @@ export const createRegistration = async (
         registrationId: idCode,
         sequenceNumber: nextCount,
         emailHash: emailHash,
+        ticket: record.ticket,
+        emailVerified: record.emailVerified,
+        verifiedAt: null,
         name: record.name,
         email: record.email,
         phone: record.phone,
@@ -314,6 +445,12 @@ export const createRegistration = async (
         stage: record.stage || '',
         pitchDeckLink: record.pitchDeckLink || '',
         teamSize: record.teamSize || '',
+        payment: record.payment,
+        paymentStatus: record.paymentStatus || 'not_required',
+        paymentAmount: record.paymentAmount || 0,
+        paymentUtr: record.paymentUtr || '',
+        paymentVerifiedAt: null,
+        paymentVerifiedBy: null,
         status: assignedStatus,
         createdAt: serverTimestamp(),
       });

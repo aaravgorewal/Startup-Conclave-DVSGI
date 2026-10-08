@@ -35,6 +35,7 @@ import {
   isValidEmail,
   isValidIndianPhone,
   isValidPitchDeckUrl,
+  isValidUtr,
   fetchPublicRegistrationCount,
   RegistrationInput,
 } from '../../services/registrations.ts';
@@ -501,6 +502,7 @@ export const SinglePage: React.FC = () => {
   const [partnerError, setPartnerError] = useState('');
 
   // Registration Form State (id="register")
+  const [ticket, setTicket] = useState<'participant' | 'pitch'>('participant');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -516,6 +518,8 @@ export const SinglePage: React.FC = () => {
   const [pitchStage, setPitchStage] = useState<'Idea' | 'Prototype' | 'Launched' | 'Revenue' | ''>('');
   const [pitchDeckLink, setPitchDeckLink] = useState('');
   const [pitchTeamSize, setPitchTeamSize] = useState('');
+  const [paymentUtr, setPaymentUtr] = useState('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(false);
   const [honeypot, setHoneypot] = useState('');
 
@@ -524,10 +528,11 @@ export const SinglePage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedRecord, setSubmittedRecord] = useState<{
     id: string;
+    ticket?: 'participant' | 'pitch';
     name: string;
     email: string;
     phone: string;
-    college: string;
+    college: string | { name: string; state?: string; city?: string; type?: string; listed: boolean };
     role: string;
     city: string;
     wantsToPitch: boolean;
@@ -537,6 +542,9 @@ export const SinglePage: React.FC = () => {
     stage?: string;
     pitchDeckLink?: string;
     teamSize?: string;
+    paymentStatus?: string;
+    paymentAmount?: number;
+    paymentUtr?: string;
     status?: string;
   } | null>(null);
 
@@ -669,9 +677,37 @@ export const SinglePage: React.FC = () => {
       if (!year.trim()) newErrors.year = 'Current year is required.';
     }
 
-    if (wantsToPitch && pitchDeckLink.trim()) {
-      if (!isValidPitchDeckUrl(pitchDeckLink.trim())) {
+    const isPitch = ticket === 'pitch' || wantsToPitch;
+
+    if (isPitch) {
+      if (!startupName.trim()) {
+        newErrors.startupName = 'Startup name is required for pitch registrations.';
+      }
+      if (!startupPitch.trim()) {
+        newErrors.startupPitch = 'Startup pitch description is required for pitch registrations.';
+      }
+      if (!pitchSector) {
+        newErrors.pitchSector = 'Please select a sector.';
+      }
+      if (!pitchStage) {
+        newErrors.pitchStage = 'Please select a stage.';
+      }
+      if (!pitchDeckLink.trim()) {
+        newErrors.pitchDeckLink = 'Pitch deck link is required for pitch registrations.';
+      } else if (!isValidPitchDeckUrl(pitchDeckLink.trim())) {
         newErrors.pitchDeckLink = 'Pitch deck link must be a Google Drive (drive.google.com) or Canva (canva.com) URL.';
+      }
+      if (!pitchTeamSize) {
+        newErrors.pitchTeamSize = 'Please select your team size.';
+      }
+
+      // Validate UPI payment reference if UPI is configured
+      if (CONFIG.payment.upiId) {
+        if (!paymentUtr.trim()) {
+          newErrors.paymentUtr = '12-digit UPI Reference Number (UTR) is required.';
+        } else if (!isValidUtr(paymentUtr.trim())) {
+          newErrors.paymentUtr = 'Please enter a valid 12-digit numeric UPI Reference Number (UTR).';
+        }
       }
     }
 
@@ -705,18 +741,20 @@ export const SinglePage: React.FC = () => {
       name: fullName.trim(),
       email: emailTrim,
       phone: phoneTrim,
+      ticket: isPitch ? 'pitch' : 'participant',
       college: college.trim(),
       course: course.trim(),
       year: year.trim(),
       role,
       city: city.trim() || 'Meerut',
-      wantsToPitch,
-      startupName: wantsToPitch && startupName.trim() ? startupName.trim() : undefined,
-      startupPitch: wantsToPitch && startupPitch.trim() ? startupPitch.trim() : undefined,
-      sector: wantsToPitch && pitchSector ? pitchSector : undefined,
-      stage: wantsToPitch && pitchStage ? pitchStage : undefined,
-      pitchDeckLink: wantsToPitch && pitchDeckLink.trim() ? pitchDeckLink.trim() : undefined,
-      teamSize: wantsToPitch && pitchTeamSize ? pitchTeamSize : undefined,
+      wantsToPitch: isPitch,
+      startupName: isPitch ? startupName.trim() : undefined,
+      startupPitch: isPitch ? startupPitch.trim() : undefined,
+      sector: isPitch ? pitchSector : undefined,
+      stage: isPitch ? pitchStage : undefined,
+      pitchDeckLink: isPitch ? pitchDeckLink.trim() : undefined,
+      teamSize: isPitch ? pitchTeamSize : undefined,
+      paymentUtr: isPitch && paymentUtr.trim() ? paymentUtr.trim() : undefined,
     };
 
     const res = await createRegistration(inputData);
@@ -729,19 +767,23 @@ export const SinglePage: React.FC = () => {
       setErrors({});
       setSubmittedRecord({
         id: res.id,
+        ticket: isPitch ? 'pitch' : 'participant',
         name: fullName.trim(),
         email: emailTrim,
         phone: phoneTrim,
         college: college.trim(),
         role,
         city: city.trim() || 'Meerut',
-        wantsToPitch,
-        startupName: startupName.trim(),
-        startupPitch: startupPitch.trim(),
-        sector: wantsToPitch ? pitchSector : undefined,
-        stage: wantsToPitch ? pitchStage : undefined,
-        pitchDeckLink: wantsToPitch ? pitchDeckLink.trim() : undefined,
-        teamSize: wantsToPitch ? pitchTeamSize : undefined,
+        wantsToPitch: isPitch,
+        startupName: isPitch ? startupName.trim() : undefined,
+        startupPitch: isPitch ? startupPitch.trim() : undefined,
+        sector: isPitch ? pitchSector : undefined,
+        stage: isPitch ? pitchStage : undefined,
+        pitchDeckLink: isPitch ? pitchDeckLink.trim() : undefined,
+        teamSize: isPitch ? pitchTeamSize : undefined,
+        paymentStatus: isPitch ? 'pending' : 'not_required',
+        paymentAmount: isPitch ? CONFIG.tickets.pitch.fee : 0,
+        paymentUtr: isPitch ? paymentUtr.trim() : undefined,
         status: res.status || 'registered',
       });
       setRegistrationCount((prev) => prev + 1);
@@ -755,9 +797,11 @@ export const SinglePage: React.FC = () => {
 
   const handleResetRegistration = () => {
     setSubmittedRecord(null);
+    setTicket('participant');
     setFullName('');
     setEmail('');
     setPhone('');
+    setPaymentUtr('');
     setCollege('');
     setCourse('');
     setYear('');
@@ -881,12 +925,18 @@ export const SinglePage: React.FC = () => {
       // Attendee Details
       ctx.fillStyle = '#111111';
       ctx.font = '700 22px sans-serif';
-      ctx.fillText(`Attendee: ${submittedRecord.name}`, 70, 320);
+      ctx.fillText(`Attendee: ${submittedRecord.name}`, 70, 315);
 
-      ctx.font = '500 18px sans-serif';
-      ctx.fillText(`College / Org: ${submittedRecord.college}`, 70, 360);
-      ctx.fillText(`Phone: ${submittedRecord.phone}   |   Email: ${submittedRecord.email}`, 70, 400);
-      ctx.fillText(`Category: ${submittedRecord.role} · ${submittedRecord.city}`, 70, 440);
+      const colName = typeof submittedRecord.college === 'object' && submittedRecord.college ? (submittedRecord.college as any).name : submittedRecord.college;
+      const ticketLabel = submittedRecord.ticket === 'pitch' ? CONFIG.tickets.pitch.label : CONFIG.tickets.participant.label;
+
+      ctx.font = '500 17px sans-serif';
+      ctx.fillText(`Pass / Ticket: ${ticketLabel}   |   College: ${colName}`, 70, 350);
+      ctx.fillText(`Phone: ${submittedRecord.phone}   |   Email: ${submittedRecord.email}`, 70, 385);
+      const paymentInfoStr = submittedRecord.paymentStatus === 'not_required'
+        ? 'Payment: Not Required (Free)'
+        : `Payment: ${(submittedRecord.paymentStatus || 'pending').toUpperCase()} (₹${submittedRecord.paymentAmount ?? CONFIG.tickets.pitch.fee})`;
+      ctx.fillText(`Category: ${submittedRecord.role} · ${submittedRecord.city}   |   ${paymentInfoStr}`, 70, 420);
 
       // Mandatory Venue & Entry Line Box
       ctx.fillStyle = '#FFF2D6';
@@ -1906,6 +1956,12 @@ export const SinglePage: React.FC = () => {
                   <span className="font-bold text-[#111111]">{submittedRecord.name}</span>
                 </div>
                 <div>
+                  <span className="text-[#111111]/70 text-xs block">Ticket / Pass:</span>
+                  <span className="font-bold text-[#111111]">
+                    {submittedRecord.ticket === 'pitch' ? CONFIG.tickets.pitch.label : CONFIG.tickets.participant.label}
+                  </span>
+                </div>
+                <div>
                   <span className="text-[#111111]/70 text-xs block">Email Address:</span>
                   <span className="font-bold text-[#111111]">{submittedRecord.email}</span>
                 </div>
@@ -1915,7 +1971,11 @@ export const SinglePage: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[#111111]/70 text-xs block">College / Organisation:</span>
-                  <span className="font-bold text-[#111111]">{submittedRecord.college}</span>
+                  <span className="font-bold text-[#111111]">
+                    {typeof submittedRecord.college === 'object' && submittedRecord.college
+                      ? (submittedRecord.college as any).name
+                      : submittedRecord.college}
+                  </span>
                 </div>
                 <div>
                   <span className="text-[#111111]/70 text-xs block">Category:</span>
@@ -1928,9 +1988,23 @@ export const SinglePage: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-[#111111]/70 text-xs block">Pitch Arena Aspirant:</span>
-                  <span className="font-bold text-[#FF6B1A]">
-                    {submittedRecord.wantsToPitch ? 'Yes (Applying to Pitch)' : 'Spectator Attendee'}
+                  <span className="text-[#111111]/70 text-xs block">Payment Status:</span>
+                  <span className={`font-bold font-mono text-xs ${
+                    submittedRecord.paymentStatus === 'not_required'
+                      ? 'text-stone-700'
+                      : submittedRecord.paymentStatus === 'verified'
+                      ? 'text-emerald-700'
+                      : submittedRecord.paymentStatus === 'rejected'
+                      ? 'text-red-700'
+                      : 'text-amber-800'
+                  }`}>
+                    {submittedRecord.paymentStatus === 'not_required'
+                      ? 'Not Required (Free)'
+                      : submittedRecord.paymentStatus === 'verified'
+                      ? 'Verified'
+                      : submittedRecord.paymentStatus === 'rejected'
+                      ? 'Rejected'
+                      : `Pending Verification ${submittedRecord.paymentUtr ? `(UTR: ${submittedRecord.paymentUtr})` : ''}`}
                   </span>
                 </div>
               </div>
@@ -2056,6 +2130,62 @@ export const SinglePage: React.FC = () => {
                   tabIndex={-1}
                   autoComplete="off"
                 />
+              </div>
+
+              {/* Ticket Type Selection */}
+              <div className="space-y-2">
+                <label className="font-bold text-[#111111] block">Select Ticket / Pass *</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTicket('participant');
+                      setWantsToPitch(false);
+                    }}
+                    className={`p-3.5 border-2 border-[#111111] text-left transition-all cursor-pointer ${
+                      ticket === 'participant'
+                        ? 'bg-[#FFD400] shadow-[3px_3px_0px_#111111]'
+                        : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm sm:text-base text-[#111111]">
+                        {CONFIG.tickets.participant.label}
+                      </span>
+                      <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-white">
+                        {CONFIG.tickets.participant.fee === 0 ? 'FREE' : `₹${CONFIG.tickets.participant.fee}`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#111111]/70 mt-1">
+                      Full 2-day attendee delegate pass
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTicket('pitch');
+                      setWantsToPitch(true);
+                    }}
+                    className={`p-3.5 border-2 border-[#111111] text-left transition-all cursor-pointer ${
+                      ticket === 'pitch'
+                        ? 'bg-[#FF6B1A] text-white shadow-[3px_3px_0px_#111111]'
+                        : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`font-bold text-sm sm:text-base ${ticket === 'pitch' ? 'text-white' : 'text-[#111111]'}`}>
+                        {CONFIG.tickets.pitch.label}
+                      </span>
+                      <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FFD400] text-[#111111]">
+                        ₹{CONFIG.tickets.pitch.fee}
+                      </span>
+                    </div>
+                    <p className={`text-xs mt-1 ${ticket === 'pitch' ? 'text-white/90' : 'text-[#111111]/70'}`}>
+                      Pitch your startup to jury & investors + delegate entry
+                    </p>
+                  </button>
+                </div>
               </div>
 
               {/* 1. Full Name */}
@@ -2196,141 +2326,282 @@ export const SinglePage: React.FC = () => {
                 </div>
               )}
 
-              {/* 6. Pitch Arena Checkbox & Conditional Fields */}
-              <div className="p-4 bg-white border-2 border-[#111111] space-y-3">
-                <div className="flex items-center gap-3 min-h-[44px]">
-                  <input
-                    type="checkbox"
-                    id="wantsToPitchCheck"
-                    checked={wantsToPitch}
-                    onChange={(e) => setWantsToPitch(e.target.checked)}
-                    className="w-5 h-5 accent-[#FF6B1A] border-2 border-[#111111] rounded-none cursor-pointer"
-                  />
-                  <label htmlFor="wantsToPitchCheck" className="font-bold text-[#111111] cursor-pointer text-sm sm:text-base">
-                    I also want to pitch my startup
-                  </label>
-                </div>
+              {/* 6. Pitch Arena Section */}
+              {ticket === 'pitch' ? (
+                <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] space-y-3.5 animate-in fade-in">
+                  <div className="flex items-center justify-between border-b border-[#111111]/20 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Rocket className="w-4 h-4 text-[#FF6B1A]" />
+                      <span className="font-bold text-[#111111] uppercase tracking-wide text-xs sm:text-sm">
+                        Pitch Arena Application Details
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTicket('participant');
+                        setWantsToPitch(false);
+                      }}
+                      className="text-[11px] font-mono underline text-[#111111]/70 hover:text-[#FF6B1A] cursor-pointer"
+                    >
+                      Switch to Attendee pass
+                    </button>
+                  </div>
 
-                {/* Extra two optional fields if checked */}
-                {wantsToPitch && (
-                  <div className="pt-3 border-t-2 border-[#111111] space-y-3 animate-in fade-in">
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                      Startup Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={startupName}
+                      onChange={(e) => {
+                        setStartupName(e.target.value);
+                        if (errors.startupName) setErrors({ ...errors, startupName: '' });
+                      }}
+                      placeholder="e.g. KisanAI"
+                      className={`w-full p-2.5 bg-white border-2 ${errors.startupName ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base`}
+                    />
+                    {errors.startupName && (
+                      <p className="text-xs text-red-600 font-bold mt-1">{errors.startupName}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                      One-Line Description / Startup Pitch *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={startupPitch}
+                      onChange={(e) => {
+                        setStartupPitch(e.target.value);
+                        if (errors.startupPitch) setErrors({ ...errors, startupPitch: '' });
+                      }}
+                      placeholder="e.g. Automated sensors for farmers in Western UP"
+                      className={`w-full p-2.5 bg-white border-2 ${errors.startupPitch ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base`}
+                    />
+                    {errors.startupPitch && (
+                      <p className="text-xs text-red-600 font-bold mt-1">{errors.startupPitch}</p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Sector Dropdown */}
                     <div className="space-y-1.5">
                       <label className="font-bold text-[#111111] block text-xs sm:text-sm">
-                        Startup Name (Optional)
+                        Sector *
                       </label>
-                      <input
-                        type="text"
-                        value={startupName}
-                        onChange={(e) => setStartupName(e.target.value)}
-                        placeholder="e.g. KisanAI"
-                        className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans min-h-[44px] text-base"
-                      />
+                      <select
+                        value={pitchSector}
+                        onChange={(e) => {
+                          setPitchSector(e.target.value);
+                          if (errors.pitchSector) setErrors({ ...errors, pitchSector: '' });
+                        }}
+                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchSector ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base cursor-pointer`}
+                      >
+                        <option value="">Select Sector</option>
+                        <option value="AgriTech">AgriTech</option>
+                        <option value="FinTech">FinTech</option>
+                        <option value="EdTech">EdTech</option>
+                        <option value="HealthTech">HealthTech</option>
+                        <option value="AI/ML">AI/ML</option>
+                        <option value="SaaS">SaaS</option>
+                        <option value="E-commerce">E-commerce</option>
+                        <option value="Social Impact">Social Impact</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      {errors.pitchSector && (
+                        <p className="text-xs text-red-600 font-bold mt-1">{errors.pitchSector}</p>
+                      )}
                     </div>
 
+                    {/* Stage Dropdown */}
                     <div className="space-y-1.5">
                       <label className="font-bold text-[#111111] block text-xs sm:text-sm">
-                        One-Line Description (Optional)
+                        Stage *
                       </label>
-                      <input
-                        type="text"
-                        value={startupPitch}
-                        onChange={(e) => setStartupPitch(e.target.value)}
-                        placeholder="e.g. Automated sensors for farmers in Western UP"
-                        className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans min-h-[44px] text-base"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Sector Dropdown */}
-                      <div className="space-y-1.5">
-                        <label className="font-bold text-[#111111] block text-xs sm:text-sm">
-                          Sector (Optional)
-                        </label>
-                        <select
-                          value={pitchSector}
-                          onChange={(e) => setPitchSector(e.target.value)}
-                          className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans min-h-[44px] text-base cursor-pointer"
-                        >
-                          <option value="">Select Sector</option>
-                          <option value="AgriTech">AgriTech</option>
-                          <option value="FinTech">FinTech</option>
-                          <option value="EdTech">EdTech</option>
-                          <option value="HealthTech">HealthTech</option>
-                          <option value="AI/ML">AI/ML</option>
-                          <option value="SaaS">SaaS</option>
-                          <option value="E-commerce">E-commerce</option>
-                          <option value="Social Impact">Social Impact</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-
-                      {/* Stage Dropdown */}
-                      <div className="space-y-1.5">
-                        <label className="font-bold text-[#111111] block text-xs sm:text-sm">
-                          Stage (Optional)
-                        </label>
-                        <select
-                          value={pitchStage}
-                          onChange={(e) => setPitchStage(e.target.value as any)}
-                          className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans min-h-[44px] text-base cursor-pointer"
-                        >
-                          <option value="">Select Stage</option>
-                          <option value="Idea">Idea</option>
-                          <option value="Prototype">Prototype</option>
-                          <option value="Launched">Launched</option>
-                          <option value="Revenue">Revenue</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Team Size Dropdown */}
-                      <div className="space-y-1.5">
-                        <label className="font-bold text-[#111111] block text-xs sm:text-sm">
-                          Team Size (Optional)
-                        </label>
-                        <select
-                          value={pitchTeamSize}
-                          onChange={(e) => setPitchTeamSize(e.target.value)}
-                          className="w-full p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-sans min-h-[44px] text-base cursor-pointer"
-                        >
-                          <option value="">Select Team Size</option>
-                          <option value="1">1 (Solo Founder)</option>
-                          <option value="2">2</option>
-                          <option value="3">3</option>
-                          <option value="4">4</option>
-                          <option value="5">5</option>
-                          <option value="6">6</option>
-                          <option value="7">7</option>
-                          <option value="8">8</option>
-                          <option value="9">9</option>
-                          <option value="10">10</option>
-                        </select>
-                      </div>
-
-                      {/* Pitch Deck Link */}
-                      <div className="space-y-1.5">
-                        <label className="font-bold text-[#111111] block text-xs sm:text-sm">
-                          Pitch Deck Link (Optional)
-                        </label>
-                        <input
-                          type="url"
-                          value={pitchDeckLink}
-                          onChange={(e) => {
-                            setPitchDeckLink(e.target.value);
-                            if (errors.pitchDeckLink) setErrors({ ...errors, pitchDeckLink: '' });
-                          }}
-                          placeholder="Google Drive or Canva link"
-                          className={`w-full p-2.5 bg-[#FFF8EC] border-2 ${errors.pitchDeckLink ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base`}
-                        />
-                        {errors.pitchDeckLink && (
-                          <p className="text-xs text-red-600 font-bold mt-1">{errors.pitchDeckLink}</p>
-                        )}
-                      </div>
+                      <select
+                        value={pitchStage}
+                        onChange={(e) => {
+                          setPitchStage(e.target.value as any);
+                          if (errors.pitchStage) setErrors({ ...errors, pitchStage: '' });
+                        }}
+                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchStage ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base cursor-pointer`}
+                      >
+                        <option value="">Select Stage</option>
+                        <option value="Idea">Idea</option>
+                        <option value="Prototype">Prototype</option>
+                        <option value="Launched">Launched</option>
+                        <option value="Revenue">Revenue</option>
+                      </select>
+                      {errors.pitchStage && (
+                        <p className="text-xs text-red-600 font-bold mt-1">{errors.pitchStage}</p>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Team Size Dropdown */}
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                        Team Size *
+                      </label>
+                      <select
+                        value={pitchTeamSize}
+                        onChange={(e) => {
+                          setPitchTeamSize(e.target.value);
+                          if (errors.pitchTeamSize) setErrors({ ...errors, pitchTeamSize: '' });
+                        }}
+                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchTeamSize ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base cursor-pointer`}
+                      >
+                        <option value="">Select Team Size</option>
+                        <option value="1">1 (Solo Founder)</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                      </select>
+                      {errors.pitchTeamSize && (
+                        <p className="text-xs text-red-600 font-bold mt-1">{errors.pitchTeamSize}</p>
+                      )}
+                    </div>
+
+                    {/* Pitch Deck Link */}
+                    <div className="space-y-1.5">
+                      <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                        Pitch Deck Link *
+                      </label>
+                      <input
+                        type="url"
+                        required
+                        value={pitchDeckLink}
+                        onChange={(e) => {
+                          setPitchDeckLink(e.target.value);
+                          if (errors.pitchDeckLink) setErrors({ ...errors, pitchDeckLink: '' });
+                        }}
+                        placeholder="Google Drive or Canva link"
+                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchDeckLink ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base`}
+                      />
+                      {errors.pitchDeckLink && (
+                        <p className="text-xs text-red-600 font-bold mt-1">{errors.pitchDeckLink}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-white border-2 border-[#111111] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="font-bold text-[#111111] block text-sm">Want to pitch your startup on stage?</span>
+                    <span className="text-xs text-[#111111]/70">Apply for the Pitch Arena pass to pitch before investors & jury (₹{CONFIG.tickets.pitch.fee}).</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTicket('pitch');
+                      setWantsToPitch(true);
+                    }}
+                    className="px-3 py-1.5 bg-[#FF6B1A] text-white font-mono font-bold text-xs uppercase border border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 cursor-pointer hover:bg-[#e0580c] transition-colors self-start sm:self-auto"
+                  >
+                    Pitch Startup
+                  </button>
+                </div>
+              )}
+
+              {/* 6.5 UPI Fee Payment Block (Rendered for Pitch pass) */}
+              {ticket === 'pitch' && (
+                <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-4">
+                  <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
+                    <div>
+                      <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-white px-2 py-0.5 border border-[#111111]">
+                        {CONFIG.tickets.pitch.label.toUpperCase()} FEE
+                      </span>
+                      <h3 className="font-display font-black text-xl text-[#111111] mt-1">
+                        ₹{CONFIG.tickets.pitch.fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ Startup Pitch Pass</span>
+                      </h3>
+                    </div>
+                    {CONFIG.payment.payeeName && (
+                      <div className="text-right">
+                        <span className="text-[10px] font-mono text-[#111111]/70 block">Payee</span>
+                        <span className="font-mono text-xs font-bold text-[#111111]">{CONFIG.payment.payeeName}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {CONFIG.payment.upiId ? (
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="font-mono text-xs font-bold text-[#111111] block">
+                          Pay via UPI to:
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 p-2.5 bg-white border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] select-all truncate">
+                            {CONFIG.payment.upiId}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (navigator.clipboard) {
+                                navigator.clipboard.writeText(CONFIG.payment.upiId);
+                                setCopiedUpi(true);
+                                setTimeout(() => setCopiedUpi(false), 2000);
+                              }
+                            }}
+                            className="px-3 py-2.5 bg-white hover:bg-[#FFD400] border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
+                          >
+                            {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                            <span>{copiedUpi ? 'Copied' : 'Copy UPI'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 12-digit UTR Input */}
+                      <div className="space-y-1.5">
+                        <label className="font-bold text-[#111111] block">
+                          12-Digit UPI Reference Number (UTR / Txn ID) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          maxLength={12}
+                          value={paymentUtr}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 12);
+                            setPaymentUtr(val);
+                            if (errors.paymentUtr) setErrors({ ...errors, paymentUtr: '' });
+                          }}
+                          placeholder="e.g. 428901234567"
+                          className={`w-full p-2.5 bg-white border-2 ${errors.paymentUtr ? 'border-red-600' : 'border-[#111111]'} font-mono text-base font-bold tracking-wider min-h-[44px]`}
+                        />
+                        {errors.paymentUtr && (
+                          <p className="text-xs text-red-600 font-bold">{errors.paymentUtr}</p>
+                        )}
+                        <p className="text-[11px] font-mono text-[#111111]/70">
+                          Enter the 12-digit numeric reference shown in your UPI app payment receipt.
+                        </p>
+                      </div>
+
+                      {CONFIG.payment.refundPolicyText && (
+                        <p className="text-[11px] font-sans text-[#111111]/60 italic border-t border-[#111111]/20 pt-2">
+                          Refund Policy: {CONFIG.payment.refundPolicyText}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-white border border-[#111111] font-mono text-xs text-[#111111]/80 space-y-1">
+                      <p className="font-bold text-[#111111]">Payment Details</p>
+                      <p>UPI payment instructions and verification will be enabled shortly. Your pitch registration will start in <strong>pending</strong> status.</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* 7. Consent Checkbox with Privacy Notice Link */}
               <div className="pt-2">

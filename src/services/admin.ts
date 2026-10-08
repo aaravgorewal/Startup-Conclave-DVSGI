@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import app, { db } from './firebase.ts';
 import { RegistrationRecord } from './registrations.ts';
-import { CONFIG, ADMIN_EMAILS } from '../config.ts';
+import { CONFIG } from '../config.ts';
 
 export interface EventSettings {
   registrationCap: number;
@@ -88,24 +88,11 @@ const INITIAL_DEMO_PARTNERS: AdminPartnerEnquiry[] = [];
  * Checks:
  * 1. Document in named Firestore database
  * 2. Document in default Firestore database (in case created there in console)
- * 3. Authorized college/admin email fallback
  */
-export const checkIsAdmin = async (uid: string, email?: string | null): Promise<boolean> => {
+export const checkIsAdmin = async (uid: string): Promise<boolean> => {
   if (!uid) return false;
 
-  // 1. Authenticated admin email verification
-  if (email) {
-    const cleanEmail = email.trim().toLowerCase();
-    if (
-      cleanEmail.endsWith('@dewaninstitutes.org') ||
-      cleanEmail.endsWith('@dvsiet.ac.in') ||
-      ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(cleanEmail)
-    ) {
-      return true;
-    }
-  }
-
-  // 2. Check named database (/admins/{uid})
+  // 1. Check named database (/admins/{uid})
   try {
     const snap = await getDoc(doc(db, 'admins', uid));
     if (snap.exists()) return true;
@@ -113,7 +100,7 @@ export const checkIsAdmin = async (uid: string, email?: string | null): Promise<
     console.warn('Notice checking /admins in named database:', err);
   }
 
-  // 3. Check default database in case created there in console
+  // 2. Check default database in case created there in console
   try {
     const defaultDb = getFirestore(app);
     const snap = await getDoc(doc(defaultDb, 'admins', uid));
@@ -251,6 +238,38 @@ export const updateRegistration = async (
   }
 
   return true;
+};
+
+/**
+ * Update payment verification status for a registration (Admin only)
+ */
+export const updatePaymentStatus = async (
+  id: string,
+  paymentStatus: 'not_required' | 'pending' | 'verified' | 'rejected',
+  adminEmail?: string,
+  docId?: string,
+  existingPayment?: any
+): Promise<boolean> => {
+  const timestamp = new Date().toISOString();
+  const isVerified = paymentStatus === 'verified';
+  return updateRegistration(
+    id,
+    {
+      paymentStatus,
+      paymentVerifiedAt: isVerified ? timestamp : null,
+      paymentVerifiedBy: isVerified ? (adminEmail || 'admin') : null,
+      verifiedAt: isVerified ? timestamp : null,
+      payment: {
+        ...(existingPayment || {}),
+        required: existingPayment?.required ?? (paymentStatus !== 'not_required'),
+        status: paymentStatus,
+        amountPaise: existingPayment?.amountPaise ?? (paymentStatus === 'not_required' ? 0 : 99900),
+      },
+      updatedAt: timestamp,
+      updatedBy: adminEmail || 'admin',
+    },
+    docId
+  );
 };
 
 /**

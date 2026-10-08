@@ -15,13 +15,6 @@ export interface LogoItem {
   confirmed: boolean;
 }
 
-export const ADMIN_EMAILS: string[] = [
-  'aaravgorewal@gmail.com',
-  'aarav@dewaninstitutes.org',
-  'admin@dvsiet.ac.in',
-  'conclave@dvsiet.ac.in',
-];
-
 export interface SpeakerItem {
   id: string;
   name: string;
@@ -31,7 +24,31 @@ export interface SpeakerItem {
   status: 'confirmed' | 'pending' | string;
 }
 
+export interface TicketConfig {
+  label: string;
+  fee: number; // INR, whole rupees
+}
+
+/** Converts whole rupees to paise integer */
+export const toPaise = (rupees: number): number => Math.round(rupees * 100);
+
+export interface PaymentConfig {
+  upiId: string;
+  payeeName: string;
+  refundPolicyText: string;
+}
+
 export const CONFIG = {
+  tickets: {
+    participant: { label: 'Participant', fee: 0 },
+    pitch: { label: 'Pitch your startup', fee: 999 },
+  } as Record<'participant' | 'pitch', TicketConfig>,
+
+  payment: {
+    upiId: '',
+    payeeName: '',
+    refundPolicyText: '',
+  } as PaymentConfig,
   // Organisers: the college's own units.
   organisers: [
     { name: 'Dewan VS Group of Institutions', logo: dewanVsLogo, confirmed: true },

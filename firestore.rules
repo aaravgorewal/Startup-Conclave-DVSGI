@@ -30,12 +30,17 @@ service cloud.firestore {
           'name', 'email', 'phone', 'college', 'course', 'year',
           'role', 'city', 'notes', 'wantsToPitch', 'startupName',
           'startupPitch', 'pitchStatus', 'status', 'createdAt',
-          'sector', 'stage', 'pitchDeckLink', 'teamSize'
+          'sector', 'stage', 'pitchDeckLink', 'teamSize',
+          'paymentStatus', 'paymentAmount', 'paymentUtr', 'paymentVerifiedAt', 'paymentVerifiedBy',
+          'ticket', 'emailVerified', 'verifiedAt', 'payment'
         ])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 100
         && data.email is string && data.email.size() > 0 && data.email.size() <= 120
         && data.phone is string && data.phone.matches('^[0-9]{10}$')
-        && data.college is string && data.college.size() > 0 && data.college.size() <= 150
+        && (
+          (data.college is string && data.college.size() > 0 && data.college.size() <= 150)
+          || (data.college is map && data.college.name is string && data.college.name.size() > 0 && data.college.name.size() <= 150)
+        )
         && data.role is string && data.role in ['Student', 'Founder', 'Professional', 'Other']
         && data.status is string && data.status in ['registered', 'waitlist']
         && data.createdAt == request.time
@@ -54,7 +59,23 @@ service cloud.firestore {
         && (!('sector' in data) || (data.sector is string && data.sector.size() <= 100))
         && (!('stage' in data) || (data.stage is string && data.stage.size() <= 50))
         && (!('pitchDeckLink' in data) || (data.pitchDeckLink is string && data.pitchDeckLink.size() <= 1000))
-        && (!('teamSize' in data) || (data.teamSize is string && data.teamSize.size() <= 50) || data.teamSize is int);
+        && (!('teamSize' in data) || (data.teamSize is string && data.teamSize.size() <= 50) || data.teamSize is int)
+        && (!('ticket' in data) || (data.ticket is string && data.ticket in ['participant', 'pitch']))
+        && (!('emailVerified' in data) || data.emailVerified is bool)
+        && (!('verifiedAt' in data) || data.verifiedAt == null || data.verifiedAt is timestamp || data.verifiedAt is string)
+        && (!('payment' in data) || (
+          data.payment is map
+          && data.payment.required is bool
+          && data.payment.status in ['not_required', 'pending']
+          && data.payment.amountPaise is int && data.payment.amountPaise >= 0
+          && (!('utr' in data.payment) || (data.payment.utr is string && data.payment.utr.size() <= 30))
+          && (!('method' in data.payment) || (data.payment.method is string && data.payment.method in ['upi', 'razorpay']))
+        ))
+        && (!('paymentStatus' in data) || (data.paymentStatus is string && data.paymentStatus in ['free', 'not_required', 'pending']))
+        && (!('paymentAmount' in data) || (data.paymentAmount is int && data.paymentAmount >= 0))
+        && (!('paymentUtr' in data) || (data.paymentUtr is string && data.paymentUtr.size() <= 30))
+        && (!('paymentVerifiedAt' in data) || data.paymentVerifiedAt == null)
+        && (!('paymentVerifiedBy' in data) || data.paymentVerifiedBy == null);
     }
 
     // Helper: Validate phone index creation payload for deterministic deduplication
@@ -136,12 +157,14 @@ service cloud.firestore {
 
     // 6. Trigger Email Collection (restricted to administrators and cloud functions)
     match /mail/{mailId} {
-      allow read, write: if isAdmin();
+      allow create: if false;
+      allow read, update, delete: if isAdmin();
     }
 
     // 7. Admins Collection (restricted to administrators)
-    match /admins/{adminId} {
-      allow read, write: if isAdmin();
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
     }
 
     // Default deny for all other unmatched collections and paths
