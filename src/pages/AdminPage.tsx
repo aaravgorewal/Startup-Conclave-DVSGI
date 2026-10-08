@@ -68,6 +68,7 @@ import {
   getEventSettings,
   saveEventSettings,
   checkIsAdmin,
+  toIso,
 } from '../services/admin.ts';
 import { CollegeInfo } from '../services/registrations.ts';
 
@@ -75,6 +76,62 @@ const getCollegeName = (col: CollegeInfo | string | undefined | null): string =>
   if (!col) return '';
   if (typeof col === 'object') return col.name || '';
   return String(col);
+};
+
+const getCollegeState = (col: CollegeInfo | string | undefined | null): string => {
+  if (!col || typeof col !== 'object') return '';
+  return col.state || '';
+};
+
+/**
+ * Safely extracts YYYY-MM-DD from an ISO string, Timestamp, Date, or unknown value.
+ * Never throws; returns empty string if missing or unparseable.
+ */
+const safeDatePrefix = (val: unknown): string => {
+  if (!val) return '';
+  if (typeof val === 'string') {
+    if (val.length >= 10 && val.includes('-')) {
+      return val.slice(0, 10);
+    }
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  }
+  const iso = toIso(val);
+  if (iso && iso.length >= 10) return iso.slice(0, 10);
+  return '';
+};
+
+/**
+ * Safely formats date for display (e.g. DD/MM/YYYY or locale format).
+ */
+const safeFormatDate = (val: unknown, fallback = '—'): string => {
+  if (!val) return fallback;
+  const iso = typeof val === 'string' ? val : toIso(val);
+  if (!iso) return fallback;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? fallback : d.toLocaleDateString();
+};
+
+/**
+ * Safely formats date & time for display.
+ */
+const safeFormatDateTime = (val: unknown, fallback = '—'): string => {
+  if (!val) return fallback;
+  const iso = typeof val === 'string' ? val : toIso(val);
+  if (!iso) return fallback;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? fallback : d.toLocaleString();
+};
+
+/**
+ * Safely formats time for display (e.g. 10:30 AM).
+ */
+const safeFormatTime = (val: unknown, fallback = '—'): string => {
+  if (!val) return fallback;
+  const iso = typeof val === 'string' ? val : toIso(val);
+  if (!iso) return fallback;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? fallback : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 export const AdminPage: React.FC = () => {
@@ -132,9 +189,15 @@ export const AdminPage: React.FC = () => {
 
   // Search & Filter State (Registrations Table)
   const [searchQuery, setSearchQuery] = useState('');
+  const [collegeSearchQuery, setCollegeSearchQuery] = useState('');
+  const [ticketFilter, setTicketFilter] = useState<'All' | 'participant' | 'pitch'>('All');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('All');
+  const [verifiedFilter, setVerifiedFilter] = useState<'All' | 'verified' | 'unverified'>('All');
+  const [stateFilter, setStateFilter] = useState<string>('All');
   const [roleFilter, setRoleFilter] = useState<string>('All');
   const [pitchFilter, setPitchFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [actionInProgressId, setActionInProgressId] = useState<string | null>(null);
 
   // Sorting
   const [sortField, setSortField] = useState<keyof AdminRegistration>('createdAt');
@@ -503,6 +566,94 @@ export const AdminPage: React.FC = () => {
     );
   };
 
+  // Handler for Mark Verified / Reject payment buttons (Admin verified only)
+  const handleMarkPayment = async (
+    reg: AdminRegistration,
+    newStatus: 'verified' | 'rejected'
+  ) => {
+    if (!currentUser) {
+      setAdminActionError('Not authenticated as admin');
+      return;
+    }
+    const isAdmin = await checkIsAdmin(currentUser.uid);
+    if (!isAdmin) {
+      setAdminActionError('Not authorised. Admin privileges required.');
+      return;
+    }
+
+    setActionInProgressId(reg.id);
+    try {
+      const adminEmail = currentUser.email || 'admin@dvsiet.ac.in';
+      const timestamp = new Date().toISOString();
+      const isVerified = newStatus === 'verified';
+
+      const ok = await updatePaymentStatus(
+        reg.id,
+        newStatus,
+        adminEmail,
+        reg.docId,
+        reg.payment
+      );
+
+      if (ok) {
+        setRegistrations((prev) =>
+          prev.map((r) =>
+            r.id === reg.id
+              ? {
+                  ...r,
+                  paymentStatus: newStatus,
+                  paymentVerifiedBy: isVerified ? adminEmail : null,
+                  paymentVerifiedAt: isVerified ? timestamp : null,
+                  verifiedAt: isVerified ? timestamp : r.verifiedAt,
+                  payment: {
+                    ...(r.payment || {}),
+                    required: r.payment?.required ?? true,
+                    status: newStatus,
+                    amountPaise: r.payment?.amountPaise ?? 99900,
+                  },
+                  updatedAt: timestamp,
+                  updatedBy: adminEmail,
+                }
+              : r
+          )
+        );
+        if (activeDetailItem?.id === reg.id) {
+          setActiveDetailItem((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  paymentStatus: newStatus,
+                  paymentVerifiedBy: isVerified ? adminEmail : null,
+                  paymentVerifiedAt: isVerified ? timestamp : null,
+                  verifiedAt: isVerified ? timestamp : prev.verifiedAt,
+                  payment: {
+                    ...(prev.payment || {}),
+                    required: prev.payment?.required ?? true,
+                    status: newStatus,
+                    amountPaise: prev.payment?.amountPaise ?? 99900,
+                  },
+                  updatedAt: timestamp,
+                  updatedBy: adminEmail,
+                }
+              : null
+          );
+        }
+        setAdminSuccessToast(
+          isVerified
+            ? `Marked payment as VERIFIED for ${reg.name} (${reg.id})`
+            : `Payment REJECTED for ${reg.name} (${reg.id})`
+        );
+      } else {
+        setAdminActionError(`Failed to update payment status for ${reg.id}. Check permissions.`);
+      }
+    } catch (err: any) {
+      console.error('Error updating payment status:', err);
+      setAdminActionError(err?.message || 'Error updating payment status');
+    } finally {
+      setActionInProgressId(null);
+    }
+  };
+
   // Requirement: Add confirmation dialog for any delete
   const handleDeleteRegistration = (reg: AdminRegistration) => {
     setConfirmDialog({
@@ -677,21 +828,49 @@ export const AdminPage: React.FC = () => {
   // Top Stat Cards Calculations (Registrations Tab Only)
   const stats = useMemo(() => {
     const total = registrations.length;
+    const participants = registrations.filter(
+      (r) => r.ticket === 'participant' || (!r.ticket && !r.wantsToPitch)
+    ).length;
+    const pitch = registrations.filter(
+      (r) => r.ticket === 'pitch' || r.wantsToPitch
+    ).length;
+
+    const pitchVerified = registrations.filter((r) => {
+      const isPitch = r.ticket === 'pitch' || r.wantsToPitch;
+      const pStatus = r.payment?.status || r.paymentStatus;
+      return isPitch && pStatus === 'verified';
+    }).length;
+
+    const pitchPending = registrations.filter((r) => {
+      const isPitch = r.ticket === 'pitch' || r.wantsToPitch;
+      const pStatus = r.payment?.status || r.paymentStatus || 'pending';
+      return isPitch && pStatus === 'pending';
+    }).length;
+
+    const pitchFee = CONFIG.tickets.pitch.fee;
+    const expectedRevenue = pitchVerified * pitchFee;
+
     const confirmed = registrations.filter((r) => r.status === 'confirmed').length;
     const registered = registrations.filter((r) => r.status === 'registered').length;
     const checkedIn = registrations.filter((r) => r.status === 'checked_in').length;
     const cancelled = registrations.filter((r) => r.status === 'cancelled').length;
     const waitlist = registrations.filter((r) => r.status === 'waitlist').length;
-    const wantsToPitch = registrations.filter((r) => r.wantsToPitch).length;
+    const wantsToPitch = pitch;
     const students = registrations.filter((r) => r.role === 'Student').length;
     const founders = registrations.filter((r) => r.role === 'Founder').length;
     const others = total - (students + founders);
 
     const todayStr = new Date().toISOString().slice(0, 10);
-    const today = registrations.filter((r) => r.createdAt && r.createdAt.slice(0, 10) === todayStr).length;
+    const today = registrations.filter((r) => safeDatePrefix(r.createdAt) === todayStr).length;
 
     return {
       total,
+      participants,
+      pitch,
+      pitchVerified,
+      pitchPending,
+      pitchFee,
+      expectedRevenue,
       confirmed,
       registered,
       checkedIn,
@@ -705,12 +884,24 @@ export const AdminPage: React.FC = () => {
     };
   }, [registrations]);
 
+  // Available States from Registrations for State Filter
+  const availableStates = useMemo(() => {
+    const set = new Set<string>();
+    registrations.forEach((r) => {
+      const st = typeof r.college === 'object' && r.college ? r.college.state : '';
+      if (st && st.trim()) {
+        set.add(st.trim());
+      }
+    });
+    return Array.from(set).sort();
+  }, [registrations]);
+
   // Daily Registrations for Small Bar Chart
   const dailyRegistrations = useMemo(() => {
     const map: Record<string, number> = {};
     registrations.forEach((r) => {
-      if (!r.createdAt) return;
-      const dateStr = r.createdAt.slice(0, 10);
+      const dateStr = safeDatePrefix(r.createdAt);
+      if (!dateStr) return;
       map[dateStr] = (map[dateStr] || 0) + 1;
     });
 
@@ -727,7 +918,7 @@ export const AdminPage: React.FC = () => {
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const m = parseInt(parts[1], 10) - 1;
       const d = parseInt(parts[2], 10);
-      const label = `${monthNames[m] || ''} ${d}`;
+      const label = `${monthNames[m] || ''} ${d || ''}`.trim() || dateStr;
       return {
         date: dateStr,
         label,
@@ -755,25 +946,75 @@ export const AdminPage: React.FC = () => {
   const filteredRegistrations = useMemo(() => {
     return registrations
       .filter((r) => {
+        // 1. General search query (Name, Email, Phone, Reg ID, UTR)
         const query = searchQuery.toLowerCase().trim();
+        const pUtr = (r.payment?.utr || r.paymentUtr || '').toLowerCase();
         const matchesQuery =
           !query ||
           r.name.toLowerCase().includes(query) ||
           r.email.toLowerCase().includes(query) ||
           r.phone.includes(query) ||
-          getCollegeName(r.college).toLowerCase().includes(query) ||
-          r.id.toLowerCase().includes(query);
+          r.id.toLowerCase().includes(query) ||
+          pUtr.includes(query);
 
+        // 2. Dedicated college search
+        const cQuery = collegeSearchQuery.toLowerCase().trim();
+        const colName = getCollegeName(r.college).toLowerCase();
+        const matchesCollege = !cQuery || colName.includes(cQuery);
+
+        // 3. Ticket filter
+        const isPitch = r.ticket === 'pitch' || r.wantsToPitch;
+        const matchesTicket =
+          ticketFilter === 'All' ||
+          (ticketFilter === 'pitch' && isPitch) ||
+          (ticketFilter === 'participant' && !isPitch);
+
+        // 4. Payment status filter
+        const pStatus = r.payment?.status || r.paymentStatus || (isPitch ? 'pending' : 'not_required');
+        const matchesPayment =
+          paymentStatusFilter === 'All' || pStatus === paymentStatusFilter;
+
+        // 5. Email verified filter
+        const matchesVerified =
+          verifiedFilter === 'All' ||
+          (verifiedFilter === 'verified' && Boolean(r.emailVerified)) ||
+          (verifiedFilter === 'unverified' && !r.emailVerified);
+
+        // 6. State filter
+        const rState = (typeof r.college === 'object' && r.college ? r.college.state || '' : '').trim();
+        const matchesState =
+          stateFilter === 'All' || rState.toLowerCase() === stateFilter.toLowerCase();
+
+        // 7. Role and status filters
         const matchesRole = roleFilter === 'All' || r.role === roleFilter;
         const matchesPitch =
           pitchFilter === 'All' ||
-          (pitchFilter === 'Yes' && (r.ticket === 'pitch' || r.wantsToPitch)) ||
-          (pitchFilter === 'No' && !(r.ticket === 'pitch' || r.wantsToPitch));
+          (pitchFilter === 'Yes' && isPitch) ||
+          (pitchFilter === 'No' && !isPitch);
         const matchesStatus = statusFilter === 'All' || r.status === statusFilter;
 
-        return matchesQuery && matchesRole && matchesPitch && matchesStatus;
+        return (
+          matchesQuery &&
+          matchesCollege &&
+          matchesTicket &&
+          matchesPayment &&
+          matchesVerified &&
+          matchesState &&
+          matchesRole &&
+          matchesPitch &&
+          matchesStatus
+        );
       })
       .sort((a, b) => {
+        if (sortField === 'createdAt') {
+          const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          const numA = isNaN(tA) ? 0 : tA;
+          const numB = isNaN(tB) ? 0 : tB;
+          if (numA < numB) return sortDirection === 'asc' ? -1 : 1;
+          if (numA > numB) return sortDirection === 'asc' ? 1 : -1;
+          return 0;
+        }
         let valA = a[sortField] || '';
         let valB = b[sortField] || '';
         if (typeof valA === 'string') valA = valA.toLowerCase();
@@ -783,7 +1024,20 @@ export const AdminPage: React.FC = () => {
         if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [registrations, searchQuery, roleFilter, pitchFilter, statusFilter, sortField, sortDirection]);
+  }, [
+    registrations,
+    searchQuery,
+    collegeSearchQuery,
+    ticketFilter,
+    paymentStatusFilter,
+    verifiedFilter,
+    stateFilter,
+    roleFilter,
+    pitchFilter,
+    statusFilter,
+    sortField,
+    sortDirection,
+  ]);
 
   // Paginated List
   const totalPages = Math.ceil(filteredRegistrations.length / pageSize) || 1;
@@ -1058,8 +1312,8 @@ export const AdminPage: React.FC = () => {
     // REQUIREMENT: Prevent double check-in with a clear warning
     if (target.status === 'checked_in') {
       triggerCheckinFeedback('warning');
-      const timeStr = target.checkInTime || target.updatedAt
-        ? new Date(target.checkInTime || target.updatedAt!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      const timeStr = target.checkInTime || target.checkedInAt || target.updatedAt
+        ? safeFormatTime(target.checkInTime || target.checkedInAt || target.updatedAt)
         : 'earlier';
       setCheckinDoubleWarning(
         `DOUBLE CHECK-IN WARNING: ${target.name} (${target.id}) was ALREADY checked in at ${timeStr} by ${target.updatedBy || 'organizer'}.`
@@ -1189,9 +1443,13 @@ export const AdminPage: React.FC = () => {
     return registrations
       .filter((r) => r.status === 'checked_in')
       .sort((a, b) => {
-        const timeA = new Date(a.checkInTime || a.updatedAt || a.createdAt).getTime();
-        const timeB = new Date(b.checkInTime || b.updatedAt || b.createdAt).getTime();
-        return timeB - timeA;
+        const getTs = (item: AdminRegistration) => {
+          const val = item.checkInTime || item.checkedInAt || item.updatedAt || item.createdAt;
+          if (!val) return 0;
+          const t = new Date(val).getTime();
+          return isNaN(t) ? 0 : t;
+        };
+        return getTs(b) - getTs(a);
       })
       .slice(0, 8);
   }, [registrations]);
@@ -1406,83 +1664,83 @@ export const AdminPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 2. Confirmed */}
+                {/* 2. Participants */}
                 <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
-                      Confirmed
+                      Participants
                     </span>
                     <span className="w-2 h-2 rounded-full bg-blue-600" />
                   </div>
                   <div className="font-display font-black text-2xl sm:text-3xl text-blue-900">
-                    {stats.confirmed}
+                    {stats.participants}
                   </div>
                   <div className="text-[10px] font-mono font-bold text-[#111111]/70 truncate">
-                    {stats.registered > 0 ? `+ ${stats.registered} registered` : 'Approved delegates'}
+                    Standard attendee
                   </div>
                 </div>
 
-                {/* 3. Checked-in */}
+                {/* 3. Pitch */}
                 <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
-                      Checked-in
-                    </span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  </div>
-                  <div className="font-display font-black text-2xl sm:text-3xl text-emerald-700">
-                    {stats.checkedIn}
-                  </div>
-                  <div className="text-[10px] font-mono font-bold text-emerald-800 truncate">
-                    {stats.total > 0 ? `${Math.round((stats.checkedIn / stats.total) * 100)}% venue turnout` : 'At venue desk'}
-                  </div>
-                </div>
-
-                {/* 4. Cancelled */}
-                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
-                      Cancelled
-                    </span>
-                    <span className="w-2 h-2 rounded-full bg-red-500" />
-                  </div>
-                  <div className="font-display font-black text-2xl sm:text-3xl text-red-600">
-                    {stats.cancelled}
-                  </div>
-                  <div className="text-[10px] font-mono font-bold text-[#111111]/60 truncate">
-                    Revoked passes
-                  </div>
-                </div>
-
-                {/* 5. Waitlist */}
-                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
-                      Waitlist
-                    </span>
-                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  </div>
-                  <div className="font-display font-black text-2xl sm:text-3xl text-amber-700">
-                    {stats.waitlist}
-                  </div>
-                  <div className="text-[10px] font-mono font-bold text-amber-900 truncate">
-                    Capacity overflow
-                  </div>
-                </div>
-
-                {/* 6. Want-to-Pitch */}
-                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
-                      Want to Pitch
+                      Pitch
                     </span>
                     <span className="w-2 h-2 rounded-full bg-[#FF6B1A]" />
                   </div>
                   <div className="font-display font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-                    {stats.wantsToPitch}
+                    {stats.pitch}
                   </div>
                   <div className="text-[10px] font-mono font-bold text-[#111111]/70 truncate">
-                    Stage applicants
+                    Pitch applicants
+                  </div>
+                </div>
+
+                {/* 4. Pitch Payments Verified */}
+                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
+                      Pitch Verified
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-emerald-700">
+                    {stats.pitchVerified}
+                  </div>
+                  <div className="text-[10px] font-mono font-bold text-emerald-800 truncate">
+                    Confirmed payments
+                  </div>
+                </div>
+
+                {/* 5. Pitch Payments Pending */}
+                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
+                      Pitch Pending
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-amber-700">
+                    {stats.pitchPending}
+                  </div>
+                  <div className="text-[10px] font-mono font-bold text-amber-900 truncate">
+                    Awaiting verification
+                  </div>
+                </div>
+
+                {/* 6. Expected Revenue = verified x fee */}
+                <div className="p-4 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] sm:text-[11px] font-black text-[#111111]/75 uppercase tracking-wide">
+                      Expected Revenue
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-[#FFD400]" />
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+                    ₹{stats.expectedRevenue.toLocaleString('en-IN')}
+                  </div>
+                  <div className="text-[10px] font-mono font-bold text-[#FF6B1A] truncate" title={`${stats.pitchVerified} verified × ₹${stats.pitchFee}`}>
+                    {stats.pitchVerified} verified × ₹{stats.pitchFee}
                   </div>
                 </div>
 
@@ -1624,72 +1882,141 @@ export const AdminPage: React.FC = () => {
             </div>
             
             {/* Action Bar: Search, Filters & Export */}
-            <div className="p-4 bg-white brutal-border brutal-shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
+            <div className="p-4 bg-white brutal-border brutal-shadow-sm flex flex-col gap-3 text-xs">
               
-              {/* Search Box */}
-              <div className="relative flex-1 max-w-md">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Search name, email, phone, college, ID..."
-                  className="w-full p-2 pl-8 bg-[#FFF8EC] border border-[#111111] font-sans focus:outline-none focus:bg-white text-xs"
-                />
-                <Search className="w-3.5 h-3.5 text-[#111111]/60 absolute left-2.5 top-2.5" />
+              {/* Row 1: Search Inputs (General & College Search) */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Search name, email, phone, ID, UTR..."
+                    className="w-full p-2 pl-8 bg-[#FFF8EC] border border-[#111111] font-sans focus:outline-none focus:bg-white text-xs"
+                  />
+                  <Search className="w-3.5 h-3.5 text-[#111111]/60 absolute left-2.5 top-2.5" />
+                </div>
+
+                <div className="relative flex-1 sm:max-w-xs">
+                  <input
+                    type="text"
+                    value={collegeSearchQuery}
+                    onChange={(e) => {
+                      setCollegeSearchQuery(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    placeholder="Search college name..."
+                    className="w-full p-2 pl-8 bg-[#FFF8EC] border border-[#111111] font-sans focus:outline-none focus:bg-white text-xs"
+                  />
+                  <GraduationCap className="w-3.5 h-3.5 text-[#111111]/60 absolute left-2.5 top-2.5" />
+                </div>
               </div>
 
-              {/* Filters */}
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={roleFilter}
-                  onChange={(e) => {
-                    setRoleFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
-                >
-                  <option value="All">All Roles</option>
-                  <option value="Student">Students</option>
-                  <option value="Founder">Founders</option>
-                  <option value="Professional">Professionals</option>
-                  <option value="Other">Others</option>
-                </select>
+              {/* Row 2: Select Filters & Export CSV */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[#111111]/10">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Ticket Filter */}
+                  <select
+                    value={ticketFilter}
+                    onChange={(e) => {
+                      setTicketFilter(e.target.value as any);
+                      setCurrentPage(1);
+                    }}
+                    className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
+                  >
+                    <option value="All">All Tickets</option>
+                    <option value="participant">Participant</option>
+                    <option value="pitch">Pitch</option>
+                  </select>
 
-                <select
-                  value={pitchFilter}
-                  onChange={(e) => {
-                    setPitchFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
-                >
-                  <option value="All">All Pitch Choices</option>
-                  <option value="Yes">Wants to Pitch</option>
-                  <option value="No">Spectators</option>
-                </select>
+                  {/* Payment Status Filter */}
+                  <select
+                    value={paymentStatusFilter}
+                    onChange={(e) => {
+                      setPaymentStatusFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
+                  >
+                    <option value="All">All Payments</option>
+                    <option value="not_required">Not Required</option>
+                    <option value="pending">Pending</option>
+                    <option value="verified">Verified</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
 
-                <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
-                >
-                  <option value="All">All Statuses ({registrations.length})</option>
-                  <option value="registered">Registered</option>
-                  <option value="waitlist">Waitlist ({stats.waitlist})</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="checked_in">Checked-in</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
+                  {/* Verified Filter */}
+                  <select
+                    value={verifiedFilter}
+                    onChange={(e) => {
+                      setVerifiedFilter(e.target.value as any);
+                      setCurrentPage(1);
+                    }}
+                    className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
+                  >
+                    <option value="All">All Verification</option>
+                    <option value="verified">Verified</option>
+                    <option value="unverified">Unverified</option>
+                  </select>
 
+                  {/* State Filter */}
+                  <select
+                    value={stateFilter}
+                    onChange={(e) => {
+                      setStateFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
+                  >
+                    <option value="All">All States ({availableStates.length})</option>
+                    {availableStates.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Role Filter */}
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => {
+                      setRoleFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
+                  >
+                    <option value="All">All Roles</option>
+                    <option value="Student">Students</option>
+                    <option value="Founder">Founders</option>
+                    <option value="Professional">Professionals</option>
+                    <option value="Other">Others</option>
+                  </select>
+
+                  {/* Registration Status Filter */}
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
+                  >
+                    <option value="All">All Statuses ({registrations.length})</option>
+                    <option value="registered">Registered</option>
+                    <option value="waitlist">Waitlist ({stats.waitlist})</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="checked_in">Checked-in</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+
+                {/* Export CSV Button */}
                 <button
                   onClick={handleExportRegistrations}
-                  className="brutal-btn bg-[#FFD400] text-[#111111] px-3 py-2 font-mono text-[11px] font-bold flex items-center gap-1.5 cursor-pointer"
+                  className="brutal-btn bg-[#FFD400] text-[#111111] px-3 py-2 font-mono text-[11px] font-bold flex items-center gap-1.5 cursor-pointer ml-auto"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Export CSV</span>
@@ -1770,12 +2097,12 @@ export const AdminPage: React.FC = () => {
                       </div>
                     </th>
                     <th className="p-3">Email & Phone</th>
-                    <th className="p-3">College / Org</th>
-                    <th className="p-3">Course / Year</th>
-                    <th className="p-3">Role</th>
-                    <th className="p-3 text-center">Pitch</th>
+                    <th className="p-3 text-center">Ticket</th>
+                    <th className="p-3 text-center">Verified</th>
+                    <th className="p-3">College (+ state)</th>
+                    <th className="p-3 text-center">Payment status</th>
+                    <th className="p-3">UTR</th>
                     <th className="p-3">Status</th>
-                    <th className="p-3 text-center">Payment</th>
                     <th onClick={() => handleSort('createdAt')} className="p-3 cursor-pointer hover:bg-[#FFD400]/50">
                       <div className="flex items-center gap-1">
                         <span>Date</span>
@@ -1814,17 +2141,6 @@ export const AdminPage: React.FC = () => {
                         <div>{reg.email}</div>
                         <div className="text-[10px] text-[#111111]/60">{reg.phone}</div>
                       </td>
-                      <td className="p-3 text-[11px] max-w-[150px] truncate" title={getCollegeName(reg.college)}>
-                        {getCollegeName(reg.college)}
-                      </td>
-                      <td className="p-3 text-[11px] text-[#111111]/70">
-                        {reg.course ? `${reg.course} (${reg.year})` : '—'}
-                      </td>
-                      <td className="p-3">
-                        <span className="font-mono text-[10px] px-1.5 py-0.5 border border-[#111111] bg-white">
-                          {reg.role}
-                        </span>
-                      </td>
                       <td className="p-3 text-center">
                         {reg.ticket === 'pitch' || reg.wantsToPitch ? (
                           <span className="font-mono text-[10px] font-bold text-white bg-[#FF6B1A] px-1.5 py-0.5 border border-[#111111]">
@@ -1835,6 +2151,87 @@ export const AdminPage: React.FC = () => {
                             PARTICIPANT
                           </span>
                         )}
+                      </td>
+                      <td className="p-3 text-center">
+                        {reg.emailVerified ? (
+                          <span className="font-mono text-[10px] font-bold text-emerald-950 bg-emerald-100 px-1.5 py-0.5 border border-emerald-600 inline-flex items-center gap-1" title={reg.verifiedAt ? `Verified: ${safeFormatDateTime(reg.verifiedAt)}` : 'Verified'}>
+                            <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                            <span>YES</span>
+                          </span>
+                        ) : (
+                          <span className="font-mono text-[10px] font-bold text-stone-600 bg-stone-100 px-1.5 py-0.5 border border-stone-300">
+                            NO
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 text-[11px] max-w-[180px]">
+                        <div className="font-bold text-[#111111] truncate" title={getCollegeName(reg.college)}>
+                          {getCollegeName(reg.college) || '—'}
+                        </div>
+                        {getCollegeState(reg.college) ? (
+                          <div className="text-[10px] font-mono text-[#111111]/60 truncate">
+                            {getCollegeState(reg.college)}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        {(() => {
+                          const isPitch = reg.ticket === 'pitch' || reg.wantsToPitch;
+                          const pStatus = reg.payment?.status || reg.paymentStatus || (isPitch ? 'pending' : 'not_required');
+                          const isPendingPitch = isPitch && pStatus === 'pending';
+
+                          return (
+                            <div className="flex flex-col items-center gap-1">
+                              <span
+                                className={`font-mono text-[10px] font-bold px-1.5 py-0.5 border border-[#111111] uppercase ${
+                                  pStatus === 'verified'
+                                    ? 'bg-emerald-100 text-emerald-900 border-emerald-600'
+                                    : pStatus === 'pending'
+                                    ? 'bg-amber-100 text-amber-950 border-amber-600'
+                                    : pStatus === 'rejected'
+                                    ? 'bg-red-100 text-red-900 border-red-600'
+                                    : 'bg-stone-100 text-[#111111]/70'
+                                }`}
+                              >
+                                {pStatus === 'not_required' ? 'NOT REQUIRED' : pStatus}
+                              </span>
+                              {isPendingPitch && (
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <button
+                                    type="button"
+                                    disabled={actionInProgressId === reg.id}
+                                    onClick={() => handleMarkPayment(reg, 'verified')}
+                                    className="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold border border-[#111111] text-[9px] uppercase cursor-pointer disabled:opacity-50 whitespace-nowrap shadow-[1px_1px_0px_#111111]"
+                                    title="Mark Verified"
+                                  >
+                                    {actionInProgressId === reg.id ? '...' : 'Mark verified'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={actionInProgressId === reg.id}
+                                    onClick={() => handleMarkPayment(reg, 'rejected')}
+                                    className="px-1.5 py-0.5 bg-red-100 hover:bg-red-200 text-red-950 font-bold border border-[#111111] text-[9px] uppercase cursor-pointer disabled:opacity-50 whitespace-nowrap shadow-[1px_1px_0px_#111111]"
+                                    title="Reject Payment"
+                                  >
+                                    {actionInProgressId === reg.id ? '...' : 'Reject'}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="p-3 font-mono text-[11px] text-[#111111]">
+                        {(() => {
+                          const utr = reg.payment?.utr || reg.paymentUtr;
+                          return utr ? (
+                            <span className="font-bold tracking-wider select-all" title={utr}>
+                              {utr}
+                            </span>
+                          ) : (
+                            <span className="text-[#111111]/40">—</span>
+                          );
+                        })()}
                       </td>
                       <td className="p-3" onClick={(e) => e.stopPropagation()}>
                         <select
@@ -1859,30 +2256,8 @@ export const AdminPage: React.FC = () => {
                           <option value="cancelled">Cancelled</option>
                         </select>
                       </td>
-                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                        {(() => {
-                          const pStatus = reg.payment?.status || reg.paymentStatus || (reg.ticket === 'pitch' ? 'pending' : 'not_required');
-                          const utrStr = reg.payment?.utr || reg.paymentUtr;
-                          return (
-                            <span
-                              className={`font-mono text-[10px] font-bold px-1.5 py-0.5 border border-[#111111] uppercase ${
-                                pStatus === 'verified'
-                                  ? 'bg-emerald-100 text-emerald-900 border-emerald-600'
-                                  : pStatus === 'pending'
-                                  ? 'bg-amber-100 text-amber-950 border-amber-600'
-                                  : pStatus === 'rejected'
-                                  ? 'bg-red-100 text-red-900 border-red-600'
-                                  : 'bg-stone-100 text-[#111111]/70'
-                              }`}
-                              title={utrStr ? `UTR: ${utrStr}` : undefined}
-                            >
-                              {pStatus === 'not_required' ? 'NOT REQUIRED' : pStatus}
-                            </span>
-                          );
-                        })()}
-                      </td>
                       <td className="p-3 font-mono text-[10px] text-[#111111]/60 whitespace-nowrap">
-                        {new Date(reg.createdAt).toLocaleDateString()}
+                        {safeFormatDate(reg.createdAt)}
                       </td>
                       <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
@@ -1910,7 +2285,7 @@ export const AdminPage: React.FC = () => {
 
                   {paginatedRegistrations.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="p-8 text-center text-[#111111]/60 font-mono">
+                      <td colSpan={12} className="p-8 text-center text-[#111111]/60 font-mono">
                         No registrations match the selected filters or query.
                       </td>
                     </tr>
@@ -2313,13 +2688,7 @@ export const AdminPage: React.FC = () => {
                       <p className="font-sans text-xs sm:text-sm text-amber-900 leading-relaxed font-semibold">
                         This delegate was already checked in and issued entry clearance at{' '}
                         <span className="font-mono underline text-amber-950 font-black">
-                          {activeCheckinAttendee.checkInTime || activeCheckinAttendee.updatedAt
-                            ? new Date(activeCheckinAttendee.checkInTime || activeCheckinAttendee.updatedAt!).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                              })
-                            : 'earlier today'}
+                          {safeFormatTime(activeCheckinAttendee.checkInTime || activeCheckinAttendee.checkedInAt || activeCheckinAttendee.updatedAt, 'earlier today')}
                         </span>
                         {activeCheckinAttendee.updatedBy && (
                           <> by <span className="font-mono font-bold">{activeCheckinAttendee.updatedBy}</span></>
@@ -2530,12 +2899,7 @@ export const AdminPage: React.FC = () => {
 
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[11px] text-[#111111]/70">
-                          {item.checkInTime || item.updatedAt
-                            ? new Date(item.checkInTime || item.updatedAt!).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : 'Just now'}
+                          {safeFormatTime(item.checkInTime || item.checkedInAt || item.updatedAt, 'Just now')}
                         </span>
                         <button
                           type="button"
@@ -2745,7 +3109,7 @@ export const AdminPage: React.FC = () => {
                         </select>
                       </td>
                       <td className="p-3 font-mono text-[10px] text-[#111111]/60 whitespace-nowrap">
-                        {new Date(p.createdAt).toLocaleDateString()}
+                        {safeFormatDate(p.createdAt)}
                       </td>
                       <td className="p-3 text-right">
                         <button
@@ -2959,18 +3323,13 @@ export const AdminPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-[#111111]/70">Updated At:</span>
                     <strong className="text-[#111111] text-right">
-                      {activeDetailItem.updatedAt
-                        ? new Date(activeDetailItem.updatedAt).toLocaleString(undefined, {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          })
-                        : 'Recently'}
+                      {safeFormatDateTime(activeDetailItem.updatedAt, 'Recently')}
                     </strong>
                   </div>
                 </div>
               ) : (
                 <p className="text-[#111111]/75 italic text-[11px]">
-                  No status updates recorded yet. Created on {new Date(activeDetailItem.createdAt).toLocaleDateString()}.
+                  No status updates recorded yet. Created on {safeFormatDate(activeDetailItem.createdAt)}.
                 </p>
               )}
             </div>
@@ -3049,7 +3408,7 @@ export const AdminPage: React.FC = () => {
                 <div className="text-[11px] text-[#111111]/80 border-t border-[#111111]/20 pt-1.5 space-y-0.5">
                   <div>Verified By: <strong>{activeDetailItem.paymentVerifiedBy}</strong></div>
                   {activeDetailItem.paymentVerifiedAt && (
-                    <div>Verified On: <span>{new Date(activeDetailItem.paymentVerifiedAt).toLocaleString()}</span></div>
+                    <div>Verified On: <span>{safeFormatDateTime(activeDetailItem.paymentVerifiedAt)}</span></div>
                   )}
                 </div>
               )}
@@ -3282,7 +3641,7 @@ export const AdminPage: React.FC = () => {
             {/* Drawer Footer with Delete Action */}
             <div className="pt-4 border-t-2 border-[#111111] flex items-center justify-between gap-2">
               <span className="font-mono text-[10px] text-[#111111]/60">
-                Registered: {new Date(activeDetailItem.createdAt).toLocaleDateString()}
+                Registered: {safeFormatDate(activeDetailItem.createdAt)}
               </span>
               <button
                 type="button"

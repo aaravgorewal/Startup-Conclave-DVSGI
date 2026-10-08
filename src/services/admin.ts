@@ -58,6 +58,7 @@ export interface AdminRegistration extends RegistrationRecord {
   pitchTotalScore?: number;
   notes?: string;
   checkInTime?: string;
+  checkedInAt?: string;
   docId?: string;
   updatedBy?: string;
   updatedAt?: string;
@@ -113,6 +114,64 @@ export const checkIsAdmin = async (uid: string): Promise<boolean> => {
 };
 
 /**
+ * Safely converts Firestore Timestamps, timestamp objects, Dates, or strings to an ISO string.
+ * Handles:
+ * - String passthrough (already ISO string or formatted)
+ * - Firestore Timestamp with .toDate() method
+ * - Objects with { seconds } or { _seconds }
+ * - JavaScript Date instances
+ * - Number timestamps (epoch ms or seconds)
+ * Returns ISO string, or empty string if input is falsy/unparseable.
+ */
+export const toIso = (val: unknown): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? '' : val.toISOString();
+  }
+  if (typeof val === 'object' && val !== null) {
+    const obj = val as Record<string, unknown>;
+    // 1. Firestore Timestamp instance with .toDate() method
+    if (typeof obj.toDate === 'function') {
+      try {
+        const d = (obj.toDate as () => Date)();
+        if (d instanceof Date && !isNaN(d.getTime())) {
+          return d.toISOString();
+        }
+      } catch {}
+    }
+    // 2. Plain { seconds, nanoseconds }
+    if (typeof obj.seconds === 'number') {
+      const nanos = typeof obj.nanoseconds === 'number' ? obj.nanoseconds : 0;
+      const ms = obj.seconds * 1000 + Math.floor(nanos / 1e6);
+      const d = new Date(ms);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    }
+    // 3. Plain { _seconds, _nanoseconds } (Admin SDK / serialized format)
+    if (typeof obj._seconds === 'number') {
+      const nanos = typeof obj._nanoseconds === 'number' ? obj._nanoseconds : 0;
+      const ms = obj._seconds * 1000 + Math.floor(nanos / 1e6);
+      const d = new Date(ms);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    }
+    // 4. Firestore Timestamp with .toMillis()
+    if (typeof obj.toMillis === 'function') {
+      try {
+        const ms = (obj.toMillis as () => number)();
+        const d = new Date(ms);
+        if (!isNaN(d.getTime())) return d.toISOString();
+      } catch {}
+    }
+  }
+  if (typeof val === 'number') {
+    const ms = val < 1e11 ? val * 1000 : val;
+    const d = new Date(ms);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  }
+  return '';
+};
+
+/**
  * Fetch all registrations from Firestore, merging with local cache
  */
 export const fetchRegistrations = async (): Promise<AdminRegistration[]> => {
@@ -123,9 +182,29 @@ export const fetchRegistrations = async (): Promise<AdminRegistration[]> => {
     const q = query(collection(db, 'registrations'));
     const snapshot = await getDocs(q);
     snapshot.forEach((d) => {
-      const data = d.data() as AdminRegistration;
-      const displayId = data.registrationId || data.id || d.id;
-      list.push({ ...data, id: displayId, docId: d.id });
+      const raw = d.data() as Record<string, any>;
+      const displayId = raw.registrationId || raw.id || d.id;
+
+      // Normalise all timestamp fields right when reading snapshots
+      const normalizedCreatedAt = toIso(raw.createdAt) || new Date().toISOString();
+      const normalizedUpdatedAt = toIso(raw.updatedAt) || undefined;
+      const normalizedCheckedInAt = toIso(raw.checkedInAt || raw.checkInTime) || undefined;
+      const normalizedVerifiedAt = toIso(raw.verifiedAt) || null;
+      const normalizedPaymentVerifiedAt = toIso(raw.paymentVerifiedAt) || null;
+
+      const reg: AdminRegistration = {
+        ...(raw as any),
+        id: displayId,
+        docId: d.id,
+        createdAt: normalizedCreatedAt,
+        updatedAt: normalizedUpdatedAt,
+        checkedInAt: normalizedCheckedInAt,
+        checkInTime: normalizedCheckedInAt,
+        verifiedAt: normalizedVerifiedAt,
+        paymentVerifiedAt: normalizedPaymentVerifiedAt,
+      };
+
+      list.push(reg);
     });
     fetched = true;
   } catch (error) {
@@ -134,9 +213,11 @@ export const fetchRegistrations = async (): Promise<AdminRegistration[]> => {
 
   // Firestore is the source of truth. Use ONLY the Firestore list when successful.
   if (fetched) {
-    const fresh = list.sort(
-      (a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime()
-    );
+    const fresh = list.sort((a, b) => {
+      const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tB - tA;
+    });
     try { localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(fresh)); } catch {}
     return fresh;
   }
@@ -145,9 +226,20 @@ export const fetchRegistrations = async (): Promise<AdminRegistration[]> => {
   try {
     const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
     const cached: AdminRegistration[] = raw ? JSON.parse(raw) : [];
-    return cached.sort(
-      (a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime()
-    );
+    const normalizedCached = cached.map((r) => ({
+      ...r,
+      createdAt: toIso(r.createdAt) || new Date().toISOString(),
+      updatedAt: toIso(r.updatedAt) || undefined,
+      checkedInAt: toIso(r.checkedInAt || r.checkInTime) || undefined,
+      checkInTime: toIso(r.checkedInAt || r.checkInTime) || undefined,
+      verifiedAt: toIso(r.verifiedAt) || null,
+      paymentVerifiedAt: toIso(r.paymentVerifiedAt) || null,
+    }));
+    return normalizedCached.sort((a, b) => {
+      const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tB - tA;
+    });
   } catch {
     return [];
   }
@@ -164,8 +256,16 @@ export const fetchPartnerEnquiries = async (): Promise<AdminPartnerEnquiry[]> =>
     const q = query(collection(db, 'partnerEnquiries'));
     const snapshot = await getDocs(q);
     snapshot.forEach((d) => {
-      const data = d.data() as AdminPartnerEnquiry;
-      list.push({ ...data, id: d.id });
+      const raw = d.data() as Record<string, any>;
+      const normalizedCreatedAt = toIso(raw.createdAt) || new Date().toISOString();
+      const normalizedUpdatedAt = toIso(raw.updatedAt) || undefined;
+
+      list.push({
+        ...(raw as any),
+        id: d.id,
+        createdAt: normalizedCreatedAt,
+        ...(normalizedUpdatedAt ? { updatedAt: normalizedUpdatedAt } : {}),
+      });
     });
     fetched = true;
   } catch (error) {
@@ -174,9 +274,11 @@ export const fetchPartnerEnquiries = async (): Promise<AdminPartnerEnquiry[]> =>
 
   // Firestore is the source of truth. Use ONLY the Firestore list when successful.
   if (fetched) {
-    const fresh = list.sort(
-      (a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime()
-    );
+    const fresh = list.sort((a, b) => {
+      const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tB - tA;
+    });
     try { localStorage.setItem(LOCAL_PARTNER_KEY, JSON.stringify(fresh)); } catch {}
     return fresh;
   }
@@ -185,9 +287,16 @@ export const fetchPartnerEnquiries = async (): Promise<AdminPartnerEnquiry[]> =>
   try {
     const raw = localStorage.getItem(LOCAL_PARTNER_KEY);
     const cached: AdminPartnerEnquiry[] = raw ? JSON.parse(raw) : [];
-    return cached.sort(
-      (a, b) => new Date(b.createdAt as any).getTime() - new Date(a.createdAt as any).getTime()
-    );
+    const normalizedCached = cached.map((p) => ({
+      ...p,
+      createdAt: toIso(p.createdAt) || new Date().toISOString(),
+      updatedAt: toIso((p as any).updatedAt) || undefined,
+    }));
+    return normalizedCached.sort((a, b) => {
+      const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tB - tA;
+    });
   } catch {
     return [];
   }
@@ -403,7 +512,11 @@ export const exportToCSV = (data: Record<string, any>[], filename: string) => {
   const rows = data.map((row) =>
     headers
       .map((header) => {
-        const val = row[header] !== undefined && row[header] !== null ? String(row[header]) : '';
+        let val = row[header] !== undefined && row[header] !== null ? String(row[header]) : '';
+        // Escape CSV formula injection by prefixing =, +, -, @ cells with '
+        if (/^[=+\-@]/.test(val)) {
+          val = `'${val}`;
+        }
         return `"${val.replace(/"/g, '""')}"`;
       })
       .join(',')

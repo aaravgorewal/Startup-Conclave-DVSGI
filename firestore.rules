@@ -8,6 +8,16 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    // Helper: Verify if user is signed in with a verified email matching emailLower
+    function isVerifiedUser(data) {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && 'emailLower' in data
+        && data.emailLower is string
+        && data.emailLower == request.auth.token.email.lower()
+        && data.email.lower() == data.emailLower;
+    }
+
     // Helper: Validate counter increment for sequential unique IDs with atomic registration match
     function isValidCounter(incoming, existing) {
       return incoming.keys().hasAll(['currentCount', 'updatedAt', 'lastEmailHash'])
@@ -24,10 +34,10 @@ service cloud.firestore {
 
     // Helper: Validate attendee registration creation payload
     function isValidRegistration(data) {
-      return data.keys().hasAll(['name', 'email', 'phone', 'college', 'role', 'status', 'createdAt', 'payment'])
+      return data.keys().hasAll(['name', 'email', 'emailLower', 'phone', 'college', 'role', 'status', 'createdAt', 'payment'])
         && data.keys().hasOnly([
           'id', 'registrationId', 'emailHash', 'sequenceNumber',
-          'name', 'email', 'phone', 'college', 'course', 'year',
+          'name', 'email', 'emailLower', 'phone', 'college', 'course', 'year',
           'role', 'city', 'notes', 'wantsToPitch', 'startupName',
           'startupPitch', 'pitchStatus', 'status', 'createdAt',
           'sector', 'stage', 'pitchDeckLink', 'teamSize',
@@ -36,6 +46,8 @@ service cloud.firestore {
         ])
         && data.name is string && data.name.size() > 0 && data.name.size() <= 100
         && data.email is string && data.email.size() > 0 && data.email.size() <= 120
+        && data.emailLower is string && data.emailLower.size() > 0 && data.emailLower.size() <= 120
+        && data.emailLower == data.email.lower()
         && data.phone is string && data.phone.matches('^[0-9]{10}$')
         && (
           (data.college is string && data.college.size() > 0 && data.college.size() <= 150)
@@ -141,8 +153,9 @@ service cloud.firestore {
 
     // 2. Registrations Collection (keyed by email hash)
     match /registrations/{registrationId} {
-      // Public users may ONLY create documents with strict validation; never read, update, or delete
-      allow create: if isValidRegistration(request.resource.data);
+      // Verified users may ONLY create documents matching their authenticated emailLower; never read, update, or delete
+      allow create: if (isVerifiedUser(request.resource.data) && isValidRegistration(request.resource.data))
+        || isAdmin();
 
       // Only signed-in users whose uid is in the admins collection may read, update, or delete
       allow read, update, delete: if isAdmin();

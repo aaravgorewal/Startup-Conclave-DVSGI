@@ -53,6 +53,7 @@ export interface RegistrationRecord {
   verifiedAt?: string | null;
   name: string;
   email: string;
+  emailLower?: string;
   phone: string;
   college: CollegeInfo | string;
   course: string;
@@ -384,6 +385,7 @@ export const createRegistration = async (
     verifiedAt: null,
     name: input.name.trim(),
     email: emailClean,
+    emailLower: emailClean,
     phone: phoneClean,
     college: collegeObj,
     course: input.course?.trim() || '',
@@ -460,6 +462,7 @@ export const createRegistration = async (
         verifiedAt: null,
         name: record.name,
         email: record.email,
+        emailLower: record.emailLower || record.email.toLowerCase(),
         phone: record.phone,
         college: record.college,
         course: record.course,

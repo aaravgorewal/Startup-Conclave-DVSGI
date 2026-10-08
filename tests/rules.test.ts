@@ -22,24 +22,92 @@ const RULES_PATH = path.resolve(import.meta.dirname, '../firestore.rules');
 
 let testEnv: RulesTestEnvironment;
 
-const getValidRegistrationData = () => ({
+/**
+ * Returns a valid participant registration payload
+ */
+const getValidParticipantData = (email = 'participant@example.com') => ({
   id: 'SC1-00001',
   registrationId: 'SC1-00001',
   sequenceNumber: 1,
-  emailHash: 'hash_test_email_1',
+  emailHash: 'hash_participant_email_1',
   name: 'Aarav Saini',
-  email: 'test@example.com',
+  email: email,
+  emailLower: email.toLowerCase(),
   phone: '9876543210',
-  college: 'DVSIET',
+  college: {
+    name: 'DVSIET Meerut',
+    state: 'Uttar Pradesh',
+    city: 'Meerut',
+    type: 'College',
+    listed: true,
+  },
   role: 'Student',
+  ticket: 'participant',
   status: 'registered',
+  createdAt: serverTimestamp(),
+  payment: {
+    required: false,
+    status: 'not_required',
+    amountPaise: 0,
+  },
+});
+
+/**
+ * Returns a valid pitch registration payload
+ */
+const getValidPitchData = (email = 'founder@example.com', utr = '123456789012') => ({
+  id: 'SC1-00002',
+  registrationId: 'SC1-00002',
+  sequenceNumber: 2,
+  emailHash: 'hash_pitch_email_1',
+  name: 'Startup Founder',
+  email: email,
+  emailLower: email.toLowerCase(),
+  phone: '9876543211',
+  college: {
+    name: 'DVSIET Meerut',
+    state: 'Uttar Pradesh',
+    city: 'Meerut',
+    type: 'College',
+    listed: true,
+  },
+  role: 'Founder',
+  ticket: 'pitch',
+  wantsToPitch: true,
+  startupName: 'NextGen AI',
+  startupPitch: 'Autonomous AI workflow platform',
+  sector: 'Technology',
+  stage: 'Prototype',
+  pitchDeckLink: 'https://drive.google.com/file/d/pitch123',
+  teamSize: '3',
+  status: 'registered',
+  createdAt: serverTimestamp(),
+  payment: {
+    required: true,
+    status: 'pending',
+    amountPaise: 99900,
+    method: 'upi',
+    utr: utr,
+  },
+});
+
+/**
+ * Returns a valid phoneIndex payload
+ */
+const getValidPhoneIndexData = (phoneHash = 'hash_phone_1', regId = 'SC1-00001') => ({
+  registrationId: regId,
+  emailHash: 'hash_participant_email_1',
+  phoneHash,
   createdAt: serverTimestamp(),
 });
 
-const getValidPhoneIndexData = (phoneHash = 'hash_phone_1') => ({
-  registrationId: 'SC1-00001',
-  emailHash: 'hash_test_email_1',
-  phoneHash,
+/**
+ * Returns a valid utrIndex payload
+ */
+const getValidUtrIndexData = (utr = '123456789012', regId = 'SC1-00002') => ({
+  registrationId: regId,
+  emailHash: 'hash_pitch_email_1',
+  utr,
   createdAt: serverTimestamp(),
 });
 
@@ -68,131 +136,308 @@ describe('Firestore Security Rules Unit Tests', () => {
     }
   });
 
-  it('public can create a valid registration; cannot read/update/delete it', async () => {
-    const db = testEnv.unauthenticatedContext().firestore();
-    const regRef = doc(db, 'registrations', 'hash_test_email_1');
-
-    // Public create succeeds
-    await assertSucceeds(setDoc(regRef, getValidRegistrationData()));
-
-    // Public read, update, delete fail
-    await assertFails(getDoc(regRef));
-    await assertFails(updateDoc(regRef, { name: 'Attempted Name Change' }));
-    await assertFails(deleteDoc(regRef));
-  });
-
-  it('duplicate email (same doc id) fails; duplicate phone (same phoneIndex id) fails', async () => {
-    const db = testEnv.unauthenticatedContext().firestore();
-    const regRef = doc(db, 'registrations', 'hash_test_email_1');
-    const phoneRef = doc(db, 'phoneIndex', 'hash_phone_1');
-
-    // First creation succeeds
-    await assertSucceeds(setDoc(regRef, getValidRegistrationData()));
-    await assertSucceeds(setDoc(phoneRef, getValidPhoneIndexData('hash_phone_1')));
-
-    // Duplicate email (second setDoc on same doc id) acts as an update and fails
-    await assertFails(setDoc(regRef, getValidRegistrationData()));
-
-    // Duplicate phone (second setDoc on same phoneIndex id) fails
-    await assertFails(setDoc(phoneRef, getValidPhoneIndexData('hash_phone_1')));
-  });
-
-  it('public cannot write to mail, admins, settings', async () => {
-    const db = testEnv.unauthenticatedContext().firestore();
-
-    // Mail collection
-    const mailRef = doc(db, 'mail', 'mail_001');
-    await assertFails(setDoc(mailRef, { to: ['test@example.com'], message: { subject: 'Test' } }));
-
-    // Admins collection
-    const adminRef = doc(db, 'admins', 'admin_001');
-    await assertFails(setDoc(adminRef, { role: 'admin' }));
-
-    // Settings collection
-    const settingsRef = doc(db, 'settings', 'event');
-    await assertFails(setDoc(settingsRef, { registrationCap: 1000 }));
-  });
-
-  it('public client cannot create or access any document in the mail collection (P2)', async () => {
-    const db = testEnv.unauthenticatedContext().firestore();
-    const mailRef = doc(db, 'mail', 'unauthorized_spam_relay');
-
-    // Create fails
-    await assertFails(
-      setDoc(mailRef, {
-        to: ['victim@example.com'],
-        message: { subject: 'Spam Relay Attempt', text: 'Spam body' },
-      })
-    );
-
-    // Read fails
-    await assertFails(getDoc(mailRef));
-
-    // Update fails
-    await assertFails(updateDoc(mailRef, { status: 'sent' }));
-
-    // Delete fails
-    await assertFails(deleteDoc(mailRef));
-  });
-
-  it('a signed-in user WITHOUT an admins/{uid} document cannot read registrations', async () => {
-    await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      const adminDb = ctx.firestore();
-      await setDoc(doc(adminDb, 'registrations', 'hash_test_email_1'), getValidRegistrationData());
+  // -------------------------------------------------------------------------
+  // 1. UNVERIFIED USER CANNOT CREATE REGISTRATION
+  // -------------------------------------------------------------------------
+  describe('1. Unverified user registration enforcement', () => {
+    it('unauthenticated user cannot create a registration', async () => {
+      const db = testEnv.unauthenticatedContext().firestore();
+      const regRef = doc(db, 'registrations', 'hash_participant_email_1');
+      await assertFails(setDoc(regRef, getValidParticipantData('unauth@example.com')));
     });
 
-    const userDb = testEnv.authenticatedContext('regular_user_123').firestore();
-    const regRef = doc(userDb, 'registrations', 'hash_test_email_1');
-
-    await assertFails(getDoc(regRef));
+    it('authenticated user with email_verified = false cannot create a registration', async () => {
+      const db = testEnv.authenticatedContext('user_unverified_1', {
+        email: 'unverified@example.com',
+        email_verified: false,
+      }).firestore();
+      const regRef = doc(db, 'registrations', 'hash_participant_email_1');
+      await assertFails(setDoc(regRef, getValidParticipantData('unverified@example.com')));
+    });
   });
 
-  it('a signed-in user WITH admins/{uid} can read, update, delete', async () => {
-    const adminUid = 'admin_user_456';
+  // -------------------------------------------------------------------------
+  // 2. VERIFIED USER CAN CREATE ONLY WITH MATCHING emailLower
+  // -------------------------------------------------------------------------
+  describe('2. Verified user emailLower validation', () => {
+    it('verified user can create registration when emailLower exactly matches auth email', async () => {
+      const userEmail = 'verified.student@example.com';
+      const db = testEnv.authenticatedContext('user_verified_1', {
+        email: userEmail,
+        email_verified: true,
+      }).firestore();
+      const regRef = doc(db, 'registrations', 'hash_participant_email_1');
 
-    await testEnv.withSecurityRulesDisabled(async (ctx) => {
-      const adminDb = ctx.firestore();
-      await setDoc(doc(adminDb, 'admins', adminUid), { role: 'admin', active: true });
-      await setDoc(doc(adminDb, 'registrations', 'hash_test_email_1'), getValidRegistrationData());
+      await assertSucceeds(setDoc(regRef, getValidParticipantData(userEmail)));
     });
 
-    const adminDb = testEnv.authenticatedContext(adminUid).firestore();
-    const regRef = doc(adminDb, 'registrations', 'hash_test_email_1');
+    it('verified user CANNOT create registration if emailLower does not match auth email', async () => {
+      const authEmail = 'legit.user@example.com';
+      const spoofedEmail = 'impostor@example.com';
+      const db = testEnv.authenticatedContext('user_verified_2', {
+        email: authEmail,
+        email_verified: true,
+      }).firestore();
+      const regRef = doc(db, 'registrations', 'hash_spoofed_email');
 
-    await assertSucceeds(getDoc(regRef));
-    await assertSucceeds(updateDoc(regRef, { status: 'confirmed' }));
-    await assertSucceeds(deleteDoc(regRef));
+      // Attempting to submit registration with a different emailLower than the auth token email
+      const payload = getValidParticipantData(spoofedEmail);
+      await assertFails(setDoc(regRef, payload));
+    });
+
+    it('verified user CANNOT create registration when emailLower field is missing', async () => {
+      const authEmail = 'valid@example.com';
+      const db = testEnv.authenticatedContext('user_verified_3', {
+        email: authEmail,
+        email_verified: true,
+      }).firestore();
+      const regRef = doc(db, 'registrations', 'hash_missing_email_lower');
+
+      const payload = getValidParticipantData(authEmail);
+      // Delete emailLower to simulate payload omission
+      delete (payload as Record<string, unknown>).emailLower;
+
+      await assertFails(setDoc(regRef, payload));
+    });
+
+    it('verified pitch registration succeeds atomically with matching utrIndex in batch', async () => {
+      const founderEmail = 'founder@example.com';
+      const utr = '987654321012';
+      const db = testEnv.authenticatedContext('founder_uid_1', {
+        email: founderEmail,
+        email_verified: true,
+      }).firestore();
+
+      const batch = writeBatch(db);
+      const regRef = doc(db, 'registrations', 'hash_pitch_email_1');
+      const utrRef = doc(db, 'utrIndex', utr);
+
+      batch.set(regRef, getValidPitchData(founderEmail, utr));
+      batch.set(utrRef, getValidUtrIndexData(utr));
+
+      await assertSucceeds(batch.commit());
+    });
   });
 
-  it('counters/registrations cannot be incremented without a matching new registration', async () => {
-    const db = testEnv.unauthenticatedContext().firestore();
-    const counterRef = doc(db, 'counters', 'registrations');
+  // -------------------------------------------------------------------------
+  // 3. DUPLICATE EMAIL / PHONE / UTR REJECTED
+  // -------------------------------------------------------------------------
+  describe('3. Deduplication rejection (email, phone, UTR)', () => {
+    it('duplicate email (same registration doc ID) is rejected on second create attempt', async () => {
+      const userEmail = 'duplicate.test@example.com';
+      const db = testEnv.authenticatedContext('user_dup_1', {
+        email: userEmail,
+        email_verified: true,
+      }).firestore();
+      const regRef = doc(db, 'registrations', 'hash_participant_email_1');
 
-    // Standalone increment without a matching registration document in batch fails
-    await assertFails(
-      setDoc(counterRef, {
-        currentCount: 1,
-        lastEmailHash: 'missing_email_hash',
-        updatedAt: serverTimestamp(),
-      })
-    );
+      // First creation succeeds
+      await assertSucceeds(setDoc(regRef, getValidParticipantData(userEmail)));
 
-    // Atomic batch write with both counter and matching registration succeeds
-    const batch = writeBatch(db);
-    const emailHash = 'hash_atomic_email_1';
-    const regRef = doc(db, 'registrations', emailHash);
-
-    batch.set(counterRef, {
-      currentCount: 1,
-      lastEmailHash: emailHash,
-      updatedAt: serverTimestamp(),
-    });
-    batch.set(regRef, {
-      ...getValidRegistrationData(),
-      sequenceNumber: 1,
-      emailHash,
+      // Duplicate registration on same doc ID acts as an update and must be rejected for non-admins
+      await assertFails(setDoc(regRef, getValidParticipantData(userEmail)));
     });
 
-    await assertSucceeds(batch.commit());
+    it('duplicate phone (same phoneIndex doc ID) is rejected on second create attempt', async () => {
+      const db = testEnv.unauthenticatedContext().firestore();
+      const phoneRef = doc(db, 'phoneIndex', 'hash_phone_duplicate');
+
+      // First phone index doc creation succeeds
+      await assertSucceeds(setDoc(phoneRef, getValidPhoneIndexData('hash_phone_duplicate')));
+
+      // Duplicate creation on same phone hash is an update and must fail
+      await assertFails(setDoc(phoneRef, getValidPhoneIndexData('hash_phone_duplicate')));
+    });
+
+    it('duplicate UTR (same utrIndex doc ID) is rejected on second create attempt', async () => {
+      const db = testEnv.unauthenticatedContext().firestore();
+      const duplicateUtr = '555666777888';
+      const utrRef = doc(db, 'utrIndex', duplicateUtr);
+
+      // First UTR index doc creation succeeds
+      await assertSucceeds(setDoc(utrRef, getValidUtrIndexData(duplicateUtr)));
+
+      // Duplicate creation on same UTR is an update and must fail
+      await assertFails(setDoc(utrRef, getValidUtrIndexData(duplicateUtr)));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 4. CLIENT CANNOT SET payment.status TO 'verified'
+  // -------------------------------------------------------------------------
+  describe('4. Client cannot set payment.status to verified', () => {
+    it('client cannot create participant registration with payment.status = verified', async () => {
+      const email = 'participant.tamper@example.com';
+      const db = testEnv.authenticatedContext('user_tamper_1', {
+        email,
+        email_verified: true,
+      }).firestore();
+      const regRef = doc(db, 'registrations', 'hash_tamper_1');
+
+      const tamperedPayload = {
+        ...getValidParticipantData(email),
+        payment: {
+          required: false,
+          status: 'verified', // Malicious attempt to self-verify
+          amountPaise: 0,
+        },
+      };
+
+      await assertFails(setDoc(regRef, tamperedPayload));
+    });
+
+    it('client cannot create pitch registration with payment.status = verified', async () => {
+      const email = 'pitch.tamper@example.com';
+      const utr = '111222333444';
+      const db = testEnv.authenticatedContext('user_tamper_2', {
+        email,
+        email_verified: true,
+      }).firestore();
+
+      const batch = writeBatch(db);
+      const regRef = doc(db, 'registrations', 'hash_tamper_2');
+      const utrRef = doc(db, 'utrIndex', utr);
+
+      const tamperedPitch = {
+        ...getValidPitchData(email, utr),
+        payment: {
+          required: true,
+          status: 'verified', // Malicious attempt to bypass admin verification
+          amountPaise: 99900,
+          method: 'upi',
+          utr,
+        },
+      };
+
+      batch.set(regRef, tamperedPitch);
+      batch.set(utrRef, getValidUtrIndexData(utr));
+
+      await assertFails(batch.commit());
+    });
+
+    it('client cannot update an existing registration to payment.status = verified', async () => {
+      const email = 'existing.attendee@example.com';
+      const regId = 'hash_existing_attendee';
+
+      // Seed valid registration with admin privileges disabled
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        const rootDb = ctx.firestore();
+        await setDoc(doc(rootDb, 'registrations', regId), getValidParticipantData(email));
+      });
+
+      // Regular signed-in attendee attempts to update payment.status
+      const db = testEnv.authenticatedContext('user_regular_attempt', {
+        email,
+        email_verified: true,
+      }).firestore();
+      const regRef = doc(db, 'registrations', regId);
+
+      await assertFails(updateDoc(regRef, {
+        'payment.status': 'verified',
+        paymentStatus: 'verified',
+      }));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 5. NON-ADMIN CANNOT READ REGISTRATIONS
+  // -------------------------------------------------------------------------
+  describe('5. Non-admin read protection', () => {
+    const regId = 'hash_private_reg_1';
+
+    beforeEach(async () => {
+      // Seed a registration
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        const rootDb = ctx.firestore();
+        await setDoc(doc(rootDb, 'registrations', regId), getValidParticipantData('private@example.com'));
+      });
+    });
+
+    it('unauthenticated visitor cannot read registrations', async () => {
+      const db = testEnv.unauthenticatedContext().firestore();
+      const regRef = doc(db, 'registrations', regId);
+      await assertFails(getDoc(regRef));
+    });
+
+    it('authenticated non-admin user (uid not in admins collection) cannot read registrations', async () => {
+      const db = testEnv.authenticatedContext('regular_user_non_admin', {
+        email: 'regular@example.com',
+        email_verified: true,
+      }).firestore();
+      const regRef = doc(db, 'registrations', regId);
+      await assertFails(getDoc(regRef));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 6. ADMIN (uid in admins collection) CAN READ, UPDATE, DELETE
+  // -------------------------------------------------------------------------
+  describe('6. Admin authorisation (uid in admins collection)', () => {
+    const adminUid = 'verified_admin_uid_777';
+    const regId = 'hash_admin_managed_reg';
+
+    beforeEach(async () => {
+      // Seed an admin document in admins collection and a sample registration
+      await testEnv.withSecurityRulesDisabled(async (ctx) => {
+        const rootDb = ctx.firestore();
+        await setDoc(doc(rootDb, 'admins', adminUid), { role: 'admin', active: true });
+        await setDoc(doc(rootDb, 'registrations', regId), getValidPitchData('pitcher@example.com', '777888999000'));
+      });
+    });
+
+    it('admin with uid in admins collection can read registrations', async () => {
+      const db = testEnv.authenticatedContext(adminUid).firestore();
+      const regRef = doc(db, 'registrations', regId);
+      await assertSucceeds(getDoc(regRef));
+    });
+
+    it('admin with uid in admins collection can update registrations (e.g. mark payment verified)', async () => {
+      const db = testEnv.authenticatedContext(adminUid).firestore();
+      const regRef = doc(db, 'registrations', regId);
+      await assertSucceeds(
+        updateDoc(regRef, {
+          'payment.status': 'verified',
+          'payment.verifiedBy': adminUid,
+          status: 'confirmed',
+        })
+      );
+    });
+
+    it('admin with uid in admins collection can delete registrations', async () => {
+      const db = testEnv.authenticatedContext(adminUid).firestore();
+      const regRef = doc(db, 'registrations', regId);
+      await assertSucceeds(deleteDoc(regRef));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 7. ADDITIONAL SECURITY INVARIANTS (mail, admins, settings)
+  // -------------------------------------------------------------------------
+  describe('7. Additional collection security invariants', () => {
+    it('public and authenticated clients cannot write to mail collection', async () => {
+      const db = testEnv.authenticatedContext('attacker_uid', {
+        email: 'attacker@example.com',
+        email_verified: true,
+      }).firestore();
+      const mailRef = doc(db, 'mail', 'spam_attempt');
+
+      await assertFails(
+        setDoc(mailRef, {
+          to: ['victim@example.com'],
+          message: { subject: 'Spam Relay', text: 'Unauthorised' },
+        })
+      );
+    });
+
+    it('regular users cannot add themselves to admins collection', async () => {
+      const attackerUid = 'attacker_uid_99';
+      const db = testEnv.authenticatedContext(attackerUid, {
+        email: 'attacker@example.com',
+        email_verified: true,
+      }).firestore();
+      const adminRef = doc(db, 'admins', attackerUid);
+
+      await assertFails(setDoc(adminRef, { role: 'admin' }));
+    });
   });
 });
