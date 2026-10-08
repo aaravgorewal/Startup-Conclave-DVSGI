@@ -1146,6 +1146,8 @@ export const AdminPage: React.FC = () => {
       College: getCollegeName(r.college),
       Role: r.role,
       'Pitch Status': r.pitchStatus || 'Applied',
+      'Payment Status': (r.payment?.status || r.paymentStatus || 'pending').toUpperCase(),
+      'Payment UTR': r.payment?.utr || r.paymentUtr || '',
       Notes: r.notes || '',
       'Applied At': r.createdAt,
     }));

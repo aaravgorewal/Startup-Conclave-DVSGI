@@ -103,8 +103,14 @@ service cloud.firestore {
             && data.payment.amountPaise == 0
           )
         )
-        && (!('paymentStatus' in data) || (data.paymentStatus is string && data.paymentStatus in ['free', 'not_required', 'pending']))
-        && (!('paymentAmount' in data) || (data.paymentAmount is int && data.paymentAmount >= 0))
+        && (!('paymentStatus' in data) || (
+          (data.ticket == 'pitch' && data.paymentStatus == 'pending')
+          || ((!('ticket' in data) || data.ticket == 'participant') && data.paymentStatus in ['not_required', 'free'])
+        ))
+        && (!('paymentAmount' in data) || (
+          (data.ticket == 'pitch' && data.paymentAmount == 999)
+          || (data.paymentAmount == 0)
+        ))
         && (!('paymentUtr' in data) || (data.paymentUtr is string && data.paymentUtr.size() <= 30))
         && (!('paymentVerifiedAt' in data) || data.paymentVerifiedAt == null)
         && (!('paymentVerifiedBy' in data) || data.paymentVerifiedBy == null);

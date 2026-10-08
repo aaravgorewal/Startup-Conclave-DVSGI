@@ -345,7 +345,7 @@ export const createRegistration = async (
   const isPitch = ticket === 'pitch';
 
   if (isPitch) {
-    if (!CONFIG.payment.upiId.trim()) {
+    if (!CONFIG.payment.upiId?.trim() || !CONFIG.payment.payeeName?.trim()) {
       return {
         success: false,
         isNetworkError: false,
@@ -484,6 +484,22 @@ export const createRegistration = async (
       const assignedStatus: 'registered' | 'waitlist' =
         nextCount > registrationCap ? 'waitlist' : 'registered';
 
+      // 5d. Duplicate checks in transaction read phase so a UTR/email/phone cannot be reused
+      if (utrDocRef) {
+        const utrSnap = await transaction.get(utrDocRef);
+        if (utrSnap.exists()) {
+          throw new Error('This UPI Reference Number (UTR) has already been registered.');
+        }
+      }
+      const regSnap = await transaction.get(regDocRef);
+      if (regSnap.exists()) {
+        throw new Error('This email address is already registered.');
+      }
+      const phoneSnap = await transaction.get(phoneDocRef);
+      if (phoneSnap.exists()) {
+        throw new Error('This phone number is already registered.');
+      }
+
       transaction.set(counterRef, {
         currentCount: nextCount,
         lastEmailHash: emailHash,
@@ -549,6 +565,14 @@ export const createRegistration = async (
   } catch (firestoreError: any) {
     const code = firestoreError?.code || '';
     const msg = (firestoreError?.message || '').toLowerCase();
+
+    if (msg.includes('already been registered') || msg.includes('already registered')) {
+      return {
+        success: false,
+        isNetworkError: false,
+        error: firestoreError.message,
+      };
+    }
 
     // Check for network errors (failed-precondition is NOT a network error per P4)
     const isNetwork =

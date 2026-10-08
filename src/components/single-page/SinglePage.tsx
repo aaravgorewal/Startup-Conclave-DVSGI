@@ -545,8 +545,13 @@ export const SinglePage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [college, setCollege] = useState('');
   const [course, setCourse] = useState('');
+  const [courseSelect, setCourseSelect] = useState('');
+  const [customCourse, setCustomCourse] = useState('');
   const [year, setYear] = useState('');
+  const [yearSelect, setYearSelect] = useState('');
+  const [customYear, setCustomYear] = useState('');
   const [role, setRole] = useState<'Student' | 'Founder' | 'Professional' | 'Other'>('Student');
+  const [professionalRole, setProfessionalRole] = useState('');
   const [city, setCity] = useState('');
   const [wantsToPitch, setWantsToPitch] = useState(false);
   const [startupName, setStartupName] = useState('');
@@ -560,12 +565,15 @@ export const SinglePage: React.FC = () => {
   const [consentAgreed, setConsentAgreed] = useState(false);
   const [honeypot, setHoneypot] = useState('');
 
+  // Pitch ticket is open only when both upiId and payeeName are configured
+  const isPitchOpen = Boolean(CONFIG.payment.upiId?.trim() && CONFIG.payment.payeeName?.trim());
+
   // Memoized client-side UPI payment deep-link URL (upi://pay?pa=&pn=&am=999&cu=INR)
   const upiPayUrl = useMemo(() => {
-    const upiId = CONFIG.payment.upiId.trim();
-    if (!upiId) return '';
-    const payee = CONFIG.payment.payeeName.trim() || CONFIG.event.name;
-    return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payee)}&am=${CONFIG.tickets.pitch.fee}&cu=INR&tn=${encodeURIComponent('Startup Conclave Pitch Fee')}`;
+    const upiId = CONFIG.payment.upiId?.trim();
+    const payee = CONFIG.payment.payeeName?.trim();
+    if (!upiId || !payee) return '';
+    return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payee)}&am=${CONFIG.tickets.pitch.fee}&cu=INR`;
   }, []);
 
   // Form Validation & Submission State
@@ -836,20 +844,51 @@ export const SinglePage: React.FC = () => {
       newErrors.email = 'This email or phone is already registered.';
     }
 
-    const phoneTrim = phone.replace(/\D/g, '').slice(-10);
+    const phoneTrim = phone.replace(/\D/g, '').slice(0, 10);
     if (!phoneTrim || !isValidIndianPhone(phoneTrim)) {
-      newErrors.phone = 'Please enter a valid 10-digit phone number.';
+      newErrors.phone = 'Please enter a valid 10-digit Indian phone number.';
     } else if (isPhoneRegistered(phoneTrim)) {
       newErrors.phone = 'This email or phone is already registered.';
     }
 
     if (!college.trim()) {
-      newErrors.college = role === 'Student' ? 'College name is required.' : 'Organisation name is required.';
+      newErrors.college = role === 'Student' ? 'College / University name is required.' : 'Organisation name is required.';
     }
 
+    let effectiveCourse = '';
+    let effectiveYear = '';
+
     if (role === 'Student') {
-      if (!course.trim()) newErrors.course = 'Degree/course is required.';
-      if (!year.trim()) newErrors.year = 'Current year is required.';
+      if (!courseSelect) {
+        newErrors.course = 'Please select your degree/course.';
+      } else if (courseSelect === 'Other') {
+        if (!customCourse.trim()) {
+          newErrors.course = 'Please specify your degree/course.';
+        } else {
+          effectiveCourse = customCourse.trim();
+        }
+      } else {
+        effectiveCourse = courseSelect.trim();
+      }
+
+      if (!yearSelect) {
+        newErrors.year = 'Please select your current year.';
+      } else if (yearSelect === 'Other') {
+        if (!customYear.trim()) {
+          newErrors.year = 'Please specify your current year.';
+        } else {
+          effectiveYear = customYear.trim();
+        }
+      } else {
+        effectiveYear = yearSelect.trim();
+      }
+    } else {
+      if (!professionalRole.trim()) {
+        newErrors.professionalRole = 'Role / designation is required.';
+      } else {
+        effectiveCourse = professionalRole.trim();
+        effectiveYear = '';
+      }
     }
 
     const isPitch = ticket === 'pitch' || wantsToPitch;
@@ -858,14 +897,14 @@ export const SinglePage: React.FC = () => {
       if (!startupName.trim()) {
         newErrors.startupName = 'Startup name is required for pitch registrations.';
       }
-      if (!startupPitch.trim()) {
-        newErrors.startupPitch = 'Startup pitch description is required for pitch registrations.';
-      }
       if (!pitchSector) {
         newErrors.pitchSector = 'Please select a sector.';
       }
       if (!pitchStage) {
         newErrors.pitchStage = 'Please select a stage.';
+      }
+      if (!startupPitch.trim()) {
+        newErrors.startupPitch = 'Startup pitch description is required for pitch registrations.';
       }
       if (!pitchDeckLink.trim()) {
         newErrors.pitchDeckLink = 'Pitch deck link is required for pitch registrations.';
@@ -876,8 +915,8 @@ export const SinglePage: React.FC = () => {
         newErrors.pitchTeamSize = 'Please select your team size.';
       }
 
-      // Block pitch registration if UPI ID is not configured (no fake UPI)
-      if (!CONFIG.payment.upiId.trim()) {
+      // Block pitch registration if UPI ID or payeeName is not configured (no fake UPI)
+      if (!isPitchOpen) {
         newErrors.form = 'Pitch registrations open soon.';
       } else {
         const cleanUtr = paymentUtr.trim();
@@ -895,6 +934,36 @@ export const SinglePage: React.FC = () => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+
+      // Focus first invalid field and scroll into view
+      const fieldOrder = [
+        { key: 'fullName', id: 'reg-fullName' },
+        { key: 'email', id: 'reg-email' },
+        { key: 'phone', id: 'reg-phone' },
+        { key: 'college', id: 'reg-college' },
+        { key: 'professionalRole', id: 'reg-professionalRole' },
+        { key: 'course', id: courseSelect === 'Other' ? 'reg-customCourse' : 'reg-courseSelect' },
+        { key: 'year', id: yearSelect === 'Other' ? 'reg-customYear' : 'reg-yearSelect' },
+        { key: 'startupName', id: 'reg-startupName' },
+        { key: 'pitchSector', id: 'reg-pitchSector' },
+        { key: 'pitchStage', id: 'reg-pitchStage' },
+        { key: 'startupPitch', id: 'reg-startupPitch' },
+        { key: 'pitchDeckLink', id: 'reg-pitchDeckLink' },
+        { key: 'pitchTeamSize', id: 'reg-pitchTeamSize' },
+        { key: 'paymentUtr', id: 'reg-paymentUtr' },
+        { key: 'consent', id: 'reg-consentCheck' },
+      ];
+
+      const firstError = fieldOrder.find((item) => Boolean(newErrors[item.key]));
+      if (firstError) {
+        setTimeout(() => {
+          const el = document.getElementById(firstError.id);
+          if (el) {
+            el.focus();
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 50);
+      }
       return;
     }
 
@@ -921,8 +990,8 @@ export const SinglePage: React.FC = () => {
       phone: phoneTrim,
       ticket: isPitch ? 'pitch' : 'participant',
       college: college.trim(),
-      course: course.trim(),
-      year: year.trim(),
+      course: effectiveCourse.slice(0, 100),
+      year: effectiveYear.slice(0, 50),
       role,
       city: city.trim() || 'Meerut',
       wantsToPitch: isPitch,
@@ -971,7 +1040,7 @@ export const SinglePage: React.FC = () => {
       // Keep all form data intact and surface clear error message with Retry option
       const isNet = Boolean(res.isNetworkError || res.error?.includes('internet') || res.error?.includes('network'));
       setIsNetworkError(isNet);
-      setErrors({ form: res.error || (isNet ? 'Could not submit. Check your internet and try again.' : 'This email or phone may already be registered. If you are sure you have not registered, contact the organisers.') });
+      setErrors({ form: res.error || (isNet ? 'Could not submit due to network error. Your details have been preserved. Please check your internet connection and retry.' : 'This email or phone may already be registered. If you are sure you have not registered, contact the organisers.') });
     }
   };
 
@@ -984,7 +1053,12 @@ export const SinglePage: React.FC = () => {
     setPaymentUtr('');
     setCollege('');
     setCourse('');
+    setCourseSelect('');
+    setCustomCourse('');
     setYear('');
+    setYearSelect('');
+    setCustomYear('');
+    setProfessionalRole('');
     setCity('');
     setWantsToPitch(false);
     setStartupName('');
@@ -1098,8 +1172,17 @@ export const SinglePage: React.FC = () => {
       ctx.font = '900 40px monospace';
       ctx.fillText(submittedRecord.id, 95, 248);
 
-      const statusBadge = submittedRecord.status === 'waitlist' ? 'STATUS: WAITLIST' : 'STATUS: CONFIRMED';
-      ctx.fillStyle = submittedRecord.status === 'waitlist' ? '#78350F' : '#065F46';
+      const isPitchPending = submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified';
+      const statusBadge = submittedRecord.status === 'waitlist'
+        ? 'STATUS: WAITLIST'
+        : isPitchPending
+        ? 'STATUS: PAYMENT PENDING'
+        : 'STATUS: CONFIRMED';
+      ctx.fillStyle = submittedRecord.status === 'waitlist'
+        ? '#78350F'
+        : isPitchPending
+        ? '#92400E'
+        : '#065F46';
       ctx.font = '800 16px monospace';
       ctx.fillText(statusBadge, width - 340, 230);
 
@@ -2199,9 +2282,15 @@ export const SinglePage: React.FC = () => {
                   <span className={`font-mono text-xs font-black uppercase tracking-wider px-2 py-0.5 border border-[#111111] ${
                     submittedRecord.status === 'waitlist'
                       ? 'bg-amber-300 text-amber-950'
+                      : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                      ? 'bg-[#FFD400] text-[#111111]'
                       : 'bg-white text-[#FF6B1A]'
                   }`}>
-                    {submittedRecord.status === 'waitlist' ? 'WAITLIST ENTRY' : 'REGISTRATION CONFIRMED'}
+                    {submittedRecord.status === 'waitlist'
+                      ? 'WAITLIST ENTRY'
+                      : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                      ? 'PAYMENT VERIFICATION PENDING'
+                      : 'REGISTRATION CONFIRMED'}
                   </span>
                   <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-[#111111] bg-[#FFF2D6] px-2 py-0.5 border border-[#111111]">
                     <span className="w-2 h-2 rounded-full bg-emerald-600 animate-sync-glow shrink-0" />
@@ -2212,6 +2301,8 @@ export const SinglePage: React.FC = () => {
                 <h3 className="font-display font-extrabold text-2xl text-[#111111] leading-tight">
                   {submittedRecord.status === 'waitlist'
                     ? 'You are on the waitlist.'
+                    : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                    ? 'Registration received. Payment verification pending'
                     : "You're registered for the conclave."}
                 </h3>
                 
@@ -2388,8 +2479,18 @@ export const SinglePage: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-[#111111]/70 text-xs block">Status:</span>
-                  <span className={`font-bold ${submittedRecord.status === 'waitlist' ? 'text-amber-800' : 'text-emerald-800'}`}>
-                    {submittedRecord.status === 'waitlist' ? 'Waitlist (Capacity reached)' : 'Registered'}
+                  <span className={`font-bold ${
+                    submittedRecord.status === 'waitlist'
+                      ? 'text-amber-800'
+                      : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                      ? 'text-amber-800'
+                      : 'text-emerald-800'
+                  }`}>
+                    {submittedRecord.status === 'waitlist'
+                      ? 'Waitlist (Capacity reached)'
+                      : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                      ? 'Payment Verification Pending'
+                      : 'Registered'}
                   </span>
                 </div>
                 <div>
@@ -2569,15 +2670,20 @@ export const SinglePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      if (!CONFIG.payment.upiId.trim()) {
+                      if (!isPitchOpen) {
                         setErrors((prev) => ({ ...prev, form: 'Pitch registrations open soon.' }));
                         return;
                       }
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.form;
+                        return next;
+                      });
                       setTicket('pitch');
                       setWantsToPitch(true);
                     }}
                     className={`p-3.5 border-2 border-[#111111] text-left transition-all ${
-                      !CONFIG.payment.upiId.trim()
+                      !isPitchOpen
                         ? 'opacity-80 bg-[#F4EFE6] cursor-not-allowed shadow-[1px_1px_0px_#111111]'
                         : ticket === 'pitch'
                         ? 'bg-[#FF6B1A] text-white shadow-[3px_3px_0px_#111111] cursor-pointer'
@@ -2585,15 +2691,15 @@ export const SinglePage: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`font-bold text-sm sm:text-base ${ticket === 'pitch' && CONFIG.payment.upiId.trim() ? 'text-white' : 'text-[#111111]'}`}>
+                      <span className={`font-bold text-sm sm:text-base ${ticket === 'pitch' && isPitchOpen ? 'text-white' : 'text-[#111111]'}`}>
                         {CONFIG.tickets.pitch.label}
                       </span>
                       <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FFD400] text-[#111111]">
-                        {!CONFIG.payment.upiId.trim() ? 'OPENS SOON' : `₹${CONFIG.tickets.pitch.fee}`}
+                        {!isPitchOpen ? 'OPENS SOON' : `₹${CONFIG.tickets.pitch.fee}`}
                       </span>
                     </div>
-                    <p className={`text-xs mt-1 ${ticket === 'pitch' && CONFIG.payment.upiId.trim() ? 'text-white/90' : 'text-[#111111]/70'}`}>
-                      {!CONFIG.payment.upiId.trim()
+                    <p className={`text-xs mt-1 ${ticket === 'pitch' && isPitchOpen ? 'text-white/90' : 'text-[#111111]/70'}`}>
+                      {!isPitchOpen
                         ? 'Pitch registrations open soon'
                         : 'Pitch your startup to jury & investors + delegate entry'}
                     </p>
@@ -2707,26 +2813,38 @@ export const SinglePage: React.FC = () => {
 
               {/* 1. Full Name */}
               <div className="space-y-1.5">
-                <label className="font-bold text-[#111111] block">Full Name *</label>
+                <label htmlFor="reg-fullName" className="font-bold text-[#111111] block cursor-pointer">
+                  Full Name *
+                </label>
                 <input
+                  id="reg-fullName"
                   type="text"
+                  autoComplete="name"
                   required
                   value={fullName}
                   onChange={(e) => {
                     setFullName(e.target.value);
-                    if (errors.fullName) setErrors({ ...errors, fullName: '' });
+                    if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: '' }));
                   }}
                   placeholder="e.g. Aryan Sharma"
-                  className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white min-h-[46px] text-base"
+                  aria-invalid={Boolean(errors.fullName)}
+                  aria-describedby={errors.fullName ? 'reg-fullName-error' : undefined}
+                  className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.fullName ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
                 />
-                {errors.fullName && <p className="text-xs text-red-600 font-bold">{errors.fullName}</p>}
+                {errors.fullName && (
+                  <p id="reg-fullName-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                    {errors.fullName}
+                  </p>
+                )}
               </div>
 
-              {/* 2. Email & WhatsApp (10-digit Indian Number) */}
+              {/* 2. Email & Phone (10-digit Indian Number) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="font-bold text-[#111111] block">Email Address *</label>
+                    <label htmlFor="reg-email" className="font-bold text-[#111111] block cursor-pointer">
+                      Email Address *
+                    </label>
                     {authUser ? (
                       <span className="font-mono text-[10px] font-black uppercase text-green-800 bg-green-100 px-1.5 py-0.5 border border-green-800 flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-green-700" />
@@ -2740,12 +2858,17 @@ export const SinglePage: React.FC = () => {
                   </div>
                   <div className="relative">
                     <input
+                      id="reg-email"
                       type="email"
+                      inputMode="email"
+                      autoComplete="email"
                       required
                       readOnly
                       value={email}
+                      aria-invalid={Boolean(errors.email)}
+                      aria-describedby={errors.email ? 'reg-email-error' : undefined}
                       placeholder="Sign in with Google above to unlock"
-                      className="w-full p-3 bg-[#EFE9DC] border-2 border-[#111111] font-sans font-bold text-[#111111] cursor-not-allowed min-h-[46px] text-base"
+                      className="w-full p-3 bg-[#EFE9DC] border-2 border-[#111111] font-sans font-bold text-[#111111] cursor-not-allowed min-h-[46px] text-base pr-20"
                       title={authUser ? 'Locked to your verified Google account' : 'Sign in with Google above to unlock'}
                     />
                     <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs font-mono font-bold text-[#111111]/70 pointer-events-none">
@@ -2753,36 +2876,65 @@ export const SinglePage: React.FC = () => {
                       <span className="hidden sm:inline">Locked</span>
                     </div>
                   </div>
-                  {errors.email && <p className="text-xs text-red-600 font-bold">{errors.email}</p>}
+                  {errors.email && (
+                    <p id="reg-email-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                      {errors.email}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[#111111] block">Phone / WhatsApp (10 digits) *</label>
+                  <label htmlFor="reg-phone" className="font-bold text-[#111111] block cursor-pointer">
+                    Phone / WhatsApp (10 digits) *
+                  </label>
                   <input
+                    id="reg-phone"
                     type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
                     required
                     maxLength={10}
                     value={phone}
                     onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '');
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                       setPhone(val);
-                      if (errors.phone) setErrors({ ...errors, phone: '' });
+                      if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
                     }}
                     placeholder="10-digit number"
-                    className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white font-mono min-h-[46px] text-base"
+                    aria-invalid={Boolean(errors.phone)}
+                    aria-describedby={errors.phone ? 'reg-phone-error' : undefined}
+                    className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.phone ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white font-mono min-h-[46px] text-base`}
                   />
-                  {errors.phone && <p className="text-xs text-red-600 font-bold">{errors.phone}</p>}
+                  {errors.phone && (
+                    <p id="reg-phone-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                      {errors.phone}
+                    </p>
+                  )}
                 </div>
               </div>
 
               {/* 3. Role & City */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[#111111] block">I am a *</label>
+                  <label htmlFor="reg-role" className="font-bold text-[#111111] block cursor-pointer">
+                    I am a *
+                  </label>
                   <select
+                    id="reg-role"
                     value={role}
-                    onChange={(e) => setRole(e.target.value as any)}
-                    className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white font-medium min-h-[46px] text-base"
+                    onChange={(e) => {
+                      const newRole = e.target.value as any;
+                      setRole(newRole);
+                      setErrors((prev) => {
+                        const next = { ...prev };
+                        delete next.college;
+                        delete next.course;
+                        delete next.year;
+                        delete next.professionalRole;
+                        return next;
+                      });
+                    }}
+                    className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white font-medium min-h-[46px] text-base cursor-pointer"
                   >
                     <option value="Student">Student</option>
                     <option value="Founder">Founder</option>
@@ -2792,9 +2944,13 @@ export const SinglePage: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="font-bold text-[#111111] block">City</label>
+                  <label htmlFor="reg-city" className="font-bold text-[#111111] block cursor-pointer">
+                    City
+                  </label>
                   <input
+                    id="reg-city"
                     type="text"
+                    autoComplete="address-level2"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     placeholder="e.g. Meerut, Delhi, Noida"
@@ -2803,64 +2959,214 @@ export const SinglePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* 4. College / Organisation */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-[#111111] block">
-                  {role === 'Student' ? 'College / University Name *' : 'Organisation Name *'}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={college}
-                  onChange={(e) => {
-                    setCollege(e.target.value);
-                    if (errors.college) setErrors({ ...errors, college: '' });
-                  }}
-                  placeholder={role === 'Student' ? 'e.g. DVSIET Meerut' : 'e.g. Acme Labs'}
-                  className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white min-h-[46px] text-base"
-                />
-                {errors.college && <p className="text-xs text-red-600 font-bold">{errors.college}</p>}
-              </div>
-
-              {/* 5. Course and Year (Required ONLY for Students) */}
-              {role === 'Student' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-[#FFF2D6] border-2 border-[#111111]">
+              {/* 4. College & Education (Students) OR Organisation & Role (Non-Students) */}
+              {role === 'Student' ? (
+                <>
+                  {/* College / University Name */}
                   <div className="space-y-1.5">
-                    <label className="font-bold text-[#111111] block">Degree / Course *</label>
+                    <label htmlFor="reg-college" className="font-bold text-[#111111] block cursor-pointer">
+                      College / University Name *
+                    </label>
                     <input
+                      id="reg-college"
                       type="text"
+                      autoComplete="organization"
                       required
-                      value={course}
+                      value={college}
                       onChange={(e) => {
-                        setCourse(e.target.value);
-                        if (errors.course) setErrors({ ...errors, course: '' });
+                        setCollege(e.target.value);
+                        if (errors.college) setErrors((prev) => ({ ...prev, college: '' }));
                       }}
-                      placeholder="e.g. B.Tech CS, BCA, MBA"
-                      className="w-full p-2.5 bg-white border-2 border-[#111111] font-sans min-h-[44px] text-base"
+                      placeholder="e.g. DVSIET Meerut"
+                      aria-invalid={Boolean(errors.college)}
+                      aria-describedby={errors.college ? 'reg-college-error' : undefined}
+                      className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.college ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
                     />
-                    {errors.course && <p className="text-xs text-red-600 font-bold">{errors.course}</p>}
+                    {errors.college && (
+                      <p id="reg-college-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                        {errors.college}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Degree / Course & Current Year Selects */}
+                  <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Degree / Course Select */}
+                      <div className="space-y-1.5">
+                        <label htmlFor="reg-courseSelect" className="font-bold text-[#111111] block cursor-pointer">
+                          Degree / Course *
+                        </label>
+                        <select
+                          id="reg-courseSelect"
+                          required
+                          value={courseSelect}
+                          onChange={(e) => {
+                            setCourseSelect(e.target.value);
+                            if (errors.course) setErrors((prev) => ({ ...prev, course: '' }));
+                          }}
+                          aria-invalid={Boolean(errors.course)}
+                          aria-describedby={errors.course ? 'reg-course-error' : undefined}
+                          className={`w-full p-2.5 bg-white border-2 ${errors.course ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                        >
+                          <option value="">Select Degree / Course</option>
+                          <option value="B.Tech / B.E.">B.Tech / B.E.</option>
+                          <option value="BCA">BCA</option>
+                          <option value="B.Sc">B.Sc</option>
+                          <option value="BBA">BBA</option>
+                          <option value="B.Com">B.Com</option>
+                          <option value="BA">BA</option>
+                          <option value="M.Tech">M.Tech</option>
+                          <option value="MCA">MCA</option>
+                          <option value="MBA">MBA</option>
+                          <option value="M.Sc">M.Sc</option>
+                          <option value="Diploma / Polytechnic">Diploma / Polytechnic</option>
+                          <option value="PhD / Research Scholar">PhD / Research Scholar</option>
+                          <option value="Other">Other (Please specify)</option>
+                        </select>
+                        {courseSelect === 'Other' && (
+                          <div className="pt-2">
+                            <label htmlFor="reg-customCourse" className="sr-only">
+                              Specify Degree / Course
+                            </label>
+                            <input
+                              id="reg-customCourse"
+                              type="text"
+                              required
+                              value={customCourse}
+                              onChange={(e) => {
+                                setCustomCourse(e.target.value);
+                                if (errors.course) setErrors((prev) => ({ ...prev, course: '' }));
+                              }}
+                              placeholder="Specify your degree / course"
+                              aria-invalid={Boolean(errors.course)}
+                              aria-describedby={errors.course ? 'reg-course-error' : undefined}
+                              className={`w-full p-2.5 bg-white border-2 ${errors.course ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                            />
+                          </div>
+                        )}
+                        {errors.course && (
+                          <p id="reg-course-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                            {errors.course}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Current Year Select */}
+                      <div className="space-y-1.5">
+                        <label htmlFor="reg-yearSelect" className="font-bold text-[#111111] block cursor-pointer">
+                          Current Year *
+                        </label>
+                        <select
+                          id="reg-yearSelect"
+                          required
+                          value={yearSelect}
+                          onChange={(e) => {
+                            setYearSelect(e.target.value);
+                            if (errors.year) setErrors((prev) => ({ ...prev, year: '' }));
+                          }}
+                          aria-invalid={Boolean(errors.year)}
+                          aria-describedby={errors.year ? 'reg-year-error' : undefined}
+                          className={`w-full p-2.5 bg-white border-2 ${errors.year ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                        >
+                          <option value="">Select Current Year</option>
+                          <option value="1st Year">1st Year</option>
+                          <option value="2nd Year">2nd Year</option>
+                          <option value="3rd Year">3rd Year</option>
+                          <option value="4th Year">4th Year</option>
+                          <option value="5th Year">5th Year</option>
+                          <option value="Passed out">Passed out / Alumni</option>
+                          <option value="Other">Other (Please specify)</option>
+                        </select>
+                        {yearSelect === 'Other' && (
+                          <div className="pt-2">
+                            <label htmlFor="reg-customYear" className="sr-only">
+                              Specify Current Year
+                            </label>
+                            <input
+                              id="reg-customYear"
+                              type="text"
+                              required
+                              value={customYear}
+                              onChange={(e) => {
+                                setCustomYear(e.target.value);
+                                if (errors.year) setErrors((prev) => ({ ...prev, year: '' }));
+                              }}
+                              placeholder="Specify your current year"
+                              aria-invalid={Boolean(errors.year)}
+                              aria-describedby={errors.year ? 'reg-year-error' : undefined}
+                              className={`w-full p-2.5 bg-white border-2 ${errors.year ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                            />
+                          </div>
+                        )}
+                        {errors.year && (
+                          <p id="reg-year-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                            {errors.year}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Non-Student Delegates: Organisation & Role */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="reg-college" className="font-bold text-[#111111] block cursor-pointer">
+                      Organisation Name *
+                    </label>
+                    <input
+                      id="reg-college"
+                      type="text"
+                      autoComplete="organization"
+                      required
+                      value={college}
+                      onChange={(e) => {
+                        setCollege(e.target.value);
+                        if (errors.college) setErrors((prev) => ({ ...prev, college: '' }));
+                      }}
+                      placeholder="e.g. Acme Labs, Startup India"
+                      aria-invalid={Boolean(errors.college)}
+                      aria-describedby={errors.college ? 'reg-college-error' : undefined}
+                      className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.college ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
+                    />
+                    {errors.college && (
+                      <p id="reg-college-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                        {errors.college}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="font-bold text-[#111111] block">Current Year *</label>
+                    <label htmlFor="reg-professionalRole" className="font-bold text-[#111111] block cursor-pointer">
+                      Role / Designation *
+                    </label>
                     <input
+                      id="reg-professionalRole"
                       type="text"
+                      autoComplete="organization-title"
                       required
-                      value={year}
+                      value={professionalRole}
                       onChange={(e) => {
-                        setYear(e.target.value);
-                        if (errors.year) setErrors({ ...errors, year: '' });
+                        setProfessionalRole(e.target.value);
+                        if (errors.professionalRole) setErrors((prev) => ({ ...prev, professionalRole: '' }));
                       }}
-                      placeholder="e.g. 2nd Year / 3rd Year"
-                      className="w-full p-2.5 bg-white border-2 border-[#111111] font-sans min-h-[44px] text-base"
+                      placeholder="e.g. Founder, Software Engineer, PM"
+                      aria-invalid={Boolean(errors.professionalRole)}
+                      aria-describedby={errors.professionalRole ? 'reg-professionalRole-error' : undefined}
+                      className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.professionalRole ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
                     />
-                    {errors.year && <p className="text-xs text-red-600 font-bold">{errors.year}</p>}
+                    {errors.professionalRole && (
+                      <p id="reg-professionalRole-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                        {errors.professionalRole}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* 6. Pitch Arena Section */}
-              {ticket === 'pitch' ? (
+              {/* 5. Pitch Arena Section */}
+              {ticket === 'pitch' && (
                 <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] space-y-3.5 animate-in fade-in">
                   <div className="flex items-center justify-between border-b border-[#111111]/20 pb-2">
                     <div className="flex items-center gap-2">
@@ -2881,59 +3187,48 @@ export const SinglePage: React.FC = () => {
                     </button>
                   </div>
 
+                  {/* 1. Startup Name */}
                   <div className="space-y-1.5">
-                    <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                    <label htmlFor="reg-startupName" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
                       Startup Name *
                     </label>
                     <input
+                      id="reg-startupName"
                       type="text"
+                      autoComplete="organization"
                       required
                       value={startupName}
                       onChange={(e) => {
                         setStartupName(e.target.value);
-                        if (errors.startupName) setErrors({ ...errors, startupName: '' });
+                        if (errors.startupName) setErrors((prev) => ({ ...prev, startupName: '' }));
                       }}
                       placeholder="e.g. KisanAI"
-                      className={`w-full p-2.5 bg-white border-2 ${errors.startupName ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base`}
+                      aria-invalid={Boolean(errors.startupName)}
+                      aria-describedby={errors.startupName ? 'reg-startupName-error' : undefined}
+                      className={`w-full p-2.5 bg-white border-2 ${errors.startupName ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
                     />
                     {errors.startupName && (
-                      <p className="text-xs text-red-600 font-bold mt-1">{errors.startupName}</p>
+                      <p id="reg-startupName-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.startupName}</p>
                     )}
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="font-bold text-[#111111] block text-xs sm:text-sm">
-                      One-Line Description / Startup Pitch *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={startupPitch}
-                      onChange={(e) => {
-                        setStartupPitch(e.target.value);
-                        if (errors.startupPitch) setErrors({ ...errors, startupPitch: '' });
-                      }}
-                      placeholder="e.g. Automated sensors for farmers in Western UP"
-                      className={`w-full p-2.5 bg-white border-2 ${errors.startupPitch ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base`}
-                    />
-                    {errors.startupPitch && (
-                      <p className="text-xs text-red-600 font-bold mt-1">{errors.startupPitch}</p>
-                    )}
-                  </div>
-
+                  {/* 2. Sector & Stage */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Sector Dropdown */}
                     <div className="space-y-1.5">
-                      <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                      <label htmlFor="reg-pitchSector" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
                         Sector *
                       </label>
                       <select
+                        id="reg-pitchSector"
                         value={pitchSector}
                         onChange={(e) => {
                           setPitchSector(e.target.value);
-                          if (errors.pitchSector) setErrors({ ...errors, pitchSector: '' });
+                          if (errors.pitchSector) setErrors((prev) => ({ ...prev, pitchSector: '' }));
                         }}
-                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchSector ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base cursor-pointer`}
+                        aria-invalid={Boolean(errors.pitchSector)}
+                        aria-describedby={errors.pitchSector ? 'reg-pitchSector-error' : undefined}
+                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchSector ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
                       >
                         <option value="">Select Sector</option>
                         <option value="AgriTech">AgriTech</option>
@@ -2947,22 +3242,25 @@ export const SinglePage: React.FC = () => {
                         <option value="Other">Other</option>
                       </select>
                       {errors.pitchSector && (
-                        <p className="text-xs text-red-600 font-bold mt-1">{errors.pitchSector}</p>
+                        <p id="reg-pitchSector-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchSector}</p>
                       )}
                     </div>
 
                     {/* Stage Dropdown */}
                     <div className="space-y-1.5">
-                      <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                      <label htmlFor="reg-pitchStage" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
                         Stage *
                       </label>
                       <select
+                        id="reg-pitchStage"
                         value={pitchStage}
                         onChange={(e) => {
                           setPitchStage(e.target.value as any);
-                          if (errors.pitchStage) setErrors({ ...errors, pitchStage: '' });
+                          if (errors.pitchStage) setErrors((prev) => ({ ...prev, pitchStage: '' }));
                         }}
-                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchStage ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base cursor-pointer`}
+                        aria-invalid={Boolean(errors.pitchStage)}
+                        aria-describedby={errors.pitchStage ? 'reg-pitchStage-error' : undefined}
+                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchStage ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
                       >
                         <option value="">Select Stage</option>
                         <option value="Idea">Idea</option>
@@ -2971,24 +3269,78 @@ export const SinglePage: React.FC = () => {
                         <option value="Revenue">Revenue</option>
                       </select>
                       {errors.pitchStage && (
-                        <p className="text-xs text-red-600 font-bold mt-1">{errors.pitchStage}</p>
+                        <p id="reg-pitchStage-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchStage}</p>
                       )}
                     </div>
                   </div>
 
+                  {/* 3. One-Liner Description / Startup Pitch */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="reg-startupPitch" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                      One-Line Description / Startup Pitch *
+                    </label>
+                    <input
+                      id="reg-startupPitch"
+                      type="text"
+                      required
+                      value={startupPitch}
+                      onChange={(e) => {
+                        setStartupPitch(e.target.value);
+                        if (errors.startupPitch) setErrors((prev) => ({ ...prev, startupPitch: '' }));
+                      }}
+                      placeholder="e.g. Automated sensors for farmers in Western UP"
+                      aria-invalid={Boolean(errors.startupPitch)}
+                      aria-describedby={errors.startupPitch ? 'reg-startupPitch-error' : undefined}
+                      className={`w-full p-2.5 bg-white border-2 ${errors.startupPitch ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                    />
+                    {errors.startupPitch && (
+                      <p id="reg-startupPitch-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.startupPitch}</p>
+                    )}
+                  </div>
+
+                  {/* 4. Pitch Deck Link & Team Size */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Pitch Deck Link */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="reg-pitchDeckLink" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                        Pitch Deck Link *
+                      </label>
+                      <input
+                        id="reg-pitchDeckLink"
+                        type="url"
+                        inputMode="url"
+                        autoComplete="url"
+                        required
+                        value={pitchDeckLink}
+                        onChange={(e) => {
+                          setPitchDeckLink(e.target.value);
+                          if (errors.pitchDeckLink) setErrors((prev) => ({ ...prev, pitchDeckLink: '' }));
+                        }}
+                        placeholder="Google Drive or Canva link"
+                        aria-invalid={Boolean(errors.pitchDeckLink)}
+                        aria-describedby={errors.pitchDeckLink ? 'reg-pitchDeckLink-error' : undefined}
+                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchDeckLink ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                      />
+                      {errors.pitchDeckLink && (
+                        <p id="reg-pitchDeckLink-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchDeckLink}</p>
+                      )}
+                    </div>
+
                     {/* Team Size Dropdown */}
                     <div className="space-y-1.5">
-                      <label className="font-bold text-[#111111] block text-xs sm:text-sm">
+                      <label htmlFor="reg-pitchTeamSize" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
                         Team Size *
                       </label>
                       <select
+                        id="reg-pitchTeamSize"
                         value={pitchTeamSize}
                         onChange={(e) => {
                           setPitchTeamSize(e.target.value);
-                          if (errors.pitchTeamSize) setErrors({ ...errors, pitchTeamSize: '' });
+                          if (errors.pitchTeamSize) setErrors((prev) => ({ ...prev, pitchTeamSize: '' }));
                         }}
-                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchTeamSize ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base cursor-pointer`}
+                        aria-invalid={Boolean(errors.pitchTeamSize)}
+                        aria-describedby={errors.pitchTeamSize ? 'reg-pitchTeamSize-error' : undefined}
+                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchTeamSize ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
                       >
                         <option value="">Select Team Size</option>
                         <option value="1">1 (Solo Founder)</option>
@@ -3003,64 +3355,16 @@ export const SinglePage: React.FC = () => {
                         <option value="10">10</option>
                       </select>
                       {errors.pitchTeamSize && (
-                        <p className="text-xs text-red-600 font-bold mt-1">{errors.pitchTeamSize}</p>
-                      )}
-                    </div>
-
-                    {/* Pitch Deck Link */}
-                    <div className="space-y-1.5">
-                      <label className="font-bold text-[#111111] block text-xs sm:text-sm">
-                        Pitch Deck Link *
-                      </label>
-                      <input
-                        type="url"
-                        required
-                        value={pitchDeckLink}
-                        onChange={(e) => {
-                          setPitchDeckLink(e.target.value);
-                          if (errors.pitchDeckLink) setErrors({ ...errors, pitchDeckLink: '' });
-                        }}
-                        placeholder="Google Drive or Canva link"
-                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchDeckLink ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[44px] text-base`}
-                      />
-                      {errors.pitchDeckLink && (
-                        <p className="text-xs text-red-600 font-bold mt-1">{errors.pitchDeckLink}</p>
+                        <p id="reg-pitchTeamSize-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchTeamSize}</p>
                       )}
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="p-4 bg-white border-2 border-[#111111] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <span className="font-bold text-[#111111] block text-sm">Want to pitch your startup on stage?</span>
-                    <span className="text-xs text-[#111111]/70">
-                      {!CONFIG.payment.upiId.trim()
-                        ? 'Pitch registrations open soon.'
-                        : `Apply for the Pitch Arena pass to pitch before investors & jury (₹${CONFIG.tickets.pitch.fee}).`}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!CONFIG.payment.upiId.trim()}
-                    onClick={() => {
-                      if (!CONFIG.payment.upiId.trim()) return;
-                      setTicket('pitch');
-                      setWantsToPitch(true);
-                    }}
-                    className={`px-3 py-1.5 font-mono font-bold text-xs uppercase border border-[#111111] shrink-0 self-start sm:self-auto ${
-                      !CONFIG.payment.upiId.trim()
-                        ? 'bg-[#E5E0D8] text-[#888888] cursor-not-allowed shadow-none'
-                        : 'bg-[#FF6B1A] text-white shadow-[2px_2px_0px_#111111] cursor-pointer hover:bg-[#e0580c] transition-colors'
-                    }`}
-                  >
-                    {!CONFIG.payment.upiId.trim() ? 'Opens Soon' : 'Pitch Startup'}
-                  </button>
                 </div>
               )}
 
-              {/* 6.5 UPI Fee Payment Block (Rendered for Pitch pass) */}
+              {/* 5.5 UPI Fee Payment Block (Rendered for Pitch pass) */}
               {ticket === 'pitch' && (
-                !CONFIG.payment.upiId.trim() ? (
+                !isPitchOpen ? (
                   <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
                     <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
                       <div>
@@ -3087,7 +3391,7 @@ export const SinglePage: React.FC = () => {
                         setTicket('participant');
                         setWantsToPitch(false);
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-white border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-white border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors cursor-pointer min-h-[44px]"
                     >
                       Switch to Attendee Delegate (Free)
                     </button>
@@ -3130,7 +3434,7 @@ export const SinglePage: React.FC = () => {
                                 setTimeout(() => setCopiedUpi(false), 2000);
                               }
                             }}
-                            className="px-3 py-2.5 bg-white hover:bg-[#FFD400] border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
+                            className="px-3 py-2.5 bg-white hover:bg-[#FFD400] border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer min-h-[44px]"
                           >
                             {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                             <span>{copiedUpi ? 'Copied' : 'Copy UPI'}</span>
@@ -3160,7 +3464,7 @@ export const SinglePage: React.FC = () => {
                           <div>
                             <a
                               href={upiPayUrl}
-                              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-white border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-all cursor-pointer"
+                              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-white border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-all cursor-pointer min-h-[44px]"
                             >
                               <ExternalLink className="w-4 h-4" />
                               <span>Open UPI app</span>
@@ -3171,10 +3475,11 @@ export const SinglePage: React.FC = () => {
 
                       {/* 12-digit UTR Input */}
                       <div className="space-y-1.5">
-                        <label className="font-bold text-[#111111] block">
+                        <label htmlFor="reg-paymentUtr" className="font-bold text-[#111111] block cursor-pointer">
                           12-Digit UPI Reference Number (UTR / Txn ID) *
                         </label>
                         <input
+                          id="reg-paymentUtr"
                           type="text"
                           required
                           inputMode="numeric"
@@ -3183,13 +3488,15 @@ export const SinglePage: React.FC = () => {
                           onChange={(e) => {
                             const val = e.target.value.replace(/\D/g, '').slice(0, 12);
                             setPaymentUtr(val);
-                            if (errors.paymentUtr) setErrors({ ...errors, paymentUtr: '' });
+                            if (errors.paymentUtr) setErrors((prev) => ({ ...prev, paymentUtr: '' }));
                           }}
                           placeholder="e.g. 428901234567"
-                          className={`w-full p-2.5 bg-white border-2 ${errors.paymentUtr ? 'border-red-600' : 'border-[#111111]'} font-mono text-base font-bold tracking-wider min-h-[44px]`}
+                          aria-invalid={Boolean(errors.paymentUtr)}
+                          aria-describedby={errors.paymentUtr ? 'reg-paymentUtr-error' : undefined}
+                          className={`w-full p-2.5 bg-white border-2 ${errors.paymentUtr ? 'border-red-600' : 'border-[#111111]'} font-mono text-base font-bold tracking-wider min-h-[46px]`}
                         />
                         {errors.paymentUtr && (
-                          <p className="text-xs text-red-600 font-bold">{errors.paymentUtr}</p>
+                          <p id="reg-paymentUtr-error" role="alert" className="text-xs text-red-600 font-bold">{errors.paymentUtr}</p>
                         )}
                         <p className="text-[11px] font-mono text-[#111111]/70">
                           Enter the 12-digit numeric reference shown in your UPI app payment receipt after paying.
@@ -3206,21 +3513,23 @@ export const SinglePage: React.FC = () => {
                 )
               )}
 
-              {/* 7. Consent Checkbox with Privacy Notice Link */}
+              {/* 6. Consent Checkbox with Privacy Notice Link */}
               <div className="pt-2">
-                <div className="flex items-start sm:items-center gap-3 min-h-[44px]">
+                <div className="flex items-start sm:items-center gap-3 min-h-[46px]">
                   <input
                     type="checkbox"
-                    id="consentCheck"
+                    id="reg-consentCheck"
                     required
                     checked={consentAgreed}
                     onChange={(e) => {
                       setConsentAgreed(e.target.checked);
-                      if (errors.consent) setErrors({ ...errors, consent: '' });
+                      if (errors.consent) setErrors((prev) => ({ ...prev, consent: '' }));
                     }}
+                    aria-invalid={Boolean(errors.consent)}
+                    aria-describedby={errors.consent ? 'reg-consent-error' : undefined}
                     className="w-5 h-5 accent-[#FF6B1A] border-2 border-[#111111] rounded-none cursor-pointer shrink-0 mt-0.5 sm:mt-0"
                   />
-                  <label htmlFor="consentCheck" className="text-xs sm:text-sm font-semibold text-[#111111] cursor-pointer leading-normal">
+                  <label htmlFor="reg-consentCheck" className="text-xs sm:text-sm font-semibold text-[#111111] cursor-pointer leading-normal select-none">
                     <span>I agree to be contacted about this event.</span>{' '}
                     <button
                       type="button"
@@ -3235,18 +3544,22 @@ export const SinglePage: React.FC = () => {
                     </button>
                   </label>
                 </div>
-                {errors.consent && <p className="text-xs text-red-600 font-bold mt-1">{errors.consent}</p>}
+                {errors.consent && (
+                  <p id="reg-consent-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                    {errors.consent}
+                  </p>
+                )}
               </div>
 
               {/* Submit Button */}
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={!authUser || isSubmitting || (ticket === 'pitch' && !CONFIG.payment.upiId.trim())}
+                  disabled={!authUser || isSubmitting || (ticket === 'pitch' && !isPitchOpen)}
                   className={`w-full brutal-btn text-white p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${
                     !authUser
                       ? 'bg-neutral-400 text-neutral-800 opacity-60 cursor-not-allowed shadow-none border-2 border-[#111111]'
-                      : ticket === 'pitch' && !CONFIG.payment.upiId.trim()
+                      : ticket === 'pitch' && !isPitchOpen
                       ? 'bg-neutral-400 text-neutral-800 opacity-70 cursor-not-allowed shadow-none border-2 border-[#111111]'
                       : isSubmitting
                       ? 'bg-[#FF6B1A] opacity-60 cursor-not-allowed pointer-events-none'
@@ -3258,12 +3571,12 @@ export const SinglePage: React.FC = () => {
                       <Lock className="w-4 h-4" />
                       <span>Sign in with Google above to unlock</span>
                     </span>
-                  ) : ticket === 'pitch' && !CONFIG.payment.upiId.trim() ? (
+                  ) : ticket === 'pitch' && !isPitchOpen ? (
                     <span>Pitch registrations open soon</span>
                   ) : isSubmitting ? (
                     <span className="flex items-center gap-2">
                       <RotateCw className="w-5 h-5 animate-spin" />
-                      <span>Submitting...</span>
+                      <span>Submitting registration...</span>
                     </span>
                   ) : (
                     <>
