@@ -38,6 +38,19 @@ export interface PaymentConfig {
   refundPolicyText: string;
 }
 
+export interface PartnerTier {
+  id: string;
+  name: string;
+  price?: string; // empty string shows "Contact us for details"
+  benefits: string[];
+}
+
+export interface StatItem {
+  label: string;
+  value: string;
+  subtext?: string;
+}
+
 export const CONFIG = {
   tickets: {
     participant: { label: 'Participant', fee: 0 },
@@ -49,6 +62,67 @@ export const CONFIG = {
     payeeName: '',
     refundPolicyText: '',
   } as PaymentConfig,
+
+  // Stats strip: render only when non-empty, labelled "Targets"
+  stats: [] as StatItem[],
+
+  // Partnership contribution ranges (hide dropdown if empty)
+  partnerRanges: [
+    'Under ₹25,000',
+    '₹25,000 – ₹50,000',
+    '₹50,000 – ₹1,00,000',
+    '₹1,00,000 – ₹2,50,000',
+    '₹2,50,000+',
+    'In-kind / Non-monetary support',
+  ] as string[],
+
+  // Partnership Tier Options (hide whole grid if empty)
+  partnerTiers: [
+    {
+      id: 'title',
+      name: 'Title Partner',
+      price: '', // Empty shows "Contact us for details"
+      benefits: [
+        'Top-billing naming rights across all event marketing and stages',
+        'Exclusive keynote address and panel participation',
+        'Prime on-ground experiential pavilion and demo space',
+        'Prominent logo placement on all conclave collateral and kits',
+      ],
+    },
+    {
+      id: 'innovation',
+      name: 'Innovation Partner',
+      price: '',
+      benefits: [
+        'Co-branding of the Startup Pitch Arena and innovation tracks',
+        'Main-stage panel slot and workshop hosting opportunities',
+        'Dedicated demo kiosk in the startup exhibition zone',
+        'Featured logo presence across event communications',
+      ],
+    },
+    {
+      id: 'gold',
+      name: 'Gold Partner',
+      price: '',
+      benefits: [
+        'Prominent brand presence across on-ground event signage',
+        'Dedicated exhibition booth for product and developer outreach',
+        'Branded merchandise inclusion in attendee welcome kits',
+        'Social media and digital acknowledgment',
+      ],
+    },
+    {
+      id: 'supporting',
+      name: 'Supporting Partner',
+      price: '',
+      benefits: [
+        'Official partner logo placement on website and event deck',
+        'Exhibition table in the networking mixer arena',
+        'Direct engagement with student innovators and faculties',
+        'Recognition during conclave closing ceremony',
+      ],
+    },
+  ] as PartnerTier[],
   // Organisers: the college's own units.
   organisers: [
     { name: 'Dewan VS Group of Institutions', logo: dewanVsLogo, confirmed: true },
@@ -177,6 +251,25 @@ export const CONFIG = {
       { label: "Stage", value: "Day 2 Main Stage" },
       { label: "Prizes", value: "To be announced" },
     ],
+    // Core benefits for participating startups
+    whatStartupsGet: [
+      {
+        title: "Pitch + Q&A Slot",
+        desc: "5 minutes on-stage live pitch followed by 5 minutes of dedicated Q&A before attendees.",
+      },
+      {
+        title: "Actionable Feedback",
+        desc: "Constructive feedback on product validation, business model, and deck presentation.",
+      },
+      {
+        title: "Ecosystem Visibility",
+        desc: "Direct spotlight in front of attendee founders, student builders, and collegiate networks.",
+      },
+    ],
+    // Confirmation flags for Pitch Arena (unconfirmed items remain hidden)
+    juryConfirmed: false,
+    investorsConfirmed: false,
+    awardsConfirmed: false,
   },
 
   speakersInvestors: {
@@ -189,16 +282,42 @@ export const CONFIG = {
 
   partners: {
     sectionNum: "06",
-    headline: "Want to partner with us?",
+    headline: "For Partners",
+    tagline: "Partner with Western UP's premier campus entrepreneurship conclave.",
     subline:
-      "Partner with Startup Conclave 1.0 to support student entrepreneurs at DVSIET, Meerut.",
-    badge: "Partners announcing soon",
+      "Support student entrepreneurs, engage top regional engineering talent, and establish leadership at DVSIET, Meerut.",
+    badge: "PARTNERSHIPS OPEN",
     tiersPreview: [
       "Title Partner",
-      "Powered By Partner",
-      "Gold & Silver",
-      "Technology Partner",
-      "Community Partner",
+      "Innovation Partner",
+      "Gold Partner",
+      "Supporting Partner",
+    ],
+    whyPartner: [
+      {
+        title: "Brand visibility",
+        desc: "Prominent brand exposure across conclave stages, banners, digital media, and delegate kits.",
+      },
+      {
+        title: "Talent access",
+        desc: "Direct access to ambitious student engineers, designers, and innovators across regional campuses.",
+      },
+      {
+        title: "Startup ecosystem",
+        desc: "Meaningful engagement with high-potential campus founders, student ventures, and incubation leadership.",
+      },
+      {
+        title: "Thought leadership",
+        desc: "Keynote addresses, panel debates, and technical workshop hosting opportunities on the main stage.",
+      },
+      {
+        title: "On-ground activation",
+        desc: "Dedicated physical footprint for product demonstrations, hands-on kiosks, and attendee interaction.",
+      },
+      {
+        title: "Recruitment",
+        desc: "Curated pipeline for student hiring, resume reviews, fast-track internships, and project demos.",
+      },
     ],
   },
 

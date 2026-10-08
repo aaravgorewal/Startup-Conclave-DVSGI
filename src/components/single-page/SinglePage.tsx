@@ -26,7 +26,7 @@ import {
   QrCode,
   ExternalLink,
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import { CONFIG, type LogoItem } from '../../config.ts';
 import {
   createRegistration,
@@ -496,6 +496,8 @@ export const SinglePage: React.FC = () => {
     contactName: '',
     email: '',
     phone: '',
+    partnershipType: 'Cash',
+    contributionRange: '',
     message: '',
   });
   const [partnerSuccess, setPartnerSuccess] = useState(false);
@@ -537,6 +539,7 @@ export const SinglePage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedRecord, setSubmittedRecord] = useState<{
     id: string;
+    ticketCode?: string;
     ticket?: 'participant' | 'pitch';
     name: string;
     email: string;
@@ -637,6 +640,8 @@ export const SinglePage: React.FC = () => {
           contactName: '',
           email: '',
           phone: '',
+          partnershipType: 'Cash',
+          contributionRange: '',
           message: '',
         });
         setPartnerHoneypot('');
@@ -779,6 +784,7 @@ export const SinglePage: React.FC = () => {
       setErrors({});
       setSubmittedRecord({
         id: res.id,
+        ticketCode: res.ticketCode,
         ticket: isPitch ? 'pitch' : 'participant',
         name: fullName.trim(),
         email: emailTrim,
@@ -949,6 +955,31 @@ export const SinglePage: React.FC = () => {
         ? 'Payment: Not Required (Free)'
         : `Payment: ${(submittedRecord.paymentStatus || 'pending').toUpperCase()} (₹${submittedRecord.paymentAmount ?? CONFIG.tickets.pitch.fee})`;
       ctx.fillText(`Category: ${submittedRecord.role} · ${submittedRecord.city}   |   ${paymentInfoStr}`, 70, 420);
+
+      // Security ticket code display if present
+      if (submittedRecord.ticketCode) {
+        ctx.font = '700 13px monospace';
+        ctx.fillStyle = '#111111';
+        ctx.fillText(`Pass Security Code: ${submittedRecord.ticketCode}`, 70, 452);
+      }
+
+      // Draw locally generated entry QR code if canvas element exists
+      const qrCanvas = document.getElementById('pass-qr-canvas') as HTMLCanvasElement | null;
+      if (qrCanvas) {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(945, 290, 175, 175);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#111111';
+        ctx.strokeRect(945, 290, 175, 175);
+
+        ctx.drawImage(qrCanvas, 952, 297, 160, 160);
+
+        ctx.fillStyle = '#111111';
+        ctx.font = '700 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('GATE ENTRY QR', 1032, 480);
+        ctx.textAlign = 'left';
+      }
 
       // Mandatory Venue & Entry Line Box
       ctx.fillStyle = '#FFF2D6';
@@ -1323,6 +1354,39 @@ export const SinglePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Targets Strip — only renders if CONFIG.stats has values */}
+      {Boolean(CONFIG.stats && CONFIG.stats.length > 0) && (
+        <section className="bg-[#FFF8EC] border-b-2 border-[#111111] px-4 sm:px-8 py-10">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+                Targets
+              </span>
+              <span className="font-mono text-xs text-[#111111]/70">
+                Event goals &amp; benchmarks
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {CONFIG.stats.map((st, sIdx) => (
+                <div key={sIdx} className="p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111]">
+                  <div className="font-display font-black text-2xl sm:text-4xl text-[#FF6B1A]">
+                    {st.value}
+                  </div>
+                  <div className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] mt-1">
+                    {st.label}
+                  </div>
+                  {st.subtext && (
+                    <div className="text-xs text-[#111111]/70 font-sans mt-0.5">
+                      {st.subtext}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* =================================================================== */}
       {/* 3. ABOUT (01) — 1-LINE INTRO                                        */}
       {/* =================================================================== */}
@@ -1568,6 +1632,60 @@ export const SinglePage: React.FC = () => {
             </div>
           </div>
 
+          {/* What Startups Get */}
+          <div className="p-4 sm:p-6 bg-white brutal-border brutal-shadow space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-black uppercase text-[#111111] tracking-wider block">
+                What Startups Get
+              </span>
+              <span className="font-mono text-[11px] font-bold text-[#FF6B1A] uppercase">
+                Stage Privileges
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-sans">
+              {CONFIG.pitchArena.whatStartupsGet.map((perk) => (
+                <div key={perk.title} className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
+                  <div className="font-display font-black text-base text-[#111111]">
+                    {perk.title}
+                  </div>
+                  <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
+                    {perk.desc}
+                  </div>
+                </div>
+              ))}
+              {CONFIG.pitchArena.juryConfirmed && (
+                <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
+                  <div className="font-display font-black text-base text-[#111111]">
+                    Jury Evaluation
+                  </div>
+                  <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
+                    Direct live scoring and review by confirmed industry jury members.
+                  </div>
+                </div>
+              )}
+              {CONFIG.pitchArena.investorsConfirmed && (
+                <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
+                  <div className="font-display font-black text-base text-[#111111]">
+                    Investor Access
+                  </div>
+                  <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
+                    Direct interaction opportunities with confirmed institutional investors and angels.
+                  </div>
+                </div>
+              )}
+              {CONFIG.pitchArena.awardsConfirmed && (
+                <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
+                  <div className="font-display font-black text-base text-[#111111]">
+                    Awards &amp; Recognition
+                  </div>
+                  <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
+                    Conclave trophies, official certificates, and stage recognition for winning teams.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Key Facts & Action */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-1">
             <div className="flex flex-wrap items-center gap-3 font-mono text-xs sm:text-sm font-bold text-[#111111]">
@@ -1671,25 +1789,34 @@ export const SinglePage: React.FC = () => {
       {/* =================================================================== */}
       {/* 8. PARTNERS (06) — 1-LINE INTRO                                     */}
       {/* =================================================================== */}
-      <section id="partners" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
+      {/* =================================================================== */}
+      {/* 8. FOR PARTNERS (06)                                                */}
+      {/* =================================================================== */}
+      <section id="partners" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-12">
         
-        <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-            {CONFIG.partners.sectionNum}
-          </span>
-          <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-            Partnerships
-          </span>
-        </div>
+        {/* Header & Intro */}
+        <div>
+          <div className="flex items-center gap-3 mb-6">
+            <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+              {CONFIG.partners.sectionNum}
+            </span>
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+              Partnerships
+            </span>
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
+              {CONFIG.partners.badge}
+            </span>
+          </div>
 
-        <div className="p-7 sm:p-10 bg-[#FFF2D6] brutal-border brutal-shadow space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="font-display font-black text-2xl sm:text-4xl text-[#111111]">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+            <div className="max-w-3xl space-y-3">
+              <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
                 {CONFIG.partners.headline}
               </h2>
-              {/* 1-Line Intro */}
-              <p className="text-base font-sans text-[#111111]/85 mt-1 max-w-2xl font-medium">
+              <p className="font-display text-lg sm:text-xl text-[#FF6B1A] font-extrabold">
+                {CONFIG.partners.tagline}
+              </p>
+              <p className="text-base font-sans text-[#111111]/85 font-medium leading-relaxed">
                 {CONFIG.partners.subline}
               </p>
             </div>
@@ -1701,40 +1828,128 @@ export const SinglePage: React.FC = () => {
                 setPartnerError('');
                 setPartnerModalOpen(true);
               }}
-              className="brutal-btn bg-[#111111] text-[#FFD400] px-6 py-3 font-display font-bold text-sm sm:text-base uppercase tracking-wider rounded-[2px] cursor-pointer shrink-0 min-h-[46px]"
+              className="brutal-btn bg-[#FFD400] text-[#111111] px-6 py-3.5 font-display font-extrabold text-base uppercase tracking-wider rounded-[2px] cursor-pointer shrink-0 min-h-[46px] self-start sm:self-auto"
             >
-              Become a Partner
+              Become a Partner →
             </button>
           </div>
+        </div>
 
-          <div className="pt-4 border-t-2 border-[#111111] flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm font-mono">
-            <span className="text-[#FF6B1A] font-bold">
-              {CONFIG.partners.badge}
+        {/* 1. WHY PARTNER WITH US: 6 benefit cards (one line each, benefit-only wording) */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
+            <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
+              Why Partner With Us
+            </h3>
+            <span className="font-mono text-xs text-[#111111]/70 font-bold">
+              6 Core Advantages
             </span>
-            <div className="flex flex-wrap gap-2 text-[#111111]/80">
-              {CONFIG.partners.tiersPreview.map((tier) => (
-                <span key={tier} className="bg-white px-2.5 py-1 border border-[#111111] text-xs">
-                  {tier}
-                </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {CONFIG.partners.whyPartner.map((benefit) => (
+              <div
+                key={benefit.title}
+                className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-2 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="font-mono text-[11px] font-bold text-[#FF6B1A] uppercase tracking-wider mb-1">
+                    Partner Advantage
+                  </div>
+                  <h4 className="font-display font-black text-lg text-[#111111]">
+                    {benefit.title}
+                  </h4>
+                  <p className="text-sm font-sans text-[#111111]/80 leading-relaxed font-medium mt-1">
+                    {benefit.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 2. PARTNERSHIP OPTIONS: Title / Innovation / Gold / Supporting (hidden if empty) */}
+        {Boolean(CONFIG.partnerTiers && CONFIG.partnerTiers.length > 0) && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
+              <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
+                Partnership Options
+              </h3>
+              <span className="font-mono text-xs text-[#111111]/70 font-bold">
+                Tailored Engagement Tiers
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {CONFIG.partnerTiers.map((tier) => (
+                <div
+                  key={tier.id}
+                  className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-3">
+                    <div className="inline-block bg-[#FFD400] text-[#111111] font-mono font-bold text-xs px-2.5 py-0.5 border border-[#111111] uppercase tracking-wider">
+                      {tier.name}
+                    </div>
+
+                    <div className="p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-mono">
+                      <span className="text-[#111111]/60 block text-[10px] uppercase font-bold tracking-wider">
+                        Commitment
+                      </span>
+                      <span className="text-xs sm:text-sm font-black text-[#111111]">
+                        {tier.price && tier.price.trim() ? tier.price.trim() : 'Contact us for details'}
+                      </span>
+                    </div>
+
+                    <ul className="space-y-2 text-xs font-sans text-[#111111]/85 pt-2 border-t border-[#111111]/20">
+                      {tier.benefits.map((b, bIdx) => (
+                        <li key={bIdx} className="flex items-start gap-1.5 font-medium leading-relaxed">
+                          <span className="text-[#FF6B1A] font-bold shrink-0">■</span>
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="pt-3 border-t-2 border-[#111111]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPartnerData((prev) => ({
+                          ...prev,
+                          message: prev.message || `Inquiring about ${tier.name} tier.`,
+                        }));
+                        setPartnerFormStartTime(Date.now());
+                        setPartnerHoneypot('');
+                        setPartnerError('');
+                        setPartnerModalOpen(true);
+                      }}
+                      className="w-full brutal-btn bg-[#111111] hover:bg-[#FF6B1A] text-white py-2 px-3 font-display font-bold text-xs uppercase tracking-wider text-center cursor-pointer min-h-[40px]"
+                    >
+                      Enquire for {tier.name.split(' ')[0]} →
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
-          {/* SUPPORTED BY: renders only for supporters with written confirmation */}
-          {CONFIG.supporters.some((s) => s.confirmed) && (
-            <div className="pt-4 border-t-2 border-[#111111]">
-              <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70 mb-3">
-                Supported by
-              </div>
-              <div className="flex flex-wrap items-stretch gap-3 sm:gap-4">
-                {CONFIG.supporters
-                  .filter((s) => s.confirmed)
-                  .map((s) => (
-                    <LogoTile key={s.name} item={s} />
-                  ))}
-              </div>
+        )}
+
+        {/* SUPPORTED BY: renders only for supporters with written confirmation */}
+        {CONFIG.supporters.some((s) => s.confirmed) && (
+          <div className="p-6 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
+            <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70">
+              Supported by
             </div>
-          )}
-        </div>
+            <div className="flex flex-wrap items-stretch gap-3 sm:gap-4">
+              {CONFIG.supporters
+                .filter((s) => s.confirmed)
+                .map((s) => (
+                  <LogoTile key={s.name} item={s} />
+                ))}
+            </div>
+          </div>
+        )}
+
       </section>
 
       {/* =================================================================== */}
@@ -1843,20 +2058,30 @@ export const SinglePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Ticket QR Code Gate Pass Preview */}
+            {/* Ticket QR Code Gate Pass Preview (Locally Generated, Zero Third-Party Requests) */}
             <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] text-left">
               <div className="p-1.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(submittedRecord.id)}`}
-                  alt={`QR Code for Registration ${submittedRecord.id}`}
+                <QRCodeCanvas
+                  id="pass-qr-canvas"
+                  value={JSON.stringify(
+                    submittedRecord.ticketCode
+                      ? { id: submittedRecord.id, t: submittedRecord.ticketCode }
+                      : { id: submittedRecord.id }
+                  )}
+                  size={160}
+                  level="M"
                   className="w-24 h-24 object-contain"
-                  loading="lazy"
                 />
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase text-[#FF6B1A]">
                   <QrCode className="w-3.5 h-3.5" />
                   <span>Official Entry Pass QR</span>
+                  {submittedRecord.ticketCode && (
+                    <span className="font-mono text-[10px] text-[#111111]/70 bg-[#FFF8EC] px-1.5 py-0.5 border border-[#111111] ml-auto">
+                      SECURE PASS
+                    </span>
+                  )}
                 </div>
                 <div className="font-display font-black text-base sm:text-lg text-[#111111]">
                   Scan at DVSIET Gate Check-in
@@ -1864,6 +2089,11 @@ export const SinglePage: React.FC = () => {
                 <p className="text-xs font-sans text-[#111111]/80 leading-relaxed">
                   Present this QR code or your Registration ID (<span className="font-mono font-bold">{submittedRecord.id}</span>) on your screen at the registration desk for instant venue admission.
                 </p>
+                {submittedRecord.ticketCode && (
+                  <div className="font-mono text-[11px] text-[#111111]/80 pt-1">
+                    Pass Security Code: <span className="font-bold text-[#FF6B1A]">{submittedRecord.ticketCode}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -3077,6 +3307,44 @@ export const SinglePage: React.FC = () => {
                     placeholder="partner@acme.com"
                     className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
                   />
+                </div>
+
+                {/* Partnership Type & Contribution Range */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-[#111111] block mb-1">Partnership Type *</label>
+                    <select
+                      value={partnerData.partnershipType}
+                      onChange={(e) => setPartnerData({ ...partnerData, partnershipType: e.target.value })}
+                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
+                    >
+                      <option value="Cash">Cash Sponsorship</option>
+                      <option value="Technology credits">Technology credits</option>
+                      <option value="Food & beverage">Food &amp; beverage</option>
+                      <option value="Merchandise">Merchandise</option>
+                      <option value="Media">Media</option>
+                      <option value="Travel/hospitality">Travel/hospitality</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  {Boolean(CONFIG.partnerRanges && CONFIG.partnerRanges.length > 0) && (
+                    <div>
+                      <label className="font-bold text-[#111111] block mb-1">Contribution Range</label>
+                      <select
+                        value={partnerData.contributionRange}
+                        onChange={(e) => setPartnerData({ ...partnerData, contributionRange: e.target.value })}
+                        className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
+                      >
+                        <option value="">Select range (optional)</option>
+                        {CONFIG.partnerRanges.map((range) => (
+                          <option key={range} value={range}>
+                            {range}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div>

@@ -28,6 +28,7 @@ let testEnv: RulesTestEnvironment;
 const getValidParticipantData = (email = 'participant@example.com') => ({
   id: 'SC1-00001',
   registrationId: 'SC1-00001',
+  ticketCode: 'A1B2C3D4E5F6G7H8',
   sequenceNumber: 1,
   emailHash: 'hash_participant_email_1',
   name: 'Aarav Saini',
@@ -58,6 +59,7 @@ const getValidParticipantData = (email = 'participant@example.com') => ({
 const getValidPitchData = (email = 'founder@example.com', utr = '123456789012') => ({
   id: 'SC1-00002',
   registrationId: 'SC1-00002',
+  ticketCode: 'A1B2C3D4E5F6G7H8',
   sequenceNumber: 2,
   emailHash: 'hash_pitch_email_1',
   name: 'Startup Founder',
@@ -137,13 +139,25 @@ describe('Firestore Security Rules Unit Tests', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 1. UNVERIFIED USER CANNOT CREATE REGISTRATION
+  // 1. UNVERIFIED USER & TICKET CODE REGISTRATION ENFORCEMENT
   // -------------------------------------------------------------------------
-  describe('1. Unverified user registration enforcement', () => {
+  describe('1. Unverified user & ticket code registration enforcement', () => {
     it('unauthenticated user cannot create a registration', async () => {
       const db = testEnv.unauthenticatedContext().firestore();
       const regRef = doc(db, 'registrations', 'hash_participant_email_1');
       await assertFails(setDoc(regRef, getValidParticipantData('unauth@example.com')));
+    });
+
+    it('registration creation without ticketCode is rejected', async () => {
+      const userEmail = 'noticketcode@example.com';
+      const db = testEnv.authenticatedContext('user_noticket', {
+        email: userEmail,
+        email_verified: true,
+      }).firestore();
+      const regRef = doc(db, 'registrations', 'hash_noticket');
+      const dataWithoutTicketCode: any = getValidParticipantData(userEmail);
+      delete dataWithoutTicketCode.ticketCode;
+      await assertFails(setDoc(regRef, dataWithoutTicketCode));
     });
 
     it('authenticated user with email_verified = false cannot create a registration', async () => {
@@ -403,6 +417,16 @@ describe('Firestore Security Rules Unit Tests', () => {
       );
     });
 
+    it('admin cannot mutate existing ticketCode (strictly immutable on update)', async () => {
+      const db = testEnv.authenticatedContext(adminUid).firestore();
+      const regRef = doc(db, 'registrations', regId);
+      await assertFails(
+        updateDoc(regRef, {
+          ticketCode: 'MUTATED_CODE_999',
+        })
+      );
+    });
+
     it('admin with uid in admins collection can delete registrations', async () => {
       const db = testEnv.authenticatedContext(adminUid).firestore();
       const regRef = doc(db, 'registrations', regId);
@@ -440,4 +464,51 @@ describe('Firestore Security Rules Unit Tests', () => {
       await assertFails(setDoc(adminRef, { role: 'admin' }));
     });
   });
+
+  // -------------------------------------------------------------------------
+  // 8. PARTNER ENQUIRIES (public can create valid, cannot read or modify)
+  // -------------------------------------------------------------------------
+  describe('8. Partner Enquiries collection', () => {
+    it('public can create partner enquiry with partnershipType and contributionRange', async () => {
+      const db = testEnv.unauthenticatedContext().firestore();
+      const enquiryRef = doc(db, 'partnerEnquiries', 'enquiry_test_1');
+
+      await assertSucceeds(
+        setDoc(enquiryRef, {
+          company: 'Acme Ventures',
+          contactName: 'Priya Sharma',
+          email: 'priya@acme.com',
+          phone: '9876543210',
+          partnershipType: 'Cash',
+          contributionRange: '₹50,000 – ₹1,00,000',
+          message: 'Interested in title sponsorship tier.',
+          status: 'new',
+          createdAt: serverTimestamp(),
+        })
+      );
+    });
+
+    it('partner enquiry with invalid extra keys is rejected', async () => {
+      const db = testEnv.unauthenticatedContext().firestore();
+      const enquiryRef = doc(db, 'partnerEnquiries', 'enquiry_test_invalid');
+
+      await assertFails(
+        setDoc(enquiryRef, {
+          company: 'Acme Ventures',
+          contactName: 'Priya Sharma',
+          email: 'priya@acme.com',
+          status: 'new',
+          createdAt: serverTimestamp(),
+          unauthorizedField: 'malicious',
+        })
+      );
+    });
+
+    it('unauthenticated public cannot read partnerEnquiries', async () => {
+      const db = testEnv.unauthenticatedContext().firestore();
+      const enquiryRef = doc(db, 'partnerEnquiries', 'enquiry_test_1');
+      await assertFails(getDoc(enquiryRef));
+    });
+  });
 });
+

@@ -48,6 +48,7 @@ export interface RegistrationInput {
 export interface RegistrationRecord {
   id: string;
   registrationId?: string;
+  ticketCode?: string;
   ticket: 'participant' | 'pitch';
   emailVerified: boolean;
   verifiedAt?: string | null;
@@ -83,6 +84,8 @@ export interface PartnerEnquiryInput {
   email: string;
   phone?: string;
   message?: string;
+  partnershipType?: string;
+  contributionRange?: string;
 }
 
 // Local cache keys for instant client deduplication and offline fallback
@@ -161,6 +164,21 @@ export const isValidPitchDeckUrl = (url?: string): boolean => {
 };
 
 /**
+ * Generates a cryptographically random 16-character alphanumeric ticketCode
+ * using crypto.getRandomValues().
+ */
+export const generateTicketCode = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let code = '';
+  for (let i = 0; i < 16; i++) {
+    code += chars[bytes[i] % chars.length];
+  }
+  return code;
+};
+
+/**
  * Validate standard 12-digit numeric Indian UPI Transaction Reference Number (UTR)
  */
 export const isValidUtr = (utr?: string): boolean => {
@@ -229,7 +247,7 @@ export const fetchPublicRegistrationCount = async (): Promise<number> => {
  */
 export const createRegistration = async (
   input: RegistrationInput
-): Promise<{ success: boolean; id?: string; status?: 'registered' | 'waitlist'; error?: string; isNetworkError?: boolean }> => {
+): Promise<{ success: boolean; id?: string; status?: 'registered' | 'waitlist'; ticketCode?: string; error?: string; isNetworkError?: boolean }> => {
   const emailClean = input.email.trim().toLowerCase();
   const phoneClean = cleanPhoneNumber(input.phone);
 
@@ -377,10 +395,12 @@ export const createRegistration = async (
   const emailHash = await hashString(emailClean);
   const phoneHash = await hashString(phoneClean);
   const nowIso = new Date().toISOString();
+  const ticketCode = generateTicketCode();
 
   const record: RegistrationRecord = {
     id: emailHash,
     ticket,
+    ticketCode,
     emailVerified: Boolean(input.emailVerified),
     verifiedAt: null,
     name: input.name.trim(),
@@ -455,6 +475,7 @@ export const createRegistration = async (
       transaction.set(regDocRef, {
         id: idCode,
         registrationId: idCode,
+        ticketCode: ticketCode,
         sequenceNumber: nextCount,
         emailHash: emailHash,
         ticket: record.ticket,
@@ -502,7 +523,7 @@ export const createRegistration = async (
         });
       }
 
-      return { idCode, status: assignedStatus };
+      return { idCode, status: assignedStatus, ticketCode };
     });
 
     assignedId = result.idCode;
@@ -595,7 +616,7 @@ export const createRegistration = async (
     console.warn('Local storage cache write notice:', storageError);
   }
 
-  return { success: true, id: assignedId, status: finalStatus };
+  return { success: true, id: assignedId, status: finalStatus, ticketCode };
 };
 
 /**
@@ -638,6 +659,8 @@ export const createPartnerEnquiry = async (
       email: input.email.trim().toLowerCase(),
       phone: cleanedPhone,
       message: (input.message || '').trim().slice(0, 500),
+      partnershipType: (input.partnershipType || '').trim().slice(0, 100),
+      contributionRange: (input.contributionRange || '').trim().slice(0, 100),
       status: 'new',
       createdAt: serverTimestamp(),
     });
@@ -699,6 +722,8 @@ export const createPartnerEnquiry = async (
       email: input.email.trim().toLowerCase(),
       phone: cleanedPhone,
       message: input.message?.trim() || '',
+      partnershipType: input.partnershipType?.trim() || '',
+      contributionRange: input.contributionRange?.trim() || '',
       status: 'new',
       createdAt: nowIso,
     });

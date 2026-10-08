@@ -49,8 +49,10 @@ import {
   BarChart3,
   GraduationCap,
   ExternalLink,
+  Info,
 } from 'lucide-react';
 import jsQR from 'jsqr';
+import { QRCodeSVG } from 'qrcode.react';
 import { auth } from '../services/firebase.ts';
 import { CONFIG } from '../config.ts';
 import {
@@ -67,6 +69,7 @@ import {
   exportToCSV,
   getEventSettings,
   saveEventSettings,
+  setCheckinOpen,
   checkIsAdmin,
   toIso,
 } from '../services/admin.ts';
@@ -272,6 +275,9 @@ export const AdminPage: React.FC = () => {
   const [regStatusSetting, setRegStatusSetting] = useState<'open' | 'closed'>(CONFIG.registration.status);
   const [showCountSetting, setShowCountSetting] = useState<boolean>(CONFIG.registration.showCount);
   const [settingsSavedToast, setSettingsSavedToast] = useState(false);
+  const [checkinOpen, setCheckinOpenState] = useState<boolean>(false);
+  const [isUpdatingCheckinOpen, setIsUpdatingCheckinOpen] = useState<boolean>(false);
+  const [checkinOpenErrorToast, setCheckinOpenErrorToast] = useState<string | null>(null);
 
   // =========================================================================
   // Check-in Desk State (Optimised for Mobile & Gate Volunteers)
@@ -283,6 +289,7 @@ export const AdminPage: React.FC = () => {
   const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [scanSuccessNotice, setScanSuccessNotice] = useState<string | null>(null);
+  const [scanLegacyWarning, setScanLegacyWarning] = useState<string | null>(null);
   const [justCheckedInRecord, setJustCheckedInRecord] = useState<AdminRegistration | null>(null);
   const [checkinDoubleWarning, setCheckinDoubleWarning] = useState<string | null>(null);
 
@@ -298,9 +305,23 @@ export const AdminPage: React.FC = () => {
         setRegistrationCapSetting(s.registrationCap || 500);
         setRegStatusSetting(s.registrationStatus || s.status || 'open');
         setShowCountSetting(s.showCount !== undefined ? s.showCount : true);
+        setCheckinOpenState(Boolean(s.checkinOpen));
       }
     }).catch((err) => console.warn('Notice loading settings/event:', err));
   }, []);
+
+  const handleToggleCheckinOpen = async () => {
+    const nextState = !checkinOpen;
+    setIsUpdatingCheckinOpen(true);
+    setCheckinOpenErrorToast(null);
+    const success = await setCheckinOpen(nextState);
+    setIsUpdatingCheckinOpen(false);
+    if (success) {
+      setCheckinOpenState(nextState);
+    } else {
+      setCheckinOpenErrorToast('Failed to update Check-in status in Firestore. Please try again.');
+    }
+  };
 
   // Monitor Firebase Auth State
   useEffect(() => {
@@ -1069,6 +1090,7 @@ export const AdminPage: React.FC = () => {
       const pUtr = r.payment?.utr || r.paymentUtr || '';
       return {
         'Registration ID': r.id,
+        'Ticket Code': r.ticketCode || '',
         Ticket: r.ticket || (r.wantsToPitch ? 'pitch' : 'participant'),
         Name: r.name,
         Email: r.email,
@@ -1111,6 +1133,7 @@ export const AdminPage: React.FC = () => {
   const handleExportPitch = () => {
     const exportData = pitchApplicants.map((r) => ({
       'Registration ID': r.id,
+      'Ticket Code': r.ticketCode || '',
       'Startup Name': r.startupName || 'Untitled Venture',
       'One-Line Pitch': r.startupPitch || '',
       Sector: r.sector || '',
@@ -1136,6 +1159,8 @@ export const AdminPage: React.FC = () => {
       'Contact Person': p.contactName,
       Email: p.email,
       Phone: p.phone || '',
+      'Partnership Type': p.partnershipType || '',
+      'Contribution Range': p.contributionRange || '',
       Message: p.message || '',
       Status: p.status || 'New',
       'Inquiry Date': p.createdAt,
@@ -1230,6 +1255,7 @@ export const AdminPage: React.FC = () => {
     setCameraError(null);
     setIsScanningQR(true);
     setScanSuccessNotice(null);
+    setScanLegacyWarning(null);
 
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1256,44 +1282,91 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  // Handle scanned QR payload
+  // Handle scanned QR payload (supports secure JSON {"id": "...", "t": "..."} and legacy plain ID)
   const handleScannedResult = (raw: string) => {
     if (!raw) return;
     const clean = raw.trim();
 
-    // Extract ID if contained in a URL or structured text
-    let extractedId = clean;
-    const idMatch = clean.match(/(SC1-\d{5}|SC1-[A-Za-z0-9]+)/i);
-    if (idMatch) {
-      extractedId = idMatch[1];
-    } else {
-      try {
-        const parsed = new URL(clean);
-        const paramId = parsed.searchParams.get('id') || parsed.searchParams.get('regId');
-        if (paramId) extractedId = paramId;
-      } catch {
-        // Not a URL
+    let scannedId = '';
+    let scannedTicketCode: string | null = null;
+
+    // 1. Try structured JSON QR payload: {"id": registrationId, "t": ticketCode}
+    try {
+      const parsed = JSON.parse(clean);
+      if (parsed && typeof parsed === 'object') {
+        if (parsed.id) {
+          scannedId = String(parsed.id).trim();
+        }
+        if (parsed.t) {
+          scannedTicketCode = String(parsed.t).trim();
+        }
+      }
+    } catch {
+      // Not JSON
+    }
+
+    // 2. If not structured JSON, extract ID from URL or regex pattern (legacy pass support)
+    if (!scannedId) {
+      const idMatch = clean.match(/(SC1-\d{5}|SC1-[A-Za-z0-9]+)/i);
+      if (idMatch) {
+        scannedId = idMatch[1];
+      } else {
+        try {
+          const parsedUrl = new URL(clean);
+          const paramId = parsedUrl.searchParams.get('id') || parsedUrl.searchParams.get('regId');
+          if (paramId) scannedId = paramId;
+        } catch {
+          // Not URL
+        }
+      }
+      if (!scannedId) {
+        scannedId = clean;
       }
     }
 
     const found = registrations.find(
       (r) =>
-        r.id.toLowerCase() === extractedId.toLowerCase() ||
-        (r.registrationId && r.registrationId.toLowerCase() === extractedId.toLowerCase()) ||
-        r.docId === extractedId ||
+        r.id.toLowerCase() === scannedId.toLowerCase() ||
+        (r.registrationId && r.registrationId.toLowerCase() === scannedId.toLowerCase()) ||
+        r.docId === scannedId ||
         r.phone === clean
     );
 
     stopQRScanner();
-    setCheckinQuery(extractedId);
+    setCheckinQuery(scannedId);
 
     if (found) {
       setSelectedCheckinId(found.id);
-      triggerCheckinFeedback('success');
-      setScanSuccessNotice(`Identified Pass: ${found.name} (${found.id})`);
+
+      // Verify whether this pass has a ticketCode or is a legacy pass without ticketCode
+      if (found.ticketCode) {
+        if (scannedTicketCode) {
+          if (scannedTicketCode === found.ticketCode) {
+            triggerCheckinFeedback('success');
+            setScanLegacyWarning(null);
+            setScanSuccessNotice(`Verified Secure Pass: ${found.name} (${found.id})`);
+          } else {
+            // Mismatch between scanned ticket code and registered code
+            triggerCheckinFeedback('error');
+            setScanLegacyWarning(`SECURITY ALERT: Scanned ticket code does not match registered security code for ${found.id}. Verify attendee identity.`);
+            setScanSuccessNotice(`Security Mismatch: ${found.name} (${found.id})`);
+          }
+        } else {
+          // Registration has ticketCode, but the scanned QR did not supply one (legacy pass format scanned)
+          triggerCheckinFeedback('warning');
+          setScanLegacyWarning(`Legacy pass warning: Scanned pass without ticket code for ${found.id}. Matched by ID only.`);
+          setScanSuccessNotice(`Identified Pass: ${found.name} (${found.id}) [Legacy Pass Warning]`);
+        }
+      } else {
+        // Requirement 3: Old registrations without ticketCode: scanner falls back to ID-only match and shows a "legacy pass" warning.
+        triggerCheckinFeedback('warning');
+        setScanLegacyWarning(`Legacy pass warning: Registration ${found.id} was created prior to ticket codes. Matched by ID only.`);
+        setScanSuccessNotice(`Identified Pass: ${found.name} (${found.id}) [Legacy Pass]`);
+      }
     } else {
       triggerCheckinFeedback('warning');
-      setScanSuccessNotice(`Scanned "${extractedId}". No matching registration record found.`);
+      setScanLegacyWarning(null);
+      setScanSuccessNotice(`Scanned "${scannedId}". No matching registration record found.`);
     }
   };
 
@@ -2381,6 +2454,77 @@ export const AdminPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Check-in Open Error Toast */}
+            {checkinOpenErrorToast && (
+              <div
+                role="alert"
+                className="p-3 bg-rose-100 border-2 border-rose-600 shadow-[2px_2px_0px_#e11d48] text-xs font-mono text-rose-950 flex items-center justify-between gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-700 shrink-0 stroke-[2.5]" />
+                  <span className="font-bold">{checkinOpenErrorToast}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCheckinOpenErrorToast(null)}
+                  className="p-1 hover:bg-rose-200 cursor-pointer"
+                  aria-label="Dismiss error"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Check-in Open Toggle Card */}
+            <div className="p-4 bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-display font-black text-base sm:text-lg text-[#111111]">
+                      Check-in open
+                    </span>
+                    <span
+                      className={`font-mono text-[10px] font-bold px-2 py-0.5 border border-[#111111] ${
+                        checkinOpen
+                          ? 'bg-emerald-300 text-emerald-950 shadow-[1px_1px_0px_#111111]'
+                          : 'bg-neutral-200 text-neutral-700'
+                      }`}
+                    >
+                      {checkinOpen ? 'OPEN' : 'CLOSED'}
+                    </span>
+                  </div>
+                  <p className="font-mono text-xs text-[#111111]/70">
+                    Controls whether volunteer scanners can verify and check in attendees.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={checkinOpen}
+                    disabled={isUpdatingCheckinOpen}
+                    onClick={handleToggleCheckinOpen}
+                    className={`px-4 py-2 border-2 border-[#111111] font-mono font-black text-xs uppercase cursor-pointer transition-all ${
+                      checkinOpen
+                        ? 'bg-[#FFD400] text-[#111111] shadow-[2px_2px_0px_#111111] hover:bg-[#ffe033]'
+                        : 'bg-white text-[#111111]/60 shadow-[2px_2px_0px_#111111] hover:bg-[#FFF2D6]'
+                    } ${isUpdatingCheckinOpen ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    {isUpdatingCheckinOpen ? 'Updating...' : checkinOpen ? 'Check-in open (ON)' : 'Check-in open (OFF)'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Volunteer setup help note */}
+              <div className="p-2.5 bg-[#FFF8EC] border border-[#111111]/30 font-mono text-xs text-[#111111]/80 flex items-center gap-2">
+                <Info className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                <span>
+                  Volunteers: create user in Firebase Auth, then add volunteers/{'{uid}'} doc.
+                </span>
+              </div>
+            </div>
+
             {/* 2. BIG SEARCH BOX & QR SCAN TOGGLE (Optimised for Mobile) */}
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
@@ -2577,7 +2721,24 @@ export const AdminPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setScanSuccessNotice(null)}
-                  className="p-1 hover:bg-emerald-200"
+                  className="p-1 hover:bg-emerald-200 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Scan Legacy Pass Warning Banner */}
+            {scanLegacyWarning && (
+              <div className="p-3 bg-amber-100 border-2 border-amber-600 shadow-[2px_2px_0px_#b45309] text-xs font-mono text-amber-950 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 stroke-[2.5]" />
+                  <span className="font-bold">{scanLegacyWarning}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setScanLegacyWarning(null)}
+                  className="p-1 hover:bg-amber-200 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -2622,13 +2783,34 @@ export const AdminPage: React.FC = () => {
                     </h3>
                   </div>
 
-                  {/* Prominent ID Badge */}
-                  <div className="shrink-0">
-                    <div className="p-2 sm:p-3 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] text-center">
+                  {/* Prominent ID Badge & Live Pass QR Display */}
+                  <div className="shrink-0 flex items-center gap-3">
+                    <div className="p-2 sm:p-3 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] text-center space-y-1">
                       <span className="font-mono text-[10px] block font-bold text-[#111111]/75">REGISTRATION ID</span>
                       <span className="font-mono font-black text-lg sm:text-xl text-[#111111]">
                         {activeCheckinAttendee.id}
                       </span>
+                      {activeCheckinAttendee.ticketCode ? (
+                        <div className="border-t border-[#111111]/30 pt-1 font-mono text-[10px] font-bold text-[#FF6B1A]">
+                          CODE: {activeCheckinAttendee.ticketCode}
+                        </div>
+                      ) : (
+                        <div className="border-t border-[#111111]/30 pt-1 font-mono text-[9px] font-bold text-amber-900 bg-amber-200/70 px-1">
+                          LEGACY PASS
+                        </div>
+                      )}
+                    </div>
+                    {/* Live Pass QR Display */}
+                    <div className="hidden sm:block p-1.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111]" title="Gate Pass QR Preview">
+                      <QRCodeSVG
+                        value={JSON.stringify(
+                          activeCheckinAttendee.ticketCode
+                            ? { id: activeCheckinAttendee.id, t: activeCheckinAttendee.ticketCode }
+                            : { id: activeCheckinAttendee.id }
+                        )}
+                        size={64}
+                        level="M"
+                      />
                     </div>
                   </div>
                 </div>
@@ -3070,6 +3252,7 @@ export const AdminPage: React.FC = () => {
                     <th className="p-3">Company</th>
                     <th className="p-3">Contact Person</th>
                     <th className="p-3">Email & Phone</th>
+                    <th className="p-3">Type & Range</th>
                     <th className="p-3">Inquiry Message</th>
                     <th className="p-3">Status</th>
                     <th className="p-3">Received At</th>
@@ -3087,6 +3270,10 @@ export const AdminPage: React.FC = () => {
                       <td className="p-3 font-mono text-[11px]">
                         <div>{p.email}</div>
                         <div className="text-[#111111]/60">{p.phone || '—'}</div>
+                      </td>
+                      <td className="p-3 font-mono text-[11px]">
+                        <div className="font-bold text-[#FF6B1A]">{p.partnershipType || 'General'}</div>
+                        <div className="text-[#111111]/70">{p.contributionRange || '—'}</div>
                       </td>
                       <td className="p-3 max-w-sm text-xs text-[#111111]/80">
                         {p.message || 'General inquiry'}
@@ -3127,7 +3314,7 @@ export const AdminPage: React.FC = () => {
 
                   {partnerEnquiries.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-[#111111]/60 font-mono">
+                      <td colSpan={8} className="p-8 text-center text-[#111111]/60 font-mono">
                         No partner enquiries received yet.
                       </td>
                     </tr>

@@ -7,6 +7,12 @@ service cloud.firestore {
       return request.auth != null
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
+    // Helper: Verify if user is signed in as a volunteer and checkin is active
+    function isVolunteer() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/volunteers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/settings/event).data.checkinOpen == true;
+    }
 
     // Helper: Verify if user is signed in with a verified email matching emailLower
     function isVerifiedUser(data) {
@@ -34,9 +40,9 @@ service cloud.firestore {
 
     // Helper: Validate attendee registration creation payload
     function isValidRegistration(data) {
-      return data.keys().hasAll(['name', 'email', 'emailLower', 'phone', 'college', 'role', 'status', 'createdAt', 'payment'])
+      return data.keys().hasAll(['name', 'email', 'emailLower', 'phone', 'college', 'role', 'status', 'createdAt', 'payment', 'ticketCode'])
         && data.keys().hasOnly([
-          'id', 'registrationId', 'emailHash', 'sequenceNumber',
+          'id', 'registrationId', 'ticketCode', 'emailHash', 'sequenceNumber',
           'name', 'email', 'emailLower', 'phone', 'college', 'course', 'year',
           'role', 'city', 'notes', 'wantsToPitch', 'startupName',
           'startupPitch', 'pitchStatus', 'status', 'createdAt',
@@ -44,6 +50,7 @@ service cloud.firestore {
           'paymentStatus', 'paymentAmount', 'paymentUtr', 'paymentVerifiedAt', 'paymentVerifiedBy',
           'ticket', 'emailVerified', 'verifiedAt', 'payment'
         ])
+        && data.ticketCode is string && data.ticketCode.size() == 16 && data.ticketCode.matches('^[A-Za-z0-9]{16}$')
         && data.name is string && data.name.size() > 0 && data.name.size() <= 100
         && data.email is string && data.email.size() > 0 && data.email.size() <= 120
         && data.emailLower is string && data.emailLower.size() > 0 && data.emailLower.size() <= 120
@@ -125,7 +132,8 @@ service cloud.firestore {
       return data.keys().hasAll(['company', 'contactName', 'email', 'status', 'createdAt'])
         && data.keys().hasOnly([
           'id', 'company', 'contactName', 'email', 'phone', 'message',
-          'notes', 'status', 'createdAt'
+          'notes', 'status', 'createdAt',
+          'partnershipType', 'contributionRange'
         ])
         && data.company is string && data.company.size() > 0 && data.company.size() <= 150
         && data.contactName is string && data.contactName.size() > 0 && data.contactName.size() <= 100
@@ -135,7 +143,9 @@ service cloud.firestore {
         && (!('id' in data) || (data.id is string && data.id.size() <= 128))
         && (!('phone' in data) || data.phone == '' || (data.phone is string && data.phone.matches('^[0-9]{10}$')))
         && (!('message' in data) || (data.message is string && data.message.size() <= 500))
-        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500));
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 500))
+        && (!('partnershipType' in data) || (data.partnershipType is string && data.partnershipType.size() <= 100))
+        && (!('contributionRange' in data) || (data.contributionRange is string && data.contributionRange.size() <= 100));
     }
 
     // 1. Counter Collection for sequential atomic ID allocation (SC1-00001, etc.)
@@ -158,7 +168,18 @@ service cloud.firestore {
         || isAdmin();
 
       // Only signed-in users whose uid is in the admins collection may read, update, or delete
-      allow read, update, delete: if isAdmin();
+      // Volunteers can list (query limit <= 1), get, and perform restricted check-in updates
+      allow list: if isAdmin() || (isVolunteer() && request.query.limit <= 1);
+      allow get: if isAdmin() || isVolunteer();
+      allow delete: if isAdmin();
+      allow update: if (isAdmin() && (!('ticketCode' in resource.data) || request.resource.data.ticketCode == resource.data.ticketCode))
+        || (
+          isVolunteer()
+          && resource.data.status == 'registered'
+          && request.resource.data.status == 'checked_in'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checkedInAt', 'checkedInBy'])
+          && request.resource.data.checkedInBy == request.auth.uid
+        );
     }
 
     // 3. Phone Index Collection (keyed by phone hash for deterministic duplicate detection)
@@ -181,8 +202,10 @@ service cloud.firestore {
 
     // 5. Settings Document
     match /settings/{settingId} {
-      // Public users can read event status and registration cap settings
-      allow read: if true;
+      // Public users can read event status and registration cap settings; admins can write
+      // Volunteers can get settings if signed in with a volunteer document
+      allow get: if (request.auth != null && exists(/databases/$(database)/documents/volunteers/$(request.auth.uid))) || true;
+      allow list: if true;
 
       // Only verified administrators can write or modify settings
       allow write: if isAdmin();
@@ -208,6 +231,12 @@ service cloud.firestore {
 
       // Only signed-in administrators may read, update, or delete
       allow read, update, delete: if isAdmin();
+    }
+
+    // 9. Volunteers Collection (keyed by Firebase Auth UID)
+    match /volunteers/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
     }
 
     // Default deny for all other unmatched collections and paths

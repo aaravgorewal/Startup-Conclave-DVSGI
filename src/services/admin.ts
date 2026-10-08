@@ -20,6 +20,7 @@ export interface EventSettings {
   registrationStatus: 'open' | 'closed';
   showCount: boolean;
   status: 'open' | 'closed';
+  checkinOpen?: boolean;
   updatedAt?: any;
 }
 
@@ -71,6 +72,8 @@ export interface AdminPartnerEnquiry {
   email: string;
   phone?: string;
   message?: string;
+  partnershipType?: string;
+  contributionRange?: string;
   status?: 'New' | 'Contacted' | 'Done' | string;
   notes?: string;
   createdAt: string;
@@ -543,6 +546,7 @@ export const getEventSettings = async (): Promise<EventSettings> => {
     registrationStatus: CONFIG.registration.status,
     showCount: CONFIG.registration.showCount,
     status: CONFIG.registration.status,
+    checkinOpen: false,
   };
 
   try {
@@ -555,6 +559,7 @@ export const getEventSettings = async (): Promise<EventSettings> => {
         registrationStatus: data.registrationStatus === 'closed' || data.status === 'closed' ? 'closed' : 'open',
         showCount: data.showCount === true,
         status: data.status === 'closed' || data.registrationStatus === 'closed' ? 'closed' : 'open',
+        checkinOpen: Boolean(data.checkinOpen),
       };
     }
   } catch (err) {
@@ -577,12 +582,14 @@ export const saveEventSettings = async (settings: Partial<EventSettings>): Promi
   const cap = typeof settings.registrationCap === 'number' ? settings.registrationCap : current.registrationCap;
   const regStatus = settings.registrationStatus || settings.status || current.registrationStatus;
   const showCount = settings.showCount !== undefined ? settings.showCount : current.showCount;
+  const checkinOpen = settings.checkinOpen !== undefined ? settings.checkinOpen : (current.checkinOpen ?? false);
 
   const payload: EventSettings = {
     registrationCap: cap,
     registrationStatus: regStatus,
     showCount: showCount,
     status: regStatus,
+    checkinOpen: checkinOpen,
   };
 
   try {
@@ -601,4 +608,30 @@ export const saveEventSettings = async (settings: Partial<EventSettings>): Promi
   } catch {}
 
   return true;
+};
+
+/**
+ * Set volunteer check-in open status in Firestore settings/event
+ */
+export const setCheckinOpen = async (open: boolean): Promise<boolean> => {
+  try {
+    const docRef = doc(db, 'settings', 'event');
+    await setDoc(
+      docRef,
+      {
+        checkinOpen: open,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    try {
+      const raw = localStorage.getItem('sc1_event_settings');
+      const prev = raw ? JSON.parse(raw) : {};
+      localStorage.setItem('sc1_event_settings', JSON.stringify({ ...prev, checkinOpen: open }));
+    } catch {}
+    return true;
+  } catch (err) {
+    console.error('Firestore setCheckinOpen failed:', err);
+    return false;
+  }
 };
