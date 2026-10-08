@@ -13,6 +13,8 @@ export interface LogoItem {
   url?: string;
   /** Supporters render ONLY when confirmed === true (needs written approval first). */
   confirmed: boolean;
+  width?: number;
+  height?: number;
 }
 
 export interface SpeakerItem {
@@ -125,15 +127,15 @@ export const CONFIG = {
   ] as PartnerTier[],
   // Organisers: the college's own units.
   organisers: [
-    { name: 'Dewan VS Group of Institutions', logo: dewanVsLogo, confirmed: true },
-    { name: 'Dewan Innovation & Incubation Forum', logo: diifLogo, confirmed: true },
-    { name: "Institution's Innovation Council", logo: iicLogo, confirmed: true },
+    { name: 'Dewan VS Group of Institutions', logo: dewanVsLogo, confirmed: true, width: 241, height: 303 },
+    { name: 'Dewan Innovation & Incubation Forum', logo: diifLogo, confirmed: true, width: 200, height: 200 },
+    { name: "Institution's Innovation Council", logo: iicLogo, confirmed: true, width: 400, height: 173 },
   ] as LogoItem[],
 
   // Supporters: government / ecosystem logos. Keep confirmed:false until written approval is granted.
   supporters: [
-    { name: 'Ministry of MSME', logo: msmeLogo, confirmed: false },
-    { name: 'StartInUP', logo: startInUpLogo, confirmed: false },
+    { name: 'Ministry of MSME', logo: msmeLogo, confirmed: false, width: 250, height: 194 },
+    { name: 'StartInUP', logo: startInUpLogo, confirmed: false, width: 200, height: 200 },
   ] as LogoItem[],
   // Contact details & Social URLs (all initially empty strings)
   contactEmail: "",

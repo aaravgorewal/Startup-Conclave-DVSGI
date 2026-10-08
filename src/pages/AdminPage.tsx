@@ -252,6 +252,21 @@ export const AdminPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [undoToast?.secondsRemaining]);
 
+  // Keyboard accessibility: ESC key closes modal dialogs and side drawer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (confirmDialog?.isOpen) {
+          setConfirmDialog(null);
+        } else if (activeDetailItem) {
+          setActiveDetailItem(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [confirmDialog, activeDetailItem]);
+
   // Action Error Toast State for Failed Admin Operations (P5)
   const [adminActionError, setAdminActionError] = useState<string | null>(null);
 
@@ -4011,3 +4026,6 @@ export const AdminPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminPage;
+

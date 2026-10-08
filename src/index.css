@@ -133,17 +133,31 @@ body {
   animation-play-state: paused;
 }
 
+/* Visible :focus-visible outlines for keyboard accessibility */
+:focus-visible {
+  outline: 3px solid #111111;
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .animate-marquee {
-    animation: none;
-    transform: none;
+    animation: none !important;
+    transform: none !important;
   }
   html {
-    scroll-behavior: auto;
+    scroll-behavior: auto !important;
   }
   .brutal-btn, .brutal-btn:hover, .brutal-btn:active {
-    transition: none;
-    transform: none;
+    transition: none !important;
+    transform: none !important;
   }
   .animate-brutal-pop, .animate-check-draw, .animate-sync-glow {
     animation: none !important;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   ArrowRight,
   Calendar,
@@ -98,6 +98,8 @@ const HeroVectorIllustration: React.FC = () => {
       {/* Custom Vector SVG */}
       <svg
         viewBox="0 0 460 380"
+        width="460"
+        height="380"
         className="w-full h-auto"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -331,10 +333,16 @@ const HeroVectorIllustration: React.FC = () => {
 };
 
 // Logo tile: equal-height white box with 2px #111111 border and hard offset shadow
-const LogoTile: React.FC<{ item: LogoItem; heightClass?: string; tileClass?: string }> = ({
+const LogoTile: React.FC<{
+  item: LogoItem;
+  heightClass?: string;
+  tileClass?: string;
+  loading?: 'lazy' | 'eager';
+}> = ({
   item,
   heightClass = 'h-12 sm:h-14',
   tileClass = 'p-2.5 sm:p-3 min-h-[56px] sm:min-h-[64px]',
+  loading = 'lazy',
 }) => {
   const [failed, setFailed] = useState(false);
   if (failed) return null; // hide tile if image fails to load
@@ -342,7 +350,9 @@ const LogoTile: React.FC<{ item: LogoItem; heightClass?: string; tileClass?: str
     <img
       src={item.logo}
       alt={item.name}
-      loading="lazy"
+      width={item.width || 200}
+      height={item.height || 200}
+      loading={loading}
       decoding="async"
       onError={() => setFailed(true)}
       className={`${heightClass} w-auto max-w-[180px] sm:max-w-[220px] object-contain`}
@@ -360,6 +370,74 @@ const LogoTile: React.FC<{ item: LogoItem; heightClass?: string; tileClass?: str
     </div>
   );
 };
+
+// Accessible Focus Trap & Escape Handler Hook for Modals and Drawers
+const useFocusTrap = ({
+  isOpen,
+  containerRef,
+  onClose,
+  triggerRef,
+}: {
+  isOpen: boolean;
+  containerRef: React.RefObject<HTMLElement | null>;
+  onClose: () => void;
+  triggerRef?: React.RefObject<HTMLElement | null>;
+}) => {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const returnTarget = triggerRef?.current;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const focusableSelector =
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusable = container.querySelectorAll<HTMLElement>(focusableSelector);
+    if (focusable.length > 0) {
+      focusable[0].focus();
+    } else {
+      container.focus();
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        const elements = container.querySelectorAll<HTMLElement>(focusableSelector);
+        if (elements.length === 0) {
+          e.preventDefault();
+          return;
+        }
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first || !container.contains(document.activeElement)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last || !container.contains(document.activeElement)) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      returnTarget?.focus?.();
+    };
+  }, [isOpen, containerRef, onClose, triggerRef]);
+};
+
 export const SinglePage: React.FC = () => {
   // Scroll progress percentage (0 - 100)
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -384,38 +462,76 @@ export const SinglePage: React.FC = () => {
 
   // Schema.org Structured Data (JSON-LD) for FAQ & Conclave Event Details
   const structuredData = useMemo(() => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const configuredBase = typeof import.meta.env.VITE_SITE_URL === 'string' && import.meta.env.VITE_SITE_URL.trim()
+      ? import.meta.env.VITE_SITE_URL.trim().replace(/\/$/, '')
+      : '';
+    const origin = configuredBase || (typeof window !== 'undefined' ? window.location.origin : '');
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
     const canonicalUrl = `${origin}${currentPath}`;
+
+    const eventNode: any = {
+      '@type': 'Event',
+      '@id': `${canonicalUrl}#event`,
+      name: CONFIG.event.name,
+      description: `${CONFIG.event.subline} ${CONFIG.event.tagline}`,
+      eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+      eventStatus: 'https://schema.org/EventScheduled',
+      location: {
+        '@type': 'Place',
+        name: 'Dewan V.S. Institute of Engineering & Technology (DVSIET)',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: 'NH-58, By-Pass Road, Partapur',
+          addressLocality: 'Meerut',
+          addressRegion: 'Uttar Pradesh',
+          postalCode: '250103',
+          addressCountry: 'IN',
+        },
+      },
+      organizer: {
+        '@type': 'Organization',
+        name: 'Dewan V.S. Institute of Engineering & Technology (DVSIET)',
+        url: canonicalUrl,
+      },
+    };
+
+    // HARD RULE: never include price, date or speakers unless present in CONFIG with confirmed values
+    const eventConfig = CONFIG.event as any;
+    if (eventConfig?.dateConfirmed && eventConfig?.startDate && eventConfig.startDate !== 'To be announced') {
+      eventNode.startDate = eventConfig.startDate;
+      if (eventConfig.endDate) {
+        eventNode.endDate = eventConfig.endDate;
+      }
+    }
+
+    if ((CONFIG as any).ticketsConfirmed && CONFIG.tickets?.participant?.fee !== undefined) {
+      eventNode.offers = [
+        {
+          '@type': 'Offer',
+          name: CONFIG.tickets.participant.label,
+          price: CONFIG.tickets.participant.fee,
+          priceCurrency: 'INR',
+          availability: 'https://schema.org/InStock',
+          url: canonicalUrl,
+        },
+      ];
+    }
+
+    const confirmedSpeakers = (CONFIG.speakersInvestors?.speakers || []).filter(
+      (s: any) => s.status === 'confirmed' && s.name
+    );
+    if (confirmedSpeakers.length > 0) {
+      eventNode.performer = confirmedSpeakers.map((s: any) => ({
+        '@type': 'Person',
+        name: s.name,
+        jobTitle: s.title || undefined,
+      }));
+    }
 
     return {
       '@context': 'https://schema.org',
       '@graph': [
-        {
-          '@type': 'Event',
-          '@id': `${canonicalUrl}#event`,
-          name: CONFIG.event.name,
-          description: `${CONFIG.event.subline} ${CONFIG.event.tagline}`,
-          eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-          eventStatus: 'https://schema.org/EventScheduled',
-          location: {
-            '@type': 'Place',
-            name: 'Dewan V.S. Institute of Engineering & Technology (DVSIET)',
-            address: {
-              '@type': 'PostalAddress',
-              streetAddress: 'NH-58, By-Pass Road, Partapur',
-              addressLocality: 'Meerut',
-              addressRegion: 'Uttar Pradesh',
-              postalCode: '250103',
-              addressCountry: 'IN',
-            },
-          },
-          organizer: {
-            '@type': 'Organization',
-            name: 'Dewan V.S. Institute of Engineering & Technology (DVSIET)',
-            url: canonicalUrl,
-          },
-        },
+        eventNode,
         {
           '@type': 'FAQPage',
           '@id': `${canonicalUrl}#faq`,
@@ -444,6 +560,20 @@ export const SinglePage: React.FC = () => {
     }
     script.textContent = JSON.stringify(structuredData);
 
+    // Sync canonical link in head if VITE_SITE_URL is provided
+    const configuredBase = typeof import.meta.env.VITE_SITE_URL === 'string' && import.meta.env.VITE_SITE_URL.trim()
+      ? import.meta.env.VITE_SITE_URL.trim()
+      : '';
+    if (configuredBase && typeof document !== 'undefined') {
+      let canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (!canonicalEl) {
+        canonicalEl = document.createElement('link');
+        canonicalEl.rel = 'canonical';
+        document.head.appendChild(canonicalEl);
+      }
+      canonicalEl.href = configuredBase.endsWith('/') ? configuredBase : `${configuredBase}/`;
+    }
+
     return () => {
       const el = document.getElementById(scriptId);
       if (el) {
@@ -452,8 +582,79 @@ export const SinglePage: React.FC = () => {
     };
   }, [structuredData]);
 
-  // Mobile navigation drawer state
+  // Mobile navigation drawer state & keyboard refs
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuToggleRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Partner Modal State & keyboard refs
+  const [partnerModalOpen, setPartnerModalOpen] = useState(false);
+  const partnerTriggerRef = useRef<HTMLElement | null>(null);
+  const partnerModalRef = useRef<HTMLDivElement>(null);
+
+  // Privacy Notice Modal State (/privacy or #privacy) & keyboard refs
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const privacyTriggerRef = useRef<HTMLElement | null>(null);
+  const privacyModalRef = useRef<HTMLDivElement>(null);
+
+  const handleCloseMobileMenu = () => {
+    setMobileMenuOpen(false);
+    mobileMenuToggleRef.current?.focus();
+  };
+
+  const handleOpenPartnerModal = (e?: React.MouseEvent) => {
+    if (e?.currentTarget) {
+      partnerTriggerRef.current = e.currentTarget as HTMLElement;
+    }
+    setPartnerModalOpen(true);
+  };
+
+  const handleOpenPrivacyModal = (e?: React.MouseEvent) => {
+    if (e?.currentTarget) {
+      privacyTriggerRef.current = e.currentTarget as HTMLElement;
+    }
+    setPrivacyModalOpen(true);
+    if (typeof window !== 'undefined' && window.location.hash !== '#privacy' && window.location.pathname !== '/privacy') {
+      window.history.pushState(null, '', '#privacy');
+    }
+  };
+
+  const handleClosePrivacyModal = () => {
+    setPrivacyModalOpen(false);
+    if (typeof window !== 'undefined') {
+      if (window.location.hash === '#privacy') {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      } else if (window.location.pathname === '/privacy') {
+        window.history.replaceState(null, '', '/');
+      }
+    }
+    privacyTriggerRef.current?.focus();
+  };
+
+  // Keyboard accessibility & focus traps for nav drawer and dialog modals
+  useFocusTrap({
+    isOpen: mobileMenuOpen,
+    containerRef: mobileMenuRef,
+    onClose: handleCloseMobileMenu,
+    triggerRef: mobileMenuToggleRef,
+  });
+
+  useFocusTrap({
+    isOpen: partnerModalOpen,
+    containerRef: partnerModalRef,
+    onClose: () => {
+      setPartnerModalOpen(false);
+      partnerTriggerRef.current?.focus();
+    },
+    triggerRef: partnerTriggerRef,
+  });
+
+  useFocusTrap({
+    isOpen: privacyModalOpen,
+    containerRef: privacyModalRef,
+    onClose: handleClosePrivacyModal,
+    triggerRef: privacyTriggerRef,
+  });
 
   // Registration Status & Counter Settings from config & Firestore settings/event
   const [regStatus, setRegStatus] = useState<'open' | 'closed'>(CONFIG.registration.status);
@@ -469,12 +670,6 @@ export const SinglePage: React.FC = () => {
       }
     }).catch(() => {});
   }, []);
-
-  // Partner Modal State
-  const [partnerModalOpen, setPartnerModalOpen] = useState(false);
-
-  // Privacy Notice Modal State (/privacy or #privacy)
-  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
 
   useEffect(() => {
     const handleLocation = () => {
@@ -492,36 +687,6 @@ export const SinglePage: React.FC = () => {
       window.removeEventListener('popstate', handleLocation);
     };
   }, []);
-
-  const handleOpenPrivacyModal = () => {
-    setPrivacyModalOpen(true);
-    if (typeof window !== 'undefined' && window.location.hash !== '#privacy' && window.location.pathname !== '/privacy') {
-      window.history.pushState(null, '', '#privacy');
-    }
-  };
-
-  const handleClosePrivacyModal = () => {
-    setPrivacyModalOpen(false);
-    if (typeof window !== 'undefined') {
-      if (window.location.hash === '#privacy') {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-      } else if (window.location.pathname === '/privacy') {
-        window.history.replaceState(null, '', '/');
-      }
-    }
-  };
-
-  // Keyboard accessibility for ESC key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (privacyModalOpen) handleClosePrivacyModal();
-        if (partnerModalOpen) setPartnerModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [privacyModalOpen, partnerModalOpen]);
   const [partnerData, setPartnerData] = useState({
     company: '',
     contactName: '',
@@ -1287,8 +1452,16 @@ export const SinglePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF8EC] text-[#111111] font-sans selection:bg-[#FF6B1A] selection:text-white pb-20 md:pb-0 overflow-x-clip text-base">
+    <div className="min-h-screen bg-[#FFF8EC] text-[#111111] font-sans selection:bg-[#FF6B1A] selection:text-[#111111] pb-20 md:pb-0 overflow-x-clip text-base">
       
+      {/* Skip to Content Link for keyboard accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2.5 focus:bg-[#FFD400] focus:text-[#111111] focus:border-2 focus:border-[#111111] focus:shadow-[3px_3px_0px_#111111] focus:font-mono focus:font-bold focus:text-xs focus:uppercase focus:tracking-wider focus:outline-none"
+      >
+        Skip to content
+      </a>
+
       {/* Subtle Scroll Progress Bar at the very top of the page */}
       <div
         className="fixed top-0 left-0 right-0 z-50 h-[3.5px] bg-[#111111]/10 pointer-events-none"
@@ -1362,12 +1535,13 @@ export const SinglePage: React.FC = () => {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => handleNavClick('register')}
-            className="hidden sm:inline-flex brutal-btn bg-[#FF6B1A] text-white px-5 py-2.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px] items-center"
+            className="hidden sm:inline-flex brutal-btn bg-[#FF6B1A] text-[#111111] px-5 py-2.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px] items-center"
           >
             Register Now
           </button>
 
           <button
+            ref={mobileMenuToggleRef}
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden px-3 py-1.5 brutal-border bg-white rounded-[2px] text-[#111111] min-h-[44px] flex items-center gap-1.5 cursor-pointer font-mono font-bold text-xs uppercase"
@@ -1391,7 +1565,14 @@ export const SinglePage: React.FC = () => {
 
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b-2 border-[#111111] bg-[#FFD400] p-4 sm:p-5 space-y-3 font-mono text-base font-bold uppercase tracking-wider animate-in fade-in shadow-[0_6px_0px_#111111]">
+        <div
+          ref={mobileMenuRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation Directory"
+          tabIndex={-1}
+          className="md:hidden border-b-2 border-[#111111] bg-[#FFD400] p-4 sm:p-5 space-y-3 font-mono text-base font-bold uppercase tracking-wider animate-in fade-in shadow-[0_6px_0px_#111111]"
+        >
           
           {/* Drawer Top Header with Explicit Close Button */}
           <div className="flex items-center justify-between pb-3 border-b-2 border-[#111111]">
@@ -1403,7 +1584,7 @@ export const SinglePage: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={handleCloseMobileMenu}
               className="brutal-btn bg-white text-[#111111] px-3 py-1 text-xs font-mono font-black uppercase flex items-center gap-1.5 min-h-[38px] cursor-pointer hover:bg-[#111111] hover:text-white"
               aria-label="Close navigation menu"
             >
@@ -1485,7 +1666,7 @@ export const SinglePage: React.FC = () => {
             <span className="font-mono text-xs text-[#111111]/75">DVSIET, Meerut</span>
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={handleCloseMobileMenu}
               className="brutal-btn bg-white text-[#111111] px-4 py-2 font-mono text-xs font-black uppercase flex items-center gap-1.5 min-h-[42px] cursor-pointer hover:bg-[#111111] hover:text-white"
               aria-label="Close navigation menu"
             >
@@ -1496,6 +1677,9 @@ export const SinglePage: React.FC = () => {
 
         </div>
       )}
+
+      {/* Main Landmark for Content Accessibility */}
+      <main id="main-content">
 
       {/* =================================================================== */}
       {/* 2. HERO SECTION                                                     */}
@@ -1551,7 +1735,7 @@ export const SinglePage: React.FC = () => {
             <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
               <button
                 onClick={() => handleNavClick('register')}
-                className="brutal-btn bg-[#FF6B1A] text-white px-8 py-4 font-display font-bold text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
+                className="brutal-btn bg-[#FF6B1A] text-[#111111] px-8 py-4 font-display font-bold text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
               >
                 <span>Register Now</span>
                 <ArrowRight className="w-5 h-5" />
@@ -1850,7 +2034,7 @@ export const SinglePage: React.FC = () => {
             <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
               {CONFIG.pitchArena.headline}
             </h2>
-            <p className="font-display text-xl sm:text-2xl text-white font-extrabold">
+            <p className="font-display text-xl sm:text-2xl text-[#111111] font-extrabold">
               {CONFIG.pitchArena.tagline}
             </p>
             {/* 1-Line Intro */}
@@ -1869,7 +2053,7 @@ export const SinglePage: React.FC = () => {
                 <div key={p.step} className="p-3 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs font-black text-[#FF6B1A]">{p.step}</span>
-                    {idx < 4 && <span className="font-mono text-xs text-[#111111]/40 hidden sm:inline">→</span>}
+                    {idx < 4 && <span className="font-mono text-xs text-[#111111]/70 hidden sm:inline">→</span>}
                   </div>
                   <div className="font-display font-black text-base text-[#111111]">{p.label}</div>
                   <div className="text-xs text-[#111111]/70">{p.desc}</div>
@@ -1974,7 +2158,7 @@ export const SinglePage: React.FC = () => {
         {/* Bold Coming Soon Block */}
         <div className="p-7 sm:p-12 bg-white brutal-border brutal-shadow-lg space-y-5 text-left">
           <div className="inline-block">
-            <span className="bg-[#FF6B1A] text-white font-mono text-xs font-black px-3.5 py-1 border-2 border-[#111111] -rotate-1 uppercase tracking-wider inline-block">
+            <span className="bg-[#FF6B1A] text-[#111111] font-mono text-xs font-black px-3.5 py-1 border-2 border-[#111111] -rotate-1 uppercase tracking-wider inline-block">
               {CONFIG.speakersInvestors.badge}
             </span>
           </div>
@@ -2068,11 +2252,11 @@ export const SinglePage: React.FC = () => {
             </div>
 
             <button
-              onClick={() => {
+              onClick={(e) => {
                 setPartnerFormStartTime(Date.now());
                 setPartnerHoneypot('');
                 setPartnerError('');
-                setPartnerModalOpen(true);
+                handleOpenPartnerModal(e);
               }}
               className="brutal-btn bg-[#FFD400] text-[#111111] px-6 py-3.5 font-display font-extrabold text-base uppercase tracking-wider rounded-[2px] cursor-pointer shrink-0 min-h-[46px] self-start sm:self-auto"
             >
@@ -2138,7 +2322,7 @@ export const SinglePage: React.FC = () => {
                     </div>
 
                     <div className="p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-mono">
-                      <span className="text-[#111111]/60 block text-[10px] uppercase font-bold tracking-wider">
+                      <span className="text-[#111111]/80 block text-[10px] uppercase font-bold tracking-wider">
                         Commitment
                       </span>
                       <span className="text-xs sm:text-sm font-black text-[#111111]">
@@ -2159,7 +2343,7 @@ export const SinglePage: React.FC = () => {
                   <div className="pt-3 border-t-2 border-[#111111]">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
                         setPartnerData((prev) => ({
                           ...prev,
                           message: prev.message || `Inquiring about ${tier.name} tier.`,
@@ -2167,9 +2351,9 @@ export const SinglePage: React.FC = () => {
                         setPartnerFormStartTime(Date.now());
                         setPartnerHoneypot('');
                         setPartnerError('');
-                        setPartnerModalOpen(true);
+                        handleOpenPartnerModal(e);
                       }}
-                      className="w-full brutal-btn bg-[#111111] hover:bg-[#FF6B1A] text-white py-2 px-3 font-display font-bold text-xs uppercase tracking-wider text-center cursor-pointer min-h-[40px]"
+                      className="w-full brutal-btn bg-[#111111] hover:bg-[#FF6B1A] text-white hover:text-[#111111] py-2 px-3 font-display font-bold text-xs uppercase tracking-wider text-center cursor-pointer min-h-[40px]"
                     >
                       Enquire for {tier.name.split(' ')[0]} →
                     </button>
@@ -2231,9 +2415,9 @@ export const SinglePage: React.FC = () => {
             <div className="w-12 h-12 bg-[#FFF2D6] border-2 border-[#111111] flex items-center justify-center mx-auto text-[#111111]">
               <Lock className="w-6 h-6 text-[#FF6B1A]" />
             </div>
-            <h3 className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+            <h2 className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
               Registrations Closed
-            </h3>
+            </h2>
             <p className="text-base font-sans text-[#111111]/80 max-w-md mx-auto">
               Delegate registrations for Startup Conclave 1.0 are currently closed. For inquiries, please reach out to the secretariat.
             </p>
@@ -2298,13 +2482,13 @@ export const SinglePage: React.FC = () => {
                   </span>
                 </div>
 
-                <h3 className="font-display font-extrabold text-2xl text-[#111111] leading-tight">
+                <h2 className="font-display font-extrabold text-2xl text-[#111111] leading-tight">
                   {submittedRecord.status === 'waitlist'
                     ? 'You are on the waitlist.'
                     : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
                     ? 'Registration received. Payment verification pending'
                     : "You're registered for the conclave."}
-                </h3>
+                </h2>
                 
                 <p className="text-sm font-mono font-bold text-[#111111]">
                   Registration ID: <span className="text-[#FF6B1A] text-base">{submittedRecord.id}</span>
@@ -2355,9 +2539,9 @@ export const SinglePage: React.FC = () => {
             <div className="p-5 bg-[#FFD400] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3 text-left">
               <div className="flex items-center gap-2.5">
                 <Camera className="w-5 h-5 text-[#111111] shrink-0" />
-                <h4 className="font-display font-black text-base sm:text-lg text-[#111111] uppercase tracking-wide">
+                <h3 className="font-display font-black text-base sm:text-lg text-[#111111] uppercase tracking-wide">
                   Take a screenshot of your Registration ID
-                </h4>
+                </h3>
               </div>
               <p className="font-sans text-xs sm:text-sm text-[#111111] font-semibold leading-relaxed">
                 Save your Registration ID (<span className="font-mono font-bold text-base">{submittedRecord.id}</span>) now. You must present it along with your college or government ID at the registration desk for venue access.
@@ -2545,19 +2729,19 @@ export const SinglePage: React.FC = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 font-mono text-xs">
                     {submittedRecord.sector && (
                       <div className="p-2 bg-[#FFF8EC] border border-[#111111]">
-                        <span className="text-[#111111]/60 block text-[10px]">SECTOR</span>
+                        <span className="text-[#111111]/80 block text-[10px]">SECTOR</span>
                         <strong className="text-[#111111]">{submittedRecord.sector}</strong>
                       </div>
                     )}
                     {submittedRecord.teamSize && (
                       <div className="p-2 bg-[#FFF8EC] border border-[#111111]">
-                        <span className="text-[#111111]/60 block text-[10px]">TEAM SIZE</span>
+                        <span className="text-[#111111]/80 block text-[10px]">TEAM SIZE</span>
                         <strong className="text-[#111111]">{submittedRecord.teamSize} {submittedRecord.teamSize === '1' ? 'Founder' : 'Members'}</strong>
                       </div>
                     )}
                     {submittedRecord.pitchDeckLink && (
                       <div className="p-2 bg-[#FFF8EC] border border-[#111111] col-span-2 sm:col-span-1">
-                        <span className="text-[#111111]/60 block text-[10px]">PITCH DECK</span>
+                        <span className="text-[#111111]/80 block text-[10px]">PITCH DECK</span>
                         <a
                           href={submittedRecord.pitchDeckLink.startsWith('http') ? submittedRecord.pitchDeckLink : `https://${submittedRecord.pitchDeckLink}`}
                           target="_blank"
@@ -2686,19 +2870,19 @@ export const SinglePage: React.FC = () => {
                       !isPitchOpen
                         ? 'opacity-80 bg-[#F4EFE6] cursor-not-allowed shadow-[1px_1px_0px_#111111]'
                         : ticket === 'pitch'
-                        ? 'bg-[#FF6B1A] text-white shadow-[3px_3px_0px_#111111] cursor-pointer'
+                        ? 'bg-[#FF6B1A] text-[#111111] shadow-[3px_3px_0px_#111111] cursor-pointer'
                         : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111] cursor-pointer'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`font-bold text-sm sm:text-base ${ticket === 'pitch' && isPitchOpen ? 'text-white' : 'text-[#111111]'}`}>
+                      <span className="font-bold text-sm sm:text-base text-[#111111]">
                         {CONFIG.tickets.pitch.label}
                       </span>
                       <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FFD400] text-[#111111]">
                         {!isPitchOpen ? 'OPENS SOON' : `₹${CONFIG.tickets.pitch.fee}`}
                       </span>
                     </div>
-                    <p className={`text-xs mt-1 ${ticket === 'pitch' && isPitchOpen ? 'text-white/90' : 'text-[#111111]/70'}`}>
+                    <p className={`text-xs mt-1 ${ticket === 'pitch' && isPitchOpen ? 'text-[#111111]/85 font-medium' : 'text-[#111111]/70'}`}>
                       {!isPitchOpen
                         ? 'Pitch registrations open soon'
                         : 'Pitch your startup to jury & investors + delegate entry'}
@@ -2826,7 +3010,7 @@ export const SinglePage: React.FC = () => {
                     setFullName(e.target.value);
                     if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: '' }));
                   }}
-                  placeholder="e.g. Aryan Sharma"
+                  placeholder="Enter your full name"
                   aria-invalid={Boolean(errors.fullName)}
                   aria-describedby={errors.fullName ? 'reg-fullName-error' : undefined}
                   className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.fullName ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
@@ -3368,7 +3552,7 @@ export const SinglePage: React.FC = () => {
                   <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
                     <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
                       <div>
-                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-white px-2 py-0.5 border border-[#111111]">
+                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-[#111111] px-2 py-0.5 border border-[#111111]">
                           {CONFIG.tickets.pitch.label.toUpperCase()}
                         </span>
                         <h3 className="font-display font-black text-xl text-[#111111] mt-1">
@@ -3391,7 +3575,7 @@ export const SinglePage: React.FC = () => {
                         setTicket('participant');
                         setWantsToPitch(false);
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-white border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors cursor-pointer min-h-[44px]"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-[#111111] border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors cursor-pointer min-h-[44px]"
                     >
                       Switch to Attendee Delegate (Free)
                     </button>
@@ -3400,7 +3584,7 @@ export const SinglePage: React.FC = () => {
                   <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-4">
                     <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
                       <div>
-                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-white px-2 py-0.5 border border-[#111111]">
+                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-[#111111] px-2 py-0.5 border border-[#111111]">
                           {CONFIG.tickets.pitch.label.toUpperCase()} FEE
                         </span>
                         <h3 className="font-display font-black text-xl text-[#111111] mt-1">
@@ -3464,7 +3648,7 @@ export const SinglePage: React.FC = () => {
                           <div>
                             <a
                               href={upiPayUrl}
-                              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-white border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-all cursor-pointer min-h-[44px]"
+                              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-[#111111] border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-all cursor-pointer min-h-[44px]"
                             >
                               <ExternalLink className="w-4 h-4" />
                               <span>Open UPI app</span>
@@ -3556,7 +3740,7 @@ export const SinglePage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={!authUser || isSubmitting || (ticket === 'pitch' && !isPitchOpen)}
-                  className={`w-full brutal-btn text-white p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${
+                  className={`w-full brutal-btn text-[#111111] p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${
                     !authUser
                       ? 'bg-neutral-400 text-neutral-800 opacity-60 cursor-not-allowed shadow-none border-2 border-[#111111]'
                       : ticket === 'pitch' && !isPitchOpen
@@ -3603,11 +3787,6 @@ export const SinglePage: React.FC = () => {
       {/* 10. FAQ ACCORDION (6 Questions)                                     */}
       {/* =================================================================== */}
       <section id="faq" className="px-4 sm:px-8 py-16 sm:py-24 max-w-4xl mx-auto text-left border-b-2 border-[#111111]">
-        {/* In-page Schema.org JSON-LD for Search Engine FAQ Rich Snippets */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-        />
         
         <div className="flex items-center gap-3 mb-6">
           <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
@@ -3650,6 +3829,7 @@ export const SinglePage: React.FC = () => {
           })}
         </div>
       </section>
+      </main>
 
       {/* =================================================================== */}
       {/* 11. FOOTER                                                          */}
@@ -3771,7 +3951,7 @@ export const SinglePage: React.FC = () => {
             <span>© {new Date().getFullYear()} Startup Conclave 1.0. All rights reserved.</span>
             <button
               type="button"
-              onClick={handleOpenPrivacyModal}
+              onClick={(e) => handleOpenPrivacyModal(e)}
               className="text-[#FF6B1A] hover:text-[#111111] underline font-bold cursor-pointer transition-colors"
             >
               Privacy Notice
@@ -3796,7 +3976,7 @@ export const SinglePage: React.FC = () => {
 
         <button
           onClick={() => handleNavClick('register')}
-          className="brutal-btn bg-[#FF6B1A] text-white px-4 py-2.5 font-display font-black text-xs uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px] flex items-center gap-1.5"
+          className="brutal-btn bg-[#FF6B1A] text-[#111111] px-4 py-2.5 font-display font-black text-xs uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px] flex items-center gap-1.5"
         >
           <span>Register Now</span>
           <ArrowRight className="w-4 h-4" />
@@ -3807,17 +3987,30 @@ export const SinglePage: React.FC = () => {
       {/* PARTNER MODAL FORM                                                  */}
       {/* =================================================================== */}
       {partnerModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#111111]/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-[#FFF8EC] brutal-border brutal-shadow-lg p-6 sm:p-8 max-w-lg w-full text-left space-y-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="partner-modal-title"
+          className="fixed inset-0 z-50 bg-[#111111]/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPartnerModalOpen(false);
+          }}
+        >
+          <div
+            ref={partnerModalRef}
+            tabIndex={-1}
+            className="bg-[#FFF8EC] brutal-border brutal-shadow-lg p-6 sm:p-8 max-w-lg w-full text-left space-y-4 max-h-[90vh] overflow-y-auto"
+          >
             
             <div className="flex items-center justify-between border-b-2 border-[#111111] pb-3">
-              <h3 className="font-display font-black text-xl text-[#111111]">
+              <h2 id="partner-modal-title" className="font-display font-black text-xl text-[#111111]">
                 Partner With Startup Conclave 1.0
-              </h3>
+              </h2>
               <button
                 type="button"
                 onClick={() => setPartnerModalOpen(false)}
-                className="p-1 brutal-border bg-white hover:bg-[#FFD400] min-h-[38px] min-w-[38px] flex items-center justify-center"
+                className="p-1 brutal-border bg-white hover:bg-[#FFD400] min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer"
+                aria-label="Close Partner Inquiry dialog"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3873,7 +4066,7 @@ export const SinglePage: React.FC = () => {
                     required
                     value={partnerData.company}
                     onChange={(e) => setPartnerData({ ...partnerData, company: e.target.value })}
-                    placeholder="e.g. Acme Tech"
+                    placeholder="Organisation or Company name"
                     className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
                   />
                 </div>
@@ -3886,7 +4079,7 @@ export const SinglePage: React.FC = () => {
                       required
                       value={partnerData.contactName}
                       onChange={(e) => setPartnerData({ ...partnerData, contactName: e.target.value })}
-                      placeholder="e.g. Rahul Dev"
+                      placeholder="Enter contact person name"
                       className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
                     />
                   </div>
@@ -3909,7 +4102,7 @@ export const SinglePage: React.FC = () => {
                     required
                     value={partnerData.email}
                     onChange={(e) => setPartnerData({ ...partnerData, email: e.target.value })}
-                    placeholder="partner@acme.com"
+                    placeholder="contact@company.com"
                     className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
                   />
                 </div>
@@ -3974,7 +4167,7 @@ export const SinglePage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={partnerSubmitting}
-                    className={`brutal-btn bg-[#FF6B1A] text-white px-5 py-2 font-display font-bold text-xs uppercase min-h-[44px] ${
+                    className={`brutal-btn bg-[#FF6B1A] text-[#111111] px-5 py-2 font-display font-bold text-xs uppercase min-h-[44px] ${
                       partnerSubmitting ? 'opacity-60 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
                     }`}
                   >
@@ -4011,7 +4204,11 @@ export const SinglePage: React.FC = () => {
             if (e.target === e.currentTarget) handleClosePrivacyModal();
           }}
         >
-          <div className="bg-[#FFF8EC] brutal-border brutal-shadow-lg p-5 sm:p-8 max-w-2xl w-full text-left space-y-5 max-h-[90vh] overflow-y-auto animate-brutal-pop">
+          <div
+            ref={privacyModalRef}
+            tabIndex={-1}
+            className="bg-[#FFF8EC] brutal-border brutal-shadow-lg p-5 sm:p-8 max-w-2xl w-full text-left space-y-5 max-h-[90vh] overflow-y-auto animate-brutal-pop"
+          >
             
             {/* Draft Notice Banner */}
             <div className="p-3 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2.5">
@@ -4030,9 +4227,9 @@ export const SinglePage: React.FC = () => {
                     Privacy Notice
                   </span>
                 </div>
-                <h3 id="privacy-modal-title" className="font-display font-black text-2xl sm:text-3xl text-[#111111] tracking-tight">
+                <h2 id="privacy-modal-title" className="font-display font-black text-2xl sm:text-3xl text-[#111111] tracking-tight">
                   Attendee Privacy & Data Usage
-                </h3>
+                </h2>
                 <p className="font-sans text-xs sm:text-sm text-[#111111]/80 font-medium">
                   Startup Conclave 1.0 · Dewan V.S. Institute of Engineering & Technology, Meerut
                 </p>
