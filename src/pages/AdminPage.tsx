@@ -690,6 +690,48 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  // Resend confirmation email via /api/admin-resend
+  const [resendingRegId, setResendingRegId] = useState<string | null>(null);
+
+  const handleAdminResend = async (reg: AdminRegistration) => {
+    if (resendingRegId) return;
+    setResendingRegId(reg.id);
+    setAdminActionError(null);
+
+    try {
+      const user = currentUser || auth.currentUser;
+      if (!user) {
+        setAdminActionError('Authentication expired. Please sign in again.');
+        setResendingRegId(null);
+        return;
+      }
+      const token = await user.getIdToken();
+
+      const resp = await fetch('/api/admin-resend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          registrationId: reg.registrationId || reg.id,
+        }),
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if (resp.ok) {
+        setAdminSuccessToast(`Confirmation email sent to ${reg.email} (${reg.id})`);
+      } else {
+        setAdminActionError(data.error || `Failed to resend confirmation (HTTP ${resp.status})`);
+      }
+    } catch (err: any) {
+      console.error('Error resending confirmation:', err);
+      setAdminActionError(err?.message || 'Network error while attempting to resend confirmation email');
+    } finally {
+      setResendingRegId(null);
+    }
+  };
+
   // Requirement: Add confirmation dialog for any delete
   const handleDeleteRegistration = (reg: AdminRegistration) => {
     setConfirmDialog({
@@ -2352,6 +2394,16 @@ export const AdminPage: React.FC = () => {
                       <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1.5">
                           <button
+                            type="button"
+                            disabled={resendingRegId === reg.id}
+                            onClick={() => handleAdminResend(reg)}
+                            className="px-2 py-1 border border-[#111111] bg-white hover:bg-[#FFF8EC] font-mono text-[10px] font-bold cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                            title={`Resend confirmation email to ${reg.email}`}
+                          >
+                            <Mail className="w-3 h-3 text-[#FF6B1A]" />
+                            <span>{resendingRegId === reg.id ? 'Sending...' : 'Resend'}</span>
+                          </button>
+                          <button
                             onClick={() => {
                               setActiveDetailItem(reg);
                               setDetailNotes(reg.notes || '');
@@ -3568,6 +3620,22 @@ export const AdminPage: React.FC = () => {
               <div>Role: <strong>{activeDetailItem.role}</strong></div>
               <div>City: {activeDetailItem.city}</div>
             </div>
+
+            {/* Resend Confirmation Pass Email */}
+            <button
+              type="button"
+              disabled={resendingRegId === activeDetailItem.id}
+              onClick={() => handleAdminResend(activeDetailItem)}
+              className="w-full py-2.5 px-3 bg-white hover:bg-[#FFF8EC] text-[#111111] font-mono font-bold text-xs border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              title={`Resend confirmation email to ${activeDetailItem.email}`}
+            >
+              <Mail className="w-4 h-4 text-[#FF6B1A]" />
+              <span>
+                {resendingRegId === activeDetailItem.id
+                  ? 'Sending confirmation email...'
+                  : 'Resend Confirmation Email'}
+              </span>
+            </button>
 
             {/* Payment & Fee Details */}
             <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2.5 text-xs font-mono">

@@ -625,9 +625,8 @@ export const createRegistration = async (
   record.id = assignedId;
   record.status = finalStatus;
 
-  // 6. Security (P2): Direct client writes to /mail are disabled in firestore.rules.
-  // Confirmation emails are dispatched server-side via Cloud Functions on document creation.
-  // Registration succeeds immediately and safely even when email services are unavailable.
+  // 6. Security: Confirmation emails are dispatched via serverless /api/send-confirmation.
+  // Direct client writes to /mail are permanently disabled in firestore.rules.
 
   // 7. Update local cache ONLY after verified successful Firestore confirmation
   try {

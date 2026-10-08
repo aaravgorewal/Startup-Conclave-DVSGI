@@ -767,6 +767,53 @@ export const SinglePage: React.FC = () => {
     status?: string;
   } | null>(null);
 
+  // Email Confirmation State & Resend Controls
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [resendCooldown, setResendCooldown] = useState<number>(0);
+  const [resendClicks, setResendClicks] = useState<number>(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
+
+  const sendConfirmationEmail = async (regId: string, tCode: string) => {
+    setEmailStatus('sending');
+    try {
+      const resp = await fetch('/api/send-confirmation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          registrationId: regId,
+          ticketCode: tCode,
+        }),
+      });
+
+      if (resp.ok) {
+        setEmailStatus('sent');
+      } else {
+        setEmailStatus('failed');
+      }
+    } catch (err) {
+      console.error('Confirmation email request failed:', err);
+      setEmailStatus('failed');
+    }
+  };
+
+  const handleResendEmail = () => {
+    if (resendClicks >= 3 || resendCooldown > 0 || !submittedRecord?.id || !submittedRecord?.ticketCode) {
+      return;
+    }
+    setResendClicks((prev) => prev + 1);
+    setResendCooldown(60);
+    sendConfirmationEmail(submittedRecord.id, submittedRecord.ticketCode);
+  };
+
   if (import.meta.env.DEV && typeof window !== 'undefined') {
     (window as any).__setTestSubmittedRecord = setSubmittedRecord;
   }
@@ -1201,6 +1248,11 @@ export const SinglePage: React.FC = () => {
         status: res.status || 'registered',
       });
       setRegistrationCount((prev) => prev + 1);
+
+      // Trigger confirmation email send without blocking the success screen
+      if (res.ticketCode) {
+        sendConfirmationEmail(res.id, res.ticketCode);
+      }
     } else {
       // Keep all form data intact and surface clear error message with Retry option
       const isNet = Boolean(res.isNetworkError || res.error?.includes('internet') || res.error?.includes('network'));
@@ -1211,6 +1263,9 @@ export const SinglePage: React.FC = () => {
 
   const handleResetRegistration = () => {
     setSubmittedRecord(null);
+    setEmailStatus('idle');
+    setResendCooldown(0);
+    setResendClicks(0);
     setTicket('participant');
     setFullName('');
     setEmail(authUser?.email ? authUser.email.toLowerCase() : '');
@@ -2495,6 +2550,63 @@ export const SinglePage: React.FC = () => {
                 </p>
               </div>
             </div>
+
+            {/* Email Confirmation Status Banner & Controls */}
+            {emailStatus === 'sending' && (
+              <div className="p-3 bg-[#FFF8EC] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2.5 text-xs font-mono text-left">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FF6B1A] animate-ping shrink-0" />
+                <span className="text-[#111111]">
+                  Sending confirmation email to <strong className="font-bold">{submittedRecord.email}</strong>...
+                </span>
+              </div>
+            )}
+
+            {emailStatus === 'sent' && (
+              <div className="p-4 bg-[#E6F4EA] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-1 text-left">
+                <div className="flex items-center gap-2 text-emerald-950 font-bold text-sm">
+                  <Check className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0" />
+                  <span>Confirmation email sent to <strong className="font-bold">{submittedRecord.email}</strong></span>
+                </div>
+                <p className="text-xs text-[#111111]/80 font-medium">
+                  Check Spam/Promotions if you do not see it.
+                </p>
+              </div>
+            )}
+
+            {emailStatus === 'failed' && (
+              <div className="p-4 bg-[#FEE2E2] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2 text-left">
+                <div className="flex items-start gap-2 text-red-950 font-bold text-sm">
+                  <AlertCircle className="w-4 h-4 text-red-700 stroke-[2.5] shrink-0 mt-0.5" />
+                  <span>We could not send the email yet. Your pass is below, download it now.</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={handleResendEmail}
+                    disabled={resendCooldown > 0 || resendClicks >= 3}
+                    className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-3.5 py-2 font-mono text-xs font-bold border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-[#FF6B1A]" />
+                    <span>
+                      {resendCooldown > 0
+                        ? `Resend email (${resendCooldown}s)`
+                        : resendClicks >= 3
+                        ? 'Resend limit reached (3/3)'
+                        : `Resend email${resendClicks > 0 ? ` (${3 - resendClicks} left)` : ''}`}
+                    </span>
+                  </button>
+                </div>
+                <p className="text-xs text-[#111111]/75 font-medium">
+                  Check Spam/Promotions if you do not see it.
+                </p>
+              </div>
+            )}
+
+            {emailStatus === 'idle' && (
+              <div className="p-3 bg-[#FFF8EC] border-2 border-[#111111] text-xs font-mono text-left text-[#111111]/80">
+                Check Spam/Promotions if you do not see it.
+              </div>
+            )}
 
             {/* Ticket QR Code Gate Pass Preview (Locally Generated, Zero Third-Party Requests) */}
             <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] text-left">

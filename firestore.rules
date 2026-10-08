@@ -220,10 +220,9 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 6. Trigger Email Collection (restricted to administrators and cloud functions)
+    // 6. Mail Collection (completely disabled)
     match /mail/{mailId} {
-      allow create: if false;
-      allow read, update, delete: if isAdmin();
+      allow read, write: if false;
     }
 
     // 7. Admins Collection (restricted to administrators)
