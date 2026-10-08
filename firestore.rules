@@ -24,7 +24,7 @@ service cloud.firestore {
 
     // Helper: Validate attendee registration creation payload
     function isValidRegistration(data) {
-      return data.keys().hasAll(['name', 'email', 'phone', 'college', 'role', 'status', 'createdAt'])
+      return data.keys().hasAll(['name', 'email', 'phone', 'college', 'role', 'status', 'createdAt', 'payment'])
         && data.keys().hasOnly([
           'id', 'registrationId', 'emailHash', 'sequenceNumber',
           'name', 'email', 'phone', 'college', 'course', 'year',
@@ -63,14 +63,24 @@ service cloud.firestore {
         && (!('ticket' in data) || (data.ticket is string && data.ticket in ['participant', 'pitch']))
         && (!('emailVerified' in data) || data.emailVerified is bool)
         && (!('verifiedAt' in data) || data.verifiedAt == null || data.verifiedAt is timestamp || data.verifiedAt is string)
-        && (!('payment' in data) || (
-          data.payment is map
-          && data.payment.required is bool
-          && data.payment.status in ['not_required', 'pending']
-          && data.payment.amountPaise is int && data.payment.amountPaise >= 0
-          && (!('utr' in data.payment) || (data.payment.utr is string && data.payment.utr.size() <= 30))
-          && (!('method' in data.payment) || (data.payment.method is string && data.payment.method in ['upi', 'razorpay']))
-        ))
+        && data.payment is map
+        && (
+          (
+            data.ticket == 'pitch'
+            && data.payment.required == true
+            && data.payment.status == 'pending'
+            && data.payment.amountPaise == 99900
+            && data.payment.method == 'upi'
+            && data.payment.utr is string
+            && data.payment.utr.matches('^[0-9]{12}$')
+            && existsAfter(/databases/$(database)/documents/utrIndex/$(data.payment.utr))
+          ) || (
+            (!('ticket' in data) || data.ticket == 'participant')
+            && data.payment.required == false
+            && data.payment.status == 'not_required'
+            && data.payment.amountPaise == 0
+          )
+        )
         && (!('paymentStatus' in data) || (data.paymentStatus is string && data.paymentStatus in ['free', 'not_required', 'pending']))
         && (!('paymentAmount' in data) || (data.paymentAmount is int && data.paymentAmount >= 0))
         && (!('paymentUtr' in data) || (data.paymentUtr is string && data.paymentUtr.size() <= 30))
@@ -85,6 +95,16 @@ service cloud.firestore {
         && data.registrationId is string && data.registrationId.size() <= 128
         && (!('emailHash' in data) || (data.emailHash is string && data.emailHash.size() <= 128))
         && (!('phoneHash' in data) || (data.phoneHash is string && data.phoneHash.size() <= 128))
+        && data.createdAt == request.time;
+    }
+
+    // Helper: Validate UTR index creation payload for deterministic duplicate detection
+    function isValidUtrIndex(data) {
+      return data.keys().hasAll(['registrationId', 'createdAt'])
+        && data.keys().hasOnly(['registrationId', 'emailHash', 'utr', 'createdAt'])
+        && data.registrationId is string && data.registrationId.size() <= 128
+        && (!('emailHash' in data) || (data.emailHash is string && data.emailHash.size() <= 128))
+        && (!('utr' in data) || (data.utr is string && data.utr.matches('^[0-9]{12}$')))
         && data.createdAt == request.time;
     }
 
@@ -165,6 +185,16 @@ service cloud.firestore {
     match /admins/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if false;
+    }
+
+    // 8. UTR Index Collection (keyed by 12-digit UTR for deterministic duplicate payment detection)
+    match /utrIndex/{utr} {
+      // Public users may ONLY create entries in the same batch; updates and deletes are disallowed
+      allow create: if isValidUtrIndex(request.resource.data)
+        && utr.matches('^[0-9]{12}$');
+
+      // Only signed-in administrators may read, update, or delete
+      allow read, update, delete: if isAdmin();
     }
 
     // Default deny for all other unmatched collections and paths

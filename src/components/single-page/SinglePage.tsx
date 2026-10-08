@@ -26,6 +26,7 @@ import {
   QrCode,
   ExternalLink,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { CONFIG, type LogoItem } from '../../config.ts';
 import {
   createRegistration,
@@ -523,6 +524,14 @@ export const SinglePage: React.FC = () => {
   const [consentAgreed, setConsentAgreed] = useState(false);
   const [honeypot, setHoneypot] = useState('');
 
+  // Memoized client-side UPI payment deep-link URL (upi://pay?pa=&pn=&am=999&cu=INR)
+  const upiPayUrl = useMemo(() => {
+    const upiId = CONFIG.payment.upiId.trim();
+    if (!upiId) return '';
+    const payee = CONFIG.payment.payeeName.trim() || CONFIG.event.name;
+    return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payee)}&am=${CONFIG.tickets.pitch.fee}&cu=INR&tn=${encodeURIComponent('Startup Conclave Pitch Fee')}`;
+  }, []);
+
   // Form Validation & Submission State
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -701,11 +710,14 @@ export const SinglePage: React.FC = () => {
         newErrors.pitchTeamSize = 'Please select your team size.';
       }
 
-      // Validate UPI payment reference if UPI is configured
-      if (CONFIG.payment.upiId) {
-        if (!paymentUtr.trim()) {
+      // Block pitch registration if UPI ID is not configured (no fake UPI)
+      if (!CONFIG.payment.upiId.trim()) {
+        newErrors.form = 'Pitch registrations open soon.';
+      } else {
+        const cleanUtr = paymentUtr.trim();
+        if (!cleanUtr) {
           newErrors.paymentUtr = '12-digit UPI Reference Number (UTR) is required.';
-        } else if (!isValidUtr(paymentUtr.trim())) {
+        } else if (!/^\d{12}$/.test(cleanUtr)) {
           newErrors.paymentUtr = 'Please enter a valid 12-digit numeric UPI Reference Number (UTR).';
         }
       }
@@ -2164,25 +2176,33 @@ export const SinglePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
+                      if (!CONFIG.payment.upiId.trim()) {
+                        setErrors((prev) => ({ ...prev, form: 'Pitch registrations open soon.' }));
+                        return;
+                      }
                       setTicket('pitch');
                       setWantsToPitch(true);
                     }}
-                    className={`p-3.5 border-2 border-[#111111] text-left transition-all cursor-pointer ${
-                      ticket === 'pitch'
-                        ? 'bg-[#FF6B1A] text-white shadow-[3px_3px_0px_#111111]'
-                        : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111]'
+                    className={`p-3.5 border-2 border-[#111111] text-left transition-all ${
+                      !CONFIG.payment.upiId.trim()
+                        ? 'opacity-80 bg-[#F4EFE6] cursor-not-allowed shadow-[1px_1px_0px_#111111]'
+                        : ticket === 'pitch'
+                        ? 'bg-[#FF6B1A] text-white shadow-[3px_3px_0px_#111111] cursor-pointer'
+                        : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111] cursor-pointer'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`font-bold text-sm sm:text-base ${ticket === 'pitch' ? 'text-white' : 'text-[#111111]'}`}>
+                      <span className={`font-bold text-sm sm:text-base ${ticket === 'pitch' && CONFIG.payment.upiId.trim() ? 'text-white' : 'text-[#111111]'}`}>
                         {CONFIG.tickets.pitch.label}
                       </span>
                       <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FFD400] text-[#111111]">
-                        ₹{CONFIG.tickets.pitch.fee}
+                        {!CONFIG.payment.upiId.trim() ? 'OPENS SOON' : `₹${CONFIG.tickets.pitch.fee}`}
                       </span>
                     </div>
-                    <p className={`text-xs mt-1 ${ticket === 'pitch' ? 'text-white/90' : 'text-[#111111]/70'}`}>
-                      Pitch your startup to jury & investors + delegate entry
+                    <p className={`text-xs mt-1 ${ticket === 'pitch' && CONFIG.payment.upiId.trim() ? 'text-white/90' : 'text-[#111111]/70'}`}>
+                      {!CONFIG.payment.upiId.trim()
+                        ? 'Pitch registrations open soon'
+                        : 'Pitch your startup to jury & investors + delegate entry'}
                     </p>
                   </button>
                 </div>
@@ -2500,46 +2520,89 @@ export const SinglePage: React.FC = () => {
                 <div className="p-4 bg-white border-2 border-[#111111] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <span className="font-bold text-[#111111] block text-sm">Want to pitch your startup on stage?</span>
-                    <span className="text-xs text-[#111111]/70">Apply for the Pitch Arena pass to pitch before investors & jury (₹{CONFIG.tickets.pitch.fee}).</span>
+                    <span className="text-xs text-[#111111]/70">
+                      {!CONFIG.payment.upiId.trim()
+                        ? 'Pitch registrations open soon.'
+                        : `Apply for the Pitch Arena pass to pitch before investors & jury (₹${CONFIG.tickets.pitch.fee}).`}
+                    </span>
                   </div>
                   <button
                     type="button"
+                    disabled={!CONFIG.payment.upiId.trim()}
                     onClick={() => {
+                      if (!CONFIG.payment.upiId.trim()) return;
                       setTicket('pitch');
                       setWantsToPitch(true);
                     }}
-                    className="px-3 py-1.5 bg-[#FF6B1A] text-white font-mono font-bold text-xs uppercase border border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 cursor-pointer hover:bg-[#e0580c] transition-colors self-start sm:self-auto"
+                    className={`px-3 py-1.5 font-mono font-bold text-xs uppercase border border-[#111111] shrink-0 self-start sm:self-auto ${
+                      !CONFIG.payment.upiId.trim()
+                        ? 'bg-[#E5E0D8] text-[#888888] cursor-not-allowed shadow-none'
+                        : 'bg-[#FF6B1A] text-white shadow-[2px_2px_0px_#111111] cursor-pointer hover:bg-[#e0580c] transition-colors'
+                    }`}
                   >
-                    Pitch Startup
+                    {!CONFIG.payment.upiId.trim() ? 'Opens Soon' : 'Pitch Startup'}
                   </button>
                 </div>
               )}
 
               {/* 6.5 UPI Fee Payment Block (Rendered for Pitch pass) */}
               {ticket === 'pitch' && (
-                <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-4">
-                  <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
-                    <div>
-                      <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-white px-2 py-0.5 border border-[#111111]">
-                        {CONFIG.tickets.pitch.label.toUpperCase()} FEE
+                !CONFIG.payment.upiId.trim() ? (
+                  <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
+                    <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
+                      <div>
+                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-white px-2 py-0.5 border border-[#111111]">
+                          {CONFIG.tickets.pitch.label.toUpperCase()}
+                        </span>
+                        <h3 className="font-display font-black text-xl text-[#111111] mt-1">
+                          ₹{CONFIG.tickets.pitch.fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ Startup Pitch Pass</span>
+                        </h3>
+                      </div>
+                      <span className="font-mono text-xs font-bold uppercase px-2 py-1 bg-[#FFD400] text-[#111111] border border-[#111111]">
+                        OPENS SOON
                       </span>
-                      <h3 className="font-display font-black text-xl text-[#111111] mt-1">
-                        ₹{CONFIG.tickets.pitch.fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ Startup Pitch Pass</span>
-                      </h3>
                     </div>
-                    {CONFIG.payment.payeeName && (
+                    <div className="p-3.5 bg-white border-2 border-[#111111] space-y-1">
+                      <p className="font-bold text-[#111111] text-sm">Pitch registrations open soon</p>
+                      <p className="text-xs text-[#111111]/70">
+                        Pitch ticket UPI payment details will be published once pitch slots are unlocked. In the meantime, you can register with a free Attendee Delegate pass.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTicket('participant');
+                        setWantsToPitch(false);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-white border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors cursor-pointer"
+                    >
+                      Switch to Attendee Delegate (Free)
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-4">
+                    <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
+                      <div>
+                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-white px-2 py-0.5 border border-[#111111]">
+                          {CONFIG.tickets.pitch.label.toUpperCase()} FEE
+                        </span>
+                        <h3 className="font-display font-black text-xl text-[#111111] mt-1">
+                          ₹{CONFIG.tickets.pitch.fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ Startup Pitch Pass</span>
+                        </h3>
+                      </div>
                       <div className="text-right">
                         <span className="text-[10px] font-mono text-[#111111]/70 block">Payee</span>
-                        <span className="font-mono text-xs font-bold text-[#111111]">{CONFIG.payment.payeeName}</span>
+                        <span className="font-mono text-xs font-bold text-[#111111]">
+                          {CONFIG.payment.payeeName.trim() || CONFIG.event.name}
+                        </span>
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {CONFIG.payment.upiId ? (
-                    <div className="space-y-3">
+                    <div className="space-y-4">
+                      {/* UPI ID with Copy button */}
                       <div className="space-y-1">
                         <label className="font-mono text-xs font-bold text-[#111111] block">
-                          Pay via UPI to:
+                          UPI ID:
                         </label>
                         <div className="flex items-center gap-2">
                           <code className="flex-1 p-2.5 bg-white border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] select-all truncate">
@@ -2562,6 +2625,37 @@ export const SinglePage: React.FC = () => {
                         </div>
                       </div>
 
+                      {/* Client-side QR Code and Deep Link Button */}
+                      <div className="p-3.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col sm:flex-row items-center gap-4">
+                        <div className="p-2.5 bg-[#FFF8EC] border-2 border-[#111111] shrink-0 flex items-center justify-center">
+                          <QRCodeSVG
+                            value={upiPayUrl}
+                            size={144}
+                            level="M"
+                            className="w-[144px] h-[144px]"
+                          />
+                        </div>
+                        <div className="space-y-3 text-center sm:text-left flex-1">
+                          <div>
+                            <span className="font-bold text-sm text-[#111111] block">
+                              Scan QR Code to Pay ₹{CONFIG.tickets.pitch.fee}
+                            </span>
+                            <p className="text-xs text-[#111111]/70 mt-0.5">
+                              Scan with Google Pay, PhonePe, Paytm, BHIM, or any UPI app.
+                            </p>
+                          </div>
+                          <div>
+                            <a
+                              href={upiPayUrl}
+                              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-white border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-all cursor-pointer"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              <span>Open UPI app</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* 12-digit UTR Input */}
                       <div className="space-y-1.5">
                         <label className="font-bold text-[#111111] block">
@@ -2570,6 +2664,7 @@ export const SinglePage: React.FC = () => {
                         <input
                           type="text"
                           required
+                          inputMode="numeric"
                           maxLength={12}
                           value={paymentUtr}
                           onChange={(e) => {
@@ -2584,7 +2679,7 @@ export const SinglePage: React.FC = () => {
                           <p className="text-xs text-red-600 font-bold">{errors.paymentUtr}</p>
                         )}
                         <p className="text-[11px] font-mono text-[#111111]/70">
-                          Enter the 12-digit numeric reference shown in your UPI app payment receipt.
+                          Enter the 12-digit numeric reference shown in your UPI app payment receipt after paying.
                         </p>
                       </div>
 
@@ -2594,13 +2689,8 @@ export const SinglePage: React.FC = () => {
                         </p>
                       )}
                     </div>
-                  ) : (
-                    <div className="p-3 bg-white border border-[#111111] font-mono text-xs text-[#111111]/80 space-y-1">
-                      <p className="font-bold text-[#111111]">Payment Details</p>
-                      <p>UPI payment instructions and verification will be enabled shortly. Your pitch registration will start in <strong>pending</strong> status.</p>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )
               )}
 
               {/* 7. Consent Checkbox with Privacy Notice Link */}
@@ -2639,21 +2729,25 @@ export const SinglePage: React.FC = () => {
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className={`w-full brutal-btn bg-[#FF6B1A] text-white p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${
-                    isSubmitting
-                      ? 'opacity-60 cursor-not-allowed pointer-events-none'
-                      : 'cursor-pointer hover:bg-[#E05307]'
+                  disabled={isSubmitting || (ticket === 'pitch' && !CONFIG.payment.upiId.trim())}
+                  className={`w-full brutal-btn text-white p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${
+                    ticket === 'pitch' && !CONFIG.payment.upiId.trim()
+                      ? 'bg-neutral-400 text-neutral-800 opacity-70 cursor-not-allowed shadow-none border-2 border-[#111111]'
+                      : isSubmitting
+                      ? 'bg-[#FF6B1A] opacity-60 cursor-not-allowed pointer-events-none'
+                      : 'bg-[#FF6B1A] cursor-pointer hover:bg-[#E05307]'
                   }`}
                 >
-                  {isSubmitting ? (
+                  {ticket === 'pitch' && !CONFIG.payment.upiId.trim() ? (
+                    <span>Pitch registrations open soon</span>
+                  ) : isSubmitting ? (
                     <span className="flex items-center gap-2">
                       <RotateCw className="w-5 h-5 animate-spin" />
                       <span>Submitting...</span>
                     </span>
                   ) : (
                     <>
-                      <span>Register for Startup Conclave 1.0</span>
+                      <span>{ticket === 'pitch' ? 'Submit Pitch Registration' : 'Register for Startup Conclave 1.0'}</span>
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}

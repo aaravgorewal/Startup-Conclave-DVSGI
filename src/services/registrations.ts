@@ -88,6 +88,7 @@ export interface PartnerEnquiryInput {
 const LOCAL_REGISTRATIONS_KEY = 'sc1_registrations_cache';
 const LOCAL_REGISTERED_EMAILS_KEY = 'sc1_registered_emails';
 const LOCAL_REGISTERED_PHONES_KEY = 'sc1_registered_phones';
+const LOCAL_REGISTERED_UTRS_KEY = 'sc1_registered_utrs';
 
 /**
  * Deterministic SHA-256 hash helper (produces 64-char lowercase hex string)
@@ -163,7 +164,20 @@ export const isValidPitchDeckUrl = (url?: string): boolean => {
  */
 export const isValidUtr = (utr?: string): boolean => {
   if (!utr) return false;
-  return /^[0-9]{12}$/.test(utr.trim());
+  return /^\d{12}$/.test(utr.trim());
+};
+
+/**
+ * Check if UTR is already registered locally
+ */
+export const isUtrRegistered = (utr: string): boolean => {
+  try {
+    const raw = localStorage.getItem(LOCAL_REGISTERED_UTRS_KEY);
+    const utrs: string[] = raw ? JSON.parse(raw) : [];
+    return utrs.includes(utr.trim());
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -294,6 +308,13 @@ export const createRegistration = async (
   const isPitch = ticket === 'pitch';
 
   if (isPitch) {
+    if (!CONFIG.payment.upiId.trim()) {
+      return {
+        success: false,
+        isNetworkError: false,
+        error: 'Pitch registrations open soon.',
+      };
+    }
     if (!input.startupName?.trim()) {
       return { success: false, isNetworkError: false, error: 'Startup name is required for pitch registrations.' };
     }
@@ -322,26 +343,32 @@ export const createRegistration = async (
   let paymentInfo: PaymentInfo;
 
   if (isPitch) {
-    const pitchFeePaise = toPaise(CONFIG.tickets.pitch.fee);
-    if (CONFIG.payment.upiId && !isValidUtr(cleanUtr)) {
+    if (!isValidUtr(cleanUtr)) {
       return {
         success: false,
         isNetworkError: false,
-        error: 'Please enter a valid 12-digit UPI Transaction Reference Number (UTR).',
+        error: 'Please enter a valid 12-digit numeric UPI Reference Number (UTR).',
+      };
+    }
+    if (isUtrRegistered(cleanUtr)) {
+      return {
+        success: false,
+        isNetworkError: false,
+        error: 'This UPI Reference Number (UTR) has already been submitted on this device. If you are sure you have not registered, contact the organisers.',
       };
     }
     paymentInfo = {
       required: true,
       status: 'pending',
-      amountPaise: pitchFeePaise,
-      utr: cleanUtr || undefined,
+      amountPaise: 99900,
+      utr: cleanUtr,
       method: 'upi',
     };
   } else {
     paymentInfo = {
       required: false,
       status: 'not_required',
-      amountPaise: toPaise(CONFIG.tickets.participant.fee),
+      amountPaise: 0,
     };
   }
 
@@ -389,6 +416,7 @@ export const createRegistration = async (
     const counterRef = doc(db, 'counters', 'registrations');
     const regDocRef = doc(db, 'registrations', emailHash);
     const phoneDocRef = doc(db, 'phoneIndex', phoneHash);
+    const utrDocRef = isPitch && cleanUtr ? doc(db, 'utrIndex', cleanUtr) : null;
     const settingsRef = doc(db, 'settings', 'event');
 
     const result = await runTransaction(db, async (transaction) => {
@@ -462,6 +490,15 @@ export const createRegistration = async (
         createdAt: serverTimestamp(),
       });
 
+      if (utrDocRef) {
+        transaction.set(utrDocRef, {
+          registrationId: idCode,
+          emailHash: emailHash,
+          utr: cleanUtr,
+          createdAt: serverTimestamp(),
+        });
+      }
+
       return { idCode, status: assignedStatus };
     });
 
@@ -496,8 +533,9 @@ export const createRegistration = async (
       return {
         success: false,
         isNetworkError: false,
-        error:
-          'This email or phone may already be registered. If you are sure you have not registered, contact the organisers.',
+        error: isPitch
+          ? 'This email, phone, or UPI reference (UTR) may already be registered. If you are sure you have not registered, contact the organisers.'
+          : 'This email or phone may already be registered. If you are sure you have not registered, contact the organisers.',
       };
     }
 
@@ -541,6 +579,15 @@ export const createRegistration = async (
     const phones: string[] = rawPhones ? JSON.parse(rawPhones) : [];
     phones.push(phoneClean);
     localStorage.setItem(LOCAL_REGISTERED_PHONES_KEY, JSON.stringify(phones));
+
+    if (isPitch && cleanUtr) {
+      const rawUtrs = localStorage.getItem(LOCAL_REGISTERED_UTRS_KEY);
+      const utrs: string[] = rawUtrs ? JSON.parse(rawUtrs) : [];
+      if (!utrs.includes(cleanUtr)) {
+        utrs.push(cleanUtr);
+        localStorage.setItem(LOCAL_REGISTERED_UTRS_KEY, JSON.stringify(utrs));
+      }
+    }
   } catch (storageError) {
     console.warn('Local storage cache write notice:', storageError);
   }
