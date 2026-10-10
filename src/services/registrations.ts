@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { db, auth } from './firebase.ts';
 import { CONFIG, toPaise } from '../config.ts';
+import { mapRegistrationError } from './errorMapping.ts';
 
 export interface CollegeInfo {
   name: string;
@@ -248,7 +249,15 @@ export const fetchPublicRegistrationCount = async (): Promise<number> => {
 export const createRegistration = async (
   input: RegistrationInput,
   customDb: any = db
-): Promise<{ success: boolean; id?: string; status?: 'registered' | 'waitlist'; ticketCode?: string; error?: string; isNetworkError?: boolean }> => {
+): Promise<{
+  success: boolean;
+  id?: string;
+  status?: 'registered' | 'waitlist';
+  ticketCode?: string;
+  error?: string;
+  errorCode?: string;
+  isNetworkError?: boolean;
+}> => {
   const emailClean = input.email.trim().toLowerCase();
   const phoneClean = cleanPhoneNumber(input.phone);
 
@@ -259,12 +268,14 @@ export const createRegistration = async (
       return {
         success: false,
         error: 'Please sign in with Google to verify your registration email before submitting.',
+        errorCode: 'auth/unauthenticated',
       };
     }
     if (currentUser.email.trim().toLowerCase() !== emailClean) {
       return {
         success: false,
         error: `Registration email (${emailClean}) must match your signed-in Google account (${currentUser.email.toLowerCase()}).`,
+        errorCode: 'auth/email-mismatch',
       };
     }
   }
@@ -326,7 +337,8 @@ export const createRegistration = async (
     return {
       success: false,
       isNetworkError: true,
-      error: 'Could not submit. Check your internet and try again.',
+      error: 'Network error or service unavailable. Check your internet connection and try again.',
+      errorCode: 'network-request-failed',
     };
   }
 
@@ -335,7 +347,8 @@ export const createRegistration = async (
     return {
       success: false,
       isNetworkError: false,
-      error: 'This email or phone may already be registered. If you are sure you have not registered, contact the organisers.',
+      error: 'This email or phone number is already registered for Startup Conclave 1.0.',
+      errorCode: 'duplicate-detected',
     };
   }
 
@@ -563,62 +576,20 @@ export const createRegistration = async (
     assignedId = result.idCode;
     finalStatus = result.status;
   } catch (firestoreError: any) {
-    const code = firestoreError?.code || '';
-    const msg = (firestoreError?.message || '').toLowerCase();
+    const isExplicitDuplicate =
+      String(firestoreError?.message || '').toLowerCase().includes('already registered') ||
+      String(firestoreError?.message || '').toLowerCase().includes('already been registered');
 
-    if (msg.includes('already been registered') || msg.includes('already registered')) {
-      return {
-        success: false,
-        isNetworkError: false,
-        error: firestoreError.message,
-      };
-    }
+    const mapped = mapRegistrationError(firestoreError, { isDuplicate: isExplicitDuplicate });
 
-    // Check for network errors (failed-precondition is NOT a network error per P4)
-    const isNetwork =
-      (typeof navigator !== 'undefined' && navigator.onLine === false) ||
-      code === 'unavailable' ||
-      code === 'deadline-exceeded' ||
-      code === 'network-request-failed' ||
-      msg.includes('offline') ||
-      msg.includes('network') ||
-      msg.includes('failed to fetch') ||
-      msg.includes('transport') ||
-      msg.includes('could not reach') ||
-      msg.includes('client is offline');
-
-    if (isNetwork) {
-      return {
-        success: false,
-        isNetworkError: true,
-        error: 'Could not submit. Check your internet and try again.',
-      };
-    }
-
-    if (code === 'permission-denied') {
-      return {
-        success: false,
-        isNetworkError: false,
-        error: isPitch
-          ? 'Registration was denied. Please ensure you are signed in with Google, or this email/phone/UTR may already be registered.'
-          : 'Registration was denied. Please ensure you are signed in with Google, or this email/phone may already be registered.',
-      };
-    }
-
-    if (code === 'failed-precondition') {
-      return {
-        success: false,
-        isNetworkError: false,
-        error: 'Something went wrong. Please try again in a minute.',
-      };
-    }
-
-    // Anything else → generic message and console.error (no personal data in logs)
-    console.error('Registration failed with error code:', code);
     return {
       success: false,
-      isNetworkError: false,
-      error: 'Something went wrong. Please try again in a minute.',
+      isNetworkError:
+        mapped.code === 'unavailable' ||
+        mapped.code === 'network-request-failed' ||
+        mapped.code === 'deadline-exceeded',
+      error: mapped.message,
+      errorCode: mapped.code,
     };
   }
 

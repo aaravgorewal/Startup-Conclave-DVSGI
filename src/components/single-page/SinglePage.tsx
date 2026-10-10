@@ -36,6 +36,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../../services/firebase.ts';
+import { mapAuthError } from '../../services/errorMapping.ts';
 import { CONFIG, type LogoItem, type TeamMember } from '../../config.ts';
 import {
   createRegistration,
@@ -704,6 +705,8 @@ export const SinglePage: React.FC = () => {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const [googleAuthError, setGoogleAuthError] = useState('');
+  const [googleAuthErrorCode, setGoogleAuthErrorCode] = useState('');
+  const [copiedPageLink, setCopiedPageLink] = useState(false);
   const [ticket, setTicket] = useState<'participant' | 'pitch'>('participant');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -824,48 +827,114 @@ export const SinglePage: React.FC = () => {
   // Schedule Active Tab (Day 1 vs Day 2)
   const [activeDay, setActiveDay] = useState<1 | 2>(1);
 
-  // In-app browser detection (Instagram, WhatsApp, Facebook, LinkedIn)
+  // In-app browser detection (user agent contains FBAN, FBAV, Instagram, LinkedInApp, Line, WhatsApp, Snapchat, wv)
   const isInAppBrowser = useMemo(() => {
     if (typeof navigator === 'undefined') return false;
-    return /Instagram|WhatsApp|FBAN|FBAV|LinkedInApp/i.test(navigator.userAgent);
+    return /FBAN|FBAV|Instagram|LinkedInApp|Line|WhatsApp|Snapchat|wv/i.test(navigator.userAgent);
   }, []);
 
-  // Friendly error message mapper for Google Auth (logs technical error to console only)
-  const getFriendlyAuthErrorMessage = (error: any): string => {
-    console.error('Google Auth technical error:', error);
-
-    const code = error?.code || '';
-    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-      return 'Google sign-in was closed. Please click "Continue with Google" to try again.';
+  const handleCopyPageLink = () => {
+    if (typeof window !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedPageLink(true);
+      setTimeout(() => setCopiedPageLink(false), 2500);
     }
-    if (code === 'auth/popup-blocked') {
-      return 'Popup was blocked by your browser. Please allow popups or use redirect.';
-    }
-    if (code === 'auth/network-request-failed') {
-      return 'Network error connecting to Google. Please check your internet connection and try again.';
-    }
-    if (code === 'auth/unauthorized-domain') {
-      return 'Sign-in is temporarily unavailable, please contact the organisers.';
-    }
-    return 'Sign-in is temporarily unavailable, please contact the organisers.';
   };
 
-  // Google Sign-In with popup + redirect fallback for mobile
+  const FORM_DRAFT_KEY = 'sc1_reg_form_draft_v1';
+
+  const saveFormDraft = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const draft = {
+        ticket,
+        fullName,
+        phone,
+        college,
+        course,
+        courseSelect,
+        customCourse,
+        year,
+        yearSelect,
+        customYear,
+        role,
+        professionalRole,
+        city,
+        wantsToPitch,
+        startupName,
+        startupPitch,
+        pitchSector,
+        pitchStage,
+        pitchDeckLink,
+        pitchTeamSize,
+        paymentUtr,
+        consentAgreed,
+      };
+      sessionStorage.setItem(FORM_DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      // Ignore sessionStorage errors in restricted privacy environments
+    }
+  };
+
+  const restoreFormDraft = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem(FORM_DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft.ticket) setTicket(draft.ticket);
+        if (draft.fullName) setFullName((prev) => prev || draft.fullName);
+        if (draft.phone) setPhone((prev) => prev || draft.phone);
+        if (draft.college) setCollege((prev) => prev || draft.college);
+        if (draft.course) setCourse((prev) => prev || draft.course);
+        if (draft.courseSelect) setCourseSelect((prev) => prev || draft.courseSelect);
+        if (draft.customCourse) setCustomCourse((prev) => prev || draft.customCourse);
+        if (draft.year) setYear((prev) => prev || draft.year);
+        if (draft.yearSelect) setYearSelect((prev) => prev || draft.yearSelect);
+        if (draft.customYear) setCustomYear((prev) => prev || draft.customYear);
+        if (draft.role) setRole((prev) => prev || draft.role);
+        if (draft.professionalRole) setProfessionalRole((prev) => prev || draft.professionalRole);
+        if (draft.city) setCity((prev) => prev || draft.city);
+        if (typeof draft.wantsToPitch === 'boolean') setWantsToPitch(draft.wantsToPitch);
+        if (draft.startupName) setStartupName((prev) => prev || draft.startupName);
+        if (draft.startupPitch) setStartupPitch((prev) => prev || draft.startupPitch);
+        if (draft.pitchSector) setPitchSector((prev) => prev || draft.pitchSector);
+        if (draft.pitchStage) setPitchStage((prev) => prev || draft.pitchStage);
+        if (draft.pitchDeckLink) setPitchDeckLink((prev) => prev || draft.pitchDeckLink);
+        if (draft.pitchTeamSize) setPitchTeamSize((prev) => prev || draft.pitchTeamSize);
+        if (draft.paymentUtr) setPaymentUtr((prev) => prev || draft.paymentUtr);
+        if (typeof draft.consentAgreed === 'boolean') setConsentAgreed(draft.consentAgreed);
+        sessionStorage.removeItem(FORM_DRAFT_KEY);
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  // Google Sign-In with popup on desktop, redirect on mobile/touch devices (and automatic fallback on blocked/closed popup)
   const handleGoogleSignIn = async () => {
     setIsGoogleSigningIn(true);
     setGoogleAuthError('');
+    setGoogleAuthErrorCode('');
+    saveFormDraft();
 
-    // Detect mobile browsers where popups are frequently blocked or restricted
-    const isMobile =
-      typeof navigator !== 'undefined' &&
-      /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // Detect mobile or touch devices
+    const isTouchOrMobileDevice =
+      typeof window !== 'undefined' &&
+      ('ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
 
-    if (isMobile) {
+    if (isTouchOrMobileDevice) {
       try {
         await signInWithRedirect(auth, googleProvider);
         return;
       } catch (redirectErr: any) {
-        console.warn('Mobile signInWithRedirect failed, attempting popup fallback:', redirectErr);
+        const mapped = mapAuthError(redirectErr);
+        setGoogleAuthError(mapped.message);
+        setGoogleAuthErrorCode(mapped.code);
+        setIsGoogleSigningIn(false);
+        return;
       }
     }
 
@@ -878,21 +947,29 @@ export const SinglePage: React.FC = () => {
           setFullName((prev) => prev.trim() || result.user.displayName || '');
         }
         setGoogleAuthError('');
+        setGoogleAuthErrorCode('');
       }
     } catch (err: any) {
       const code = err?.code || '';
-      // Automatic fallback to redirect if popup was blocked by browser
-      if (code === 'auth/popup-blocked') {
+      // Automatic fallback when popup fails with auth/popup-blocked, auth/popup-closed-by-user or auth/cancelled-popup-request
+      if (
+        code === 'auth/popup-blocked' ||
+        code === 'auth/popup-closed-by-user' ||
+        code === 'auth/cancelled-popup-request'
+      ) {
         try {
+          saveFormDraft();
           await signInWithRedirect(auth, googleProvider);
           return;
         } catch (redirectErr: any) {
-          const friendly = getFriendlyAuthErrorMessage(redirectErr);
-          setGoogleAuthError(friendly);
+          const mapped = mapAuthError(redirectErr);
+          setGoogleAuthError(mapped.message);
+          setGoogleAuthErrorCode(mapped.code);
         }
       } else {
-        const friendly = getFriendlyAuthErrorMessage(err);
-        setGoogleAuthError(friendly);
+        const mapped = mapAuthError(err);
+        setGoogleAuthError(mapped.message);
+        setGoogleAuthErrorCode(mapped.code);
       }
     } finally {
       setIsGoogleSigningIn(false);
@@ -906,6 +983,7 @@ export const SinglePage: React.FC = () => {
       setAuthUser(null);
       setEmail('');
       setGoogleAuthError('');
+      setGoogleAuthErrorCode('');
     } catch (err) {
       console.error('Sign-out error:', err);
     }
@@ -913,9 +991,13 @@ export const SinglePage: React.FC = () => {
 
   // Auth state listener and redirect result handler
   useEffect(() => {
-    // 1. Process result from mobile redirect sign-in if returning from Google
+    // Check and restore draft immediately on mount
+    restoreFormDraft();
+
+    // 1. Process result from redirect sign-in if returning from Google
     getRedirectResult(auth)
       .then((result) => {
+        restoreFormDraft();
         if (result?.user) {
           setAuthUser(result.user);
           if (result.user.email) {
@@ -923,11 +1005,14 @@ export const SinglePage: React.FC = () => {
             setFullName((prev) => prev.trim() || result.user.displayName || '');
           }
           setGoogleAuthError('');
+          setGoogleAuthErrorCode('');
         }
       })
       .catch((err) => {
-        const friendly = getFriendlyAuthErrorMessage(err);
-        setGoogleAuthError(friendly);
+        restoreFormDraft();
+        const mapped = mapAuthError(err);
+        setGoogleAuthError(mapped.message);
+        setGoogleAuthErrorCode(mapped.code);
       });
 
     // 2. Continuous auth state observer
@@ -937,6 +1022,7 @@ export const SinglePage: React.FC = () => {
         setEmail(user.email.toLowerCase());
         setFullName((prev) => prev.trim() || user.displayName || '');
       }
+      restoreFormDraft();
     });
 
     return () => unsubscribe();
@@ -1258,9 +1344,18 @@ export const SinglePage: React.FC = () => {
       }
     } else {
       // Keep all form data intact and surface clear error message with Retry option
-      const isNet = Boolean(res.isNetworkError || res.error?.includes('internet') || res.error?.includes('network'));
+      const isNet = Boolean(
+        res.isNetworkError ||
+        res.errorCode === 'network-request-failed' ||
+        res.errorCode === 'unavailable' ||
+        res.error?.includes('internet') ||
+        res.error?.includes('network')
+      );
       setIsNetworkError(isNet);
-      setErrors({ form: res.error || (isNet ? 'Could not submit due to network error. Your details have been preserved. Please check your internet connection and retry.' : 'This email or phone may already be registered. If you are sure you have not registered, contact the organisers.') });
+      setErrors({
+        form: res.error || (isNet ? 'Network error or service unavailable. Check your internet connection and try again.' : 'Something went wrong. Please try again in a minute.'),
+        formCode: res.errorCode || (isNet ? 'network-request-failed' : 'unknown'),
+      });
     }
   };
 
@@ -3137,21 +3232,28 @@ export const SinglePage: React.FC = () => {
             </div>
 
             {errors.form && (
-              <div className="p-3.5 sm:p-4 bg-red-100 border-2 border-red-500 text-red-800 text-sm font-bold flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
-                <div className="flex items-center gap-2.5">
-                  <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
-                  <span>{errors.form}</span>
+              <div className="p-3.5 sm:p-4 bg-red-100 border-2 border-red-500 text-red-800 text-sm font-bold flex flex-col gap-2 animate-in fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
+                    <span>{errors.form}</span>
+                  </div>
+                  {isNetworkError && (
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={(e) => handleRegisterSubmit(e)}
+                      className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-mono font-bold text-xs uppercase tracking-wider border border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 self-start sm:self-auto cursor-pointer flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
+                      <span>Retry</span>
+                    </button>
+                  )}
                 </div>
-                {isNetworkError && (
-                  <button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={(e) => handleRegisterSubmit(e)}
-                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-mono font-bold text-xs uppercase tracking-wider border border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 self-start sm:self-auto cursor-pointer flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <RotateCw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
-                    <span>Retry</span>
-                  </button>
+                {errors.formCode && (
+                  <div className="text-[11px] text-gray-500 font-mono font-normal">
+                    Error code: {errors.formCode}
+                  </div>
                 )}
               </div>
             )}
@@ -3270,6 +3372,35 @@ export const SinglePage: React.FC = () => {
                       Change account
                     </button>
                   </div>
+                ) : isInAppBrowser ? (
+                  <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 font-display font-black text-sm uppercase text-[#111111]">
+                        <AlertCircle className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                        <span>In-App Browser Detected</span>
+                      </div>
+                      <p className="text-xs text-[#111111] font-sans font-medium">
+                        Open this page in Chrome or Safari to sign in with Google
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleCopyPageLink}
+                      className="brutal-btn bg-[#FFD400] hover:bg-[#FFE55B] text-[#111111] border-2 border-[#111111] px-4 py-2 font-display font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[2px_2px_0px_#111111] min-h-[44px] shrink-0 transition-all"
+                    >
+                      {copiedPageLink ? (
+                        <>
+                          <Check className="w-4 h-4 text-[#111111]" />
+                          <span>Link Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 text-[#111111]" />
+                          <span>Copy link</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 ) : (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
                     <div className="space-y-1">
@@ -3302,31 +3433,27 @@ export const SinglePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* In-app browser notice */}
-                {isInAppBrowser && !authUser && (
-                  <div className="p-3 bg-[#FFF2D6] border-2 border-[#111111] text-[#111111] text-xs font-mono flex items-start gap-2 shadow-[2px_2px_0px_#111111]">
-                    <AlertCircle className="w-4 h-4 text-[#FF6B1A] shrink-0 mt-0.5" />
-                    <div className="space-y-0.5 leading-relaxed">
-                      <span className="font-bold uppercase block text-[#111111]">In-App Browser Detected</span>
-                      <span>Google sign-in may not work inside Instagram, WhatsApp, or LinkedIn. For the best experience, tap <strong>⋮</strong> or <strong>⋯</strong> and select <strong>"Open in Chrome"</strong> or <strong>"Open in Safari"</strong>.</span>
-                    </div>
-                  </div>
-                )}
-
                 {/* Error message displayed once, directly below button */}
                 {googleAuthError && (
-                  <div className="p-2.5 bg-red-100 border-2 border-red-800 text-red-900 font-mono text-xs flex items-center justify-between gap-2 shadow-[1px_1px_0px_#111111]">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0 text-red-700" />
-                      <span>{googleAuthError}</span>
+                  <div className="p-2.5 bg-red-100 border-2 border-red-800 text-red-900 font-mono text-xs flex flex-col gap-1 shadow-[1px_1px_0px_#111111]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-red-700" />
+                        <span>{googleAuthError}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGoogleSignIn}
+                        className="font-bold underline uppercase text-red-900 hover:text-black cursor-pointer shrink-0 text-[11px]"
+                      >
+                        Retry
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleGoogleSignIn}
-                      className="font-bold underline uppercase text-red-900 hover:text-black cursor-pointer shrink-0 text-[11px]"
-                    >
-                      Retry
-                    </button>
+                    {googleAuthErrorCode && (
+                      <div className="text-[11px] text-gray-500 font-mono">
+                        Error code: {googleAuthErrorCode}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

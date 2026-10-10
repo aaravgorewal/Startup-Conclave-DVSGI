@@ -1,16 +1,42 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+} from 'firebase/auth';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Read authDomain from VITE_FIREBASE_AUTH_DOMAIN (falling back to firebase-applet-config.json)
+const resolvedAuthDomain =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN) ||
+  firebaseConfig.authDomain;
+
+const config = {
+  ...firebaseConfig,
+  authDomain: resolvedAuthDomain,
+};
+
+const app = !getApps().length ? initializeApp(config) : getApp();
 
 export const db = firebaseConfig.firestoreDatabaseId
   ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
   : getFirestore(app);
 
 export const auth = getAuth(app);
+
+// Set persistence to browserLocalPersistence with a fallback to browserSessionPersistence
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserLocalPersistence).catch((localErr) => {
+    console.error('browserLocalPersistence failed, attempting browserSessionPersistence fallback:', localErr);
+    setPersistence(auth, browserSessionPersistence).catch((sessionErr) => {
+      console.error('browserSessionPersistence fallback failed:', sessionErr);
+    });
+  });
+}
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
