@@ -36,7 +36,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../../services/firebase.ts';
-import { CONFIG, type LogoItem } from '../../config.ts';
+import { CONFIG, type LogoItem, type TeamMember } from '../../config.ts';
 import {
   createRegistration,
   createPartnerEnquiry,
@@ -947,7 +947,10 @@ export const SinglePage: React.FC = () => {
     setMobileMenuOpen(false);
     requestAnimationFrame(() => {
       setTimeout(() => {
-        const element = document.getElementById(anchor);
+        const element =
+          document.getElementById(anchor) ||
+          (anchor === 'team' ? document.getElementById('behind') : null) ||
+          (anchor === 'behind' ? document.getElementById('team') : null);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -1535,7 +1538,7 @@ export const SinglePage: React.FC = () => {
       {/* =================================================================== */}
       {/* 1. STICKY TOP BAR                                                   */}
       {/* =================================================================== */}
-      <header className="sticky top-0 z-40 bg-[#FFF8EC] border-b-2 border-[#111111] px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="sticky top-0 z-40 glass border-t-0 border-x-0 border-b-2 shadow-none px-4 sm:px-8 py-3.5 flex items-center justify-between">
         
         {/* Wordmark */}
         <a
@@ -1577,6 +1580,12 @@ export const SinglePage: React.FC = () => {
             className="hover:text-[#FF6B1A] transition-colors cursor-pointer"
           >
             Partners
+          </button>
+          <button
+            onClick={() => handleNavClick('team')}
+            className="hover:text-[#FF6B1A] transition-colors cursor-pointer"
+          >
+            Team
           </button>
           <button
             onClick={() => handleNavClick('faq')}
@@ -1700,6 +1709,14 @@ export const SinglePage: React.FC = () => {
             </button>
             <button
               type="button"
+              onClick={() => handleNavClick('team')}
+              className="w-full text-left py-2 px-2 hover:bg-white/40 min-h-[44px] flex items-center justify-between group transition-colors cursor-pointer"
+            >
+              <span>Behind the Event</span>
+              <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+            </button>
+            <button
+              type="button"
               onClick={() => handleNavClick('register')}
               className="w-full text-left py-2 px-3 bg-white brutal-border font-black text-[#FF6B1A] min-h-[44px] flex items-center justify-between shadow-[2px_2px_0px_#111111] cursor-pointer"
             >
@@ -1740,10 +1757,16 @@ export const SinglePage: React.FC = () => {
       {/* 2. HERO SECTION                                                     */}
       {/* =================================================================== */}
       <section className="relative px-4 sm:px-8 pt-10 sm:pt-16 pb-14 sm:pb-20 max-w-6xl mx-auto text-left">
+        {/* Soft subtle colour backdrop shapes for restrained brutalist glass blur (subtle, pure CSS, no images) */}
+        <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none select-none" aria-hidden="true">
+          <div className="absolute -top-10 -left-10 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-[#FF6B1A]/12 blur-3xl" />
+          <div className="absolute top-20 left-1/4 w-80 h-80 sm:w-[28rem] sm:h-[28rem] rounded-full bg-[#FFD400]/18 blur-3xl" />
+          <div className="absolute top-1/3 -right-12 w-64 h-64 sm:w-88 sm:h-88 rounded-full bg-[#FF6B1A]/10 blur-3xl" />
+        </div>
         
         {/* Floating Sticker Badge */}
         <div className="inline-block mb-4 sm:mb-6">
-          <div className="bg-[#FFD400] text-[#111111] font-mono text-sm font-black px-3.5 py-1 brutal-border brutal-shadow-sm -rotate-2 uppercase tracking-wide">
+          <div className="glass text-[#111111] font-mono text-sm font-black px-3.5 py-1 -rotate-2 uppercase tracking-wide">
             {CONFIG.event.badgeSticker}
           </div>
         </div>
@@ -1765,7 +1788,7 @@ export const SinglePage: React.FC = () => {
             </p>
 
             {/* Quick Info Strip */}
-            <div className="p-2.5 sm:p-3.5 lg:px-3 lg:py-2.5 xl:p-3.5 bg-white brutal-border brutal-shadow-sm flex flex-wrap md:flex-nowrap items-center gap-x-2 sm:gap-x-3 lg:gap-x-2 xl:gap-x-3 gap-y-2 font-mono text-xs sm:text-[13px] xl:text-sm font-bold text-[#111111] w-full max-w-full">
+            <div className="p-2.5 sm:p-3.5 lg:px-3 lg:py-2.5 xl:p-3.5 glass flex flex-wrap md:flex-nowrap items-center gap-x-2 sm:gap-x-3 lg:gap-x-2 xl:gap-x-3 gap-y-2 font-mono text-xs sm:text-[13px] xl:text-sm font-bold text-[#111111] w-full max-w-full">
               <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                 <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
                 <span>Date: {CONFIG.event.date}</span>
@@ -2438,6 +2461,220 @@ export const SinglePage: React.FC = () => {
       </section>
 
       {/* =================================================================== */}
+      {/* 8. BEHIND THE EVENT (LEADERSHIP & SECRETARIAT) (id="team")          */}
+      {/* =================================================================== */}
+      {(() => {
+        const facultyList: TeamMember[] =
+          CONFIG.team?.faculty && CONFIG.team.faculty.length > 0
+            ? CONFIG.team.faculty
+            : CONFIG.faculty || [];
+        const studentsList: TeamMember[] =
+          CONFIG.team?.students && CONFIG.team.students.length > 0
+            ? CONFIG.team.students
+            : CONFIG.students || [];
+
+        const confirmedFaculty = facultyList.filter((m) => m.confirmed);
+        const confirmedStudents = studentsList.filter((m) => m.confirmed);
+
+        const hasFacultyConfirmed = confirmedFaculty.length > 0;
+        const hasStudentsConfirmed = confirmedStudents.length > 0;
+
+        // Rendered only while at least one group is showing placeholders
+        const showPlaceholdersNote = !hasFacultyConfirmed || !hasStudentsConfirmed;
+
+        const getInitials = (name: string, customInitials?: string) => {
+          if (customInitials) return customInitials;
+          return name
+            .split(' ')
+            .filter(Boolean)
+            .map((p) => p[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase();
+        };
+
+        return (
+          <section
+            id="team"
+            className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-12 scroll-mt-16"
+          >
+            <span id="behind" className="sr-only" aria-hidden="true" />
+
+            {/* Header & Sub-note */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+                  Organising Body
+                </span>
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
+                  Secretariat
+                </span>
+              </div>
+
+              <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
+                Behind the event
+              </h2>
+
+              {showPlaceholdersNote && (
+                <p className="font-mono text-sm sm:text-base font-bold text-[#111111]/80 mt-3">
+                  Faculty and student leadership will be announced soon.
+                </p>
+              )}
+            </div>
+
+            {/* 1. FACULTY LEADERSHIP */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
+                <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
+                  Faculty Leadership
+                </h3>
+                <span className="font-mono text-xs text-[#111111]/70 font-bold">
+                  Academic Steering &amp; Advisory
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {hasFacultyConfirmed ? (
+                  confirmedFaculty.map((member, idx) => (
+                    <div
+                      key={idx}
+                      className="p-5 bg-white brutal-border brutal-shadow flex items-start gap-4 text-left"
+                    >
+                      {member.photo || member.photoUrl ? (
+                        <img
+                          src={member.photo || member.photoUrl}
+                          alt={member.name}
+                          className="w-16 h-16 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0"
+                        />
+                      ) : (
+                        <div
+                          className="w-16 h-16 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0"
+                          aria-label={member.name}
+                        >
+                          <span className="font-display font-black text-xl text-[#111111]">
+                            {getInitials(member.name, member.initials)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <h4 className="font-display font-black text-lg text-[#111111]">
+                          {member.name}
+                        </h4>
+                        <p className="font-mono text-xs font-bold text-[#FF6B1A] uppercase tracking-wide">
+                          {member.role}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  // Exactly 2 placeholder cards for Faculty leadership
+                  [1, 2].map((placeholderIdx) => (
+                    <div
+                      key={placeholderIdx}
+                      className="p-5 bg-white border-2 border-dashed border-[#111111] shadow-[3px_3px_0px_#111111] flex items-start gap-4 text-left"
+                    >
+                      <div
+                        className="w-14 h-14 sm:w-16 sm:h-16 bg-[#FFF8EC] border-2 border-[#111111] flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#111111]"
+                        aria-hidden="true"
+                      >
+                        <span className="font-mono font-black text-2xl text-[#111111]">?</span>
+                      </div>
+                      <div className="space-y-1.5 flex-1">
+                        <span
+                          className="font-mono text-xs font-bold text-[#111111] uppercase tracking-wider block"
+                          style={{ fontVariant: 'all-small-caps' }}
+                        >
+                          Faculty leadership
+                        </span>
+                        <div className="font-display font-black text-lg sm:text-xl text-[#111111] leading-snug">
+                          To be announced
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* 2. STUDENT LEADERSHIP */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
+                <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
+                  Student Leadership
+                </h3>
+                <span className="font-mono text-xs text-[#111111]/70 font-bold">
+                  Organising Secretariat &amp; Execution
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {hasStudentsConfirmed ? (
+                  confirmedStudents.map((member, idx) => (
+                    <div
+                      key={idx}
+                      className="p-5 bg-white brutal-border brutal-shadow flex items-start gap-4 text-left"
+                    >
+                      {member.photo || member.photoUrl ? (
+                        <img
+                          src={member.photo || member.photoUrl}
+                          alt={member.name}
+                          className="w-16 h-16 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0"
+                        />
+                      ) : (
+                        <div
+                          className="w-16 h-16 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0"
+                          aria-label={member.name}
+                        >
+                          <span className="font-display font-black text-xl text-[#111111]">
+                            {getInitials(member.name, member.initials)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <h4 className="font-display font-black text-lg text-[#111111]">
+                          {member.name}
+                        </h4>
+                        <p className="font-mono text-xs font-bold text-[#FF6B1A] uppercase tracking-wide">
+                          {member.role}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  // Exactly 2 placeholder cards for Student leadership
+                  [1, 2].map((placeholderIdx) => (
+                    <div
+                      key={placeholderIdx}
+                      className="p-5 bg-white border-2 border-dashed border-[#111111] shadow-[3px_3px_0px_#111111] flex items-start gap-4 text-left"
+                    >
+                      <div
+                        className="w-14 h-14 sm:w-16 sm:h-16 bg-[#FFF8EC] border-2 border-[#111111] flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#111111]"
+                        aria-hidden="true"
+                      >
+                        <span className="font-mono font-black text-2xl text-[#111111]">?</span>
+                      </div>
+                      <div className="space-y-1.5 flex-1">
+                        <span
+                          className="font-mono text-xs font-bold text-[#111111] uppercase tracking-wider block"
+                          style={{ fontVariant: 'all-small-caps' }}
+                        >
+                          Student leadership
+                        </span>
+                        <div className="font-display font-black text-lg sm:text-xl text-[#111111] leading-snug">
+                          To be announced
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+          </section>
+        );
+      })()}
+
+      {/* =================================================================== */}
       {/* 9. REGISTRATION (07) — MAIN FORM SECTION (id="register")            */}
       {/* =================================================================== */}
       <section id="register" className="px-4 sm:px-8 py-16 sm:py-24 max-w-4xl mx-auto text-left border-b-2 border-[#111111] scroll-mt-16">
@@ -2491,7 +2728,7 @@ export const SinglePage: React.FC = () => {
           /* =============================================================== */
           /* CASE B: SUCCESS CONFIRMATION SCREEN                             */
           /* =============================================================== */
-          <div className="p-6 sm:p-10 bg-white brutal-border brutal-shadow-lg space-y-6 text-left animate-brutal-pop">
+          <div className="p-6 sm:p-10 glass space-y-6 text-left animate-brutal-pop">
             
             {/* Top Confirmed Header with Checkmark Micro-Interaction */}
             <div className="p-5 bg-[#FFD400] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex items-start sm:items-center gap-4 relative overflow-hidden">
@@ -2609,7 +2846,7 @@ export const SinglePage: React.FC = () => {
             )}
 
             {/* Ticket QR Code Gate Pass Preview (Locally Generated, Zero Third-Party Requests) */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] text-left">
+            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 glass text-left">
               <div className="p-1.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0">
                 <QRCodeCanvas
                   id="pass-qr-canvas"
@@ -4103,7 +4340,7 @@ export const SinglePage: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="partner-modal-title"
-          className="fixed inset-0 z-50 bg-[#111111]/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          className="fixed inset-0 z-50 bg-[#111111]/75 backdrop-blur-[12px] flex items-center justify-center p-4 animate-in fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) setPartnerModalOpen(false);
           }}
@@ -4311,7 +4548,7 @@ export const SinglePage: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="privacy-modal-title"
-          className="fixed inset-0 z-50 bg-[#111111]/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in"
+          className="fixed inset-0 z-50 bg-[#111111]/75 backdrop-blur-[12px] flex items-center justify-center p-3 sm:p-5 animate-in fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) handleClosePrivacyModal();
           }}

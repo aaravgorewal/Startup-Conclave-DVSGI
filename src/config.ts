@@ -26,6 +26,15 @@ export interface SpeakerItem {
   status: 'confirmed' | 'pending' | string;
 }
 
+export interface TeamMember {
+  name: string;
+  role: string;
+  photo?: string;
+  photoUrl?: string;
+  initials?: string;
+  confirmed: boolean;
+}
+
 export interface TicketConfig {
   label: string;
   fee: number; // INR, whole rupees
@@ -321,6 +330,16 @@ export const CONFIG = {
         desc: "Curated pipeline for student hiring, resume reviews, fast-track internships, and project demos.",
       },
     ],
+  },
+
+  // Behind the event: Faculty and Student leadership
+  faculty: [] as TeamMember[],
+  students: [] as TeamMember[],
+  team: {
+    headline: "Behind the event",
+    note: "Faculty and student leadership will be announced soon.",
+    faculty: [] as TeamMember[],
+    students: [] as TeamMember[],
   },
 
   registration: {

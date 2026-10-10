@@ -565,7 +565,7 @@ export default function ScanPage() {
     return (
       <div className="min-h-screen bg-[#FFF8EC] flex flex-col font-sans text-[#111111] p-3 sm:p-4">
         {/* Top Header */}
-        <header className="max-w-md w-full mx-auto bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] p-3 flex items-center justify-between gap-3 mb-4">
+        <header className="max-w-md w-full mx-auto glass p-3 flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
             <span className="font-mono text-xs font-black uppercase text-[#111111]">
@@ -588,7 +588,7 @@ export default function ScanPage() {
         <main className="max-w-md w-full mx-auto flex-1 flex flex-col justify-center">
           {/* GREEN: Checked In OK */}
           {checkinResult.kind === 'ok' && (
-            <div className="bg-white border-2 border-[#111111] shadow-[6px_6px_0px_#111111] p-6 space-y-6">
+            <div className="glass p-6 space-y-6">
               {/* Header Banner */}
               <div className="p-4 bg-emerald-100 border-2 border-emerald-700 shadow-[3px_3px_0px_#047857] flex items-center gap-3">
                 <CheckCircle2 className="w-8 h-8 text-emerald-800 shrink-0 stroke-[2.5]" />
@@ -662,7 +662,7 @@ export default function ScanPage() {
 
           {/* AMBER: Already Checked In */}
           {checkinResult.kind === 'already' && (
-            <div className="bg-white border-2 border-[#111111] shadow-[6px_6px_0px_#111111] p-6 space-y-6">
+            <div className="glass p-6 space-y-6">
               {/* Header Banner */}
               <div className="p-4 bg-amber-100 border-2 border-amber-600 shadow-[3px_3px_0px_#b45309] flex items-center gap-3">
                 <AlertTriangle className="w-8 h-8 text-amber-700 shrink-0 stroke-[2.5]" />
@@ -721,7 +721,7 @@ export default function ScanPage() {
             checkinResult.kind === 'payment_pending' ||
             checkinResult.kind === 'closed' ||
             checkinResult.kind === 'error') && (
-            <div className="bg-white border-2 border-[#111111] shadow-[6px_6px_0px_#111111] p-6 space-y-6">
+            <div className="glass p-6 space-y-6">
               {/* Header Banner */}
               <div className="p-4 bg-rose-100 border-2 border-rose-600 shadow-[3px_3px_0px_#e11d48] flex items-center gap-3">
                 <XCircle className="w-8 h-8 text-rose-700 shrink-0 stroke-[2.5]" />
@@ -797,7 +797,7 @@ export default function ScanPage() {
       <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
 
       {/* Terminal Top Navigation Bar */}
-      <header className="p-3 sm:p-4 bg-white border-b-2 border-[#111111] shadow-[0px_2px_0px_#111111] flex items-center justify-between gap-3 shrink-0 z-20">
+      <header className="p-3 sm:p-4 glass rounded-none border-x-0 border-t-0 border-b-2 shadow-[0px_2px_0px_#111111] flex items-center justify-between gap-3 shrink-0 z-20">
         <div className="flex items-center gap-2">
           <div className="p-1.5 bg-[#FFD400] border-2 border-[#111111] shadow-[1px_1px_0px_#111111]">
             <QrCode className="w-4 h-4 text-[#111111]" />
@@ -881,7 +881,7 @@ export default function ScanPage() {
                   {/* Pulsing Scan Line */}
                   <div className="absolute inset-x-0 h-0.5 bg-[#FFD400] animate-pulse top-1/2 -translate-y-1/2" />
                 </div>
-                <div className="mt-4 px-3 py-1 bg-[#111111]/85 text-[#FFD400] font-mono text-[11px] font-bold uppercase border border-[#FFD400]/40">
+                <div className="mt-4 px-3 py-1 glass text-[#111111] font-mono text-[11px] font-bold uppercase">
                   Align Gate Pass QR In Center
                 </div>
               </div>
@@ -915,7 +915,7 @@ export default function ScanPage() {
             </div>
 
             {/* MANUAL FALLBACK INPUT SECTION */}
-            <div className="bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] p-4 space-y-3">
+            <div className="glass p-4 space-y-3">
               <div>
                 <label
                   htmlFor="manual-reg-id"
