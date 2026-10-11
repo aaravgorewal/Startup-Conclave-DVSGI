@@ -3194,7 +3194,7 @@ export const SinglePage: React.FC = () => {
                         return (
                           <div
                             key={`lead-${member.name}-${idx}`}
-                            className="p-3.5 sm:p-4 bg-white brutal-border brutal-shadow flex items-start gap-3 sm:gap-3.5 text-left transition-transform hover:-translate-y-0.5 min-w-0 h-full"
+                            className="p-3 sm:p-3.5 bg-white brutal-border brutal-shadow flex items-center gap-3 sm:gap-3.5 text-left transition-transform hover:-translate-y-0.5 min-w-0"
                           >
                             {/* Photo / Initials */}
                             {photoUrl ? (
@@ -3218,9 +3218,9 @@ export const SinglePage: React.FC = () => {
                               </div>
                             )}
 
-                            {/* Member Details beside photo */}
-                            <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch gap-2">
-                              <div className="flex items-start justify-between gap-1.5">
+                            {/* Member Details: tight spacing, no awkward gap */}
+                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                              <div className="flex items-center justify-between gap-1.5">
                                 <h5 className="font-display font-black text-base sm:text-lg text-[#111111] leading-tight break-words">
                                   {member.name}
                                 </h5>
@@ -3236,7 +3236,7 @@ export const SinglePage: React.FC = () => {
                                 </a>
                               </div>
 
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="flex flex-wrap gap-1">
                                 {member.roles.map((r, roleIdx) => (
                                   <span
                                     key={roleIdx}

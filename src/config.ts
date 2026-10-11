@@ -463,7 +463,7 @@ export const CONFIG = {
     },
     {
       name: "Gagan Kumar",
-      roles: ["Marketing & PR"],
+      roles: ["Marketing & PR Lead"],
       photo: "gagan-kumar.jpeg",
       linkedin: "",
       confirmed: true,
@@ -471,7 +471,7 @@ export const CONFIG = {
     },
     {
       name: "Yash Mishra",
-      roles: ["Marketing"],
+      roles: ["Marketing & Outreach Lead"],
       photo: "yash-mishra.png",
       linkedin: "https://www.linkedin.com/in/yash-mishra-650b20267/",
       confirmed: true,
@@ -479,7 +479,7 @@ export const CONFIG = {
     },
     {
       name: "Hetisha Bhardwaj",
-      roles: ["Branding & Creative"],
+      roles: ["Branding & Creative Lead"],
       photo: "hetisha-bhardwaj.jpeg",
       linkedin: "https://www.linkedin.com/in/hetisha-bhardwaj-64a286384/",
       confirmed: true,
@@ -487,7 +487,7 @@ export const CONFIG = {
     },
     {
       name: "Mahima Chaudhary",
-      roles: ["Hospitality"],
+      roles: ["Hospitality & Protocol Lead"],
       photo: "mahima-chaudhary.png",
       linkedin: "https://www.linkedin.com/in/mahima-chaudhary-981b43340/",
       confirmed: true,
@@ -495,7 +495,7 @@ export const CONFIG = {
     },
     {
       name: "Kunal Dhama",
-      roles: ["Finance"],
+      roles: ["Finance & Budgeting Lead"],
       photo: "kunal-dhama.jpeg",
       linkedin: "https://www.linkedin.com/in/kunal-dhama-325755319/",
       confirmed: true,
@@ -503,7 +503,7 @@ export const CONFIG = {
     },
     {
       name: "Aaditya Chaudhary",
-      roles: ["Technical"],
+      roles: ["Technical & Operations Lead"],
       photo: "aaditya-chaudhary.png",
       linkedin: "https://www.linkedin.com/in/aaditya-chaudhary-/",
       confirmed: true,
@@ -511,7 +511,7 @@ export const CONFIG = {
     },
     {
       name: "Arpita Rajput",
-      roles: ["Anchoring"],
+      roles: ["Stage & Anchoring Lead"],
       photo: "arpita-rajput.jpeg",
       linkedin: "https://www.linkedin.com/in/arpita-rajput-8477b2434/",
       confirmed: true,
@@ -519,7 +519,7 @@ export const CONFIG = {
     },
     {
       name: "Nitika",
-      roles: ["Startup & Investor Relations"],
+      roles: ["Startup & Investor Relations Lead"],
       photo: "nitika.jpeg",
       linkedin: "https://www.linkedin.com/in/nitika-ruhela-29078b3a9/",
       confirmed: true,
@@ -527,7 +527,7 @@ export const CONFIG = {
     },
     {
       name: "Shiva Maitray",
-      roles: ["Security"],
+      roles: ["Security & Logistics Lead"],
       photo: "shiva-maitray.png",
       linkedin: "https://www.linkedin.com/in/shiva-maitray-581558325/",
       confirmed: true,
@@ -572,7 +572,7 @@ export const CONFIG = {
       },
       {
         name: "Gagan Kumar",
-        roles: ["Marketing & PR"],
+        roles: ["Marketing & PR Lead"],
         photo: "gagan-kumar.jpeg",
         linkedin: "",
         confirmed: true,
@@ -580,7 +580,7 @@ export const CONFIG = {
       },
       {
         name: "Yash Mishra",
-        roles: ["Marketing"],
+        roles: ["Marketing & Outreach Lead"],
         photo: "yash-mishra.png",
         linkedin: "https://www.linkedin.com/in/yash-mishra-650b20267/",
         confirmed: true,
@@ -588,7 +588,7 @@ export const CONFIG = {
       },
       {
         name: "Hetisha Bhardwaj",
-        roles: ["Branding & Creative"],
+        roles: ["Branding & Creative Lead"],
         photo: "hetisha-bhardwaj.jpeg",
         linkedin: "https://www.linkedin.com/in/hetisha-bhardwaj-64a286384/",
         confirmed: true,
@@ -596,7 +596,7 @@ export const CONFIG = {
       },
       {
         name: "Mahima Chaudhary",
-        roles: ["Hospitality"],
+        roles: ["Hospitality & Protocol Lead"],
         photo: "mahima-chaudhary.png",
         linkedin: "https://www.linkedin.com/in/mahima-chaudhary-981b43340/",
         confirmed: true,
@@ -604,7 +604,7 @@ export const CONFIG = {
       },
       {
         name: "Kunal Dhama",
-        roles: ["Finance"],
+        roles: ["Finance & Budgeting Lead"],
         photo: "kunal-dhama.jpeg",
         linkedin: "https://www.linkedin.com/in/kunal-dhama-325755319/",
         confirmed: true,
@@ -612,7 +612,7 @@ export const CONFIG = {
       },
       {
         name: "Aaditya Chaudhary",
-        roles: ["Technical"],
+        roles: ["Technical & Operations Lead"],
         photo: "aaditya-chaudhary.png",
         linkedin: "https://www.linkedin.com/in/aaditya-chaudhary-/",
         confirmed: true,
@@ -620,7 +620,7 @@ export const CONFIG = {
       },
       {
         name: "Arpita Rajput",
-        roles: ["Anchoring"],
+        roles: ["Stage & Anchoring Lead"],
         photo: "arpita-rajput.jpeg",
         linkedin: "https://www.linkedin.com/in/arpita-rajput-8477b2434/",
         confirmed: true,
@@ -628,7 +628,7 @@ export const CONFIG = {
       },
       {
         name: "Nitika",
-        roles: ["Startup & Investor Relations"],
+        roles: ["Startup & Investor Relations Lead"],
         photo: "nitika.jpeg",
         linkedin: "https://www.linkedin.com/in/nitika-ruhela-29078b3a9/",
         confirmed: true,
@@ -636,7 +636,7 @@ export const CONFIG = {
       },
       {
         name: "Shiva Maitray",
-        roles: ["Security"],
+        roles: ["Security & Logistics Lead"],
         photo: "shiva-maitray.png",
         linkedin: "https://www.linkedin.com/in/shiva-maitray-581558325/",
         confirmed: true,
