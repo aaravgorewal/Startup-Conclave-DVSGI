@@ -467,6 +467,8 @@ export const CONFIG = {
     },
   ] as TeamMember[],
   volunteerFormUrl: '',
+  // photo: filename in src/assets/team/ (or auto-matched by name slug if omitted; initials shown on fallback).
+  // linkedin: URL starting with https://www.linkedin.com/ to display profile icon, or left empty/omitted.
   team: {
     headline: "Behind the event",
     note: "Faculty and student leadership will be announced soon.",
@@ -501,8 +503,8 @@ export const CONFIG = {
         tier: "core",
       },
       {
-        name: "Nitika Ruhela",
-        roles: ["Startup & Investor Relations"],
+        name: "Gagan Kumar",
+        roles: ["Marketing & PR"],
         confirmed: true,
         tier: "lead",
       },
@@ -539,6 +541,12 @@ export const CONFIG = {
       {
         name: "Arpita Rajput",
         roles: ["Anchoring"],
+        confirmed: true,
+        tier: "lead",
+      },
+      {
+        name: "Nitika Ruhela",
+        roles: ["Startup & Investor Relations"],
         confirmed: true,
         tier: "lead",
       },
