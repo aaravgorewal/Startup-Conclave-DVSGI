@@ -3114,31 +3114,31 @@ export const SinglePage: React.FC = () => {
                     return (
                       <div
                         key={`core-${member.name}-${idx}`}
-                        className="p-4 sm:p-5 lg:p-4 xl:p-5 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-3 sm:gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0 h-full"
+                        className="p-4 sm:p-5 lg:p-4 xl:p-5 bg-white brutal-border brutal-shadow flex flex-col gap-3 sm:gap-3.5 text-left transition-transform hover:-translate-y-0.5 min-w-0"
                       >
-                        <div className="space-y-4">
-                          {photoUrl ? (
-                            <img
-                              src={photoUrl}
-                              loading="lazy"
-                              width={320}
-                              height={320}
-                              alt={`${member.name}, ${member.roles.join(', ')}`}
-                              className="w-full aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
-                            />
-                          ) : (
-                            <div
-                              className="w-full aspect-square bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center gap-2 shrink-0 select-none"
-                              aria-label={member.name}
-                            >
-                              <UserIcon className="w-12 h-12 text-[#111111]/35 stroke-[1.5]" />
-                              <span className="font-mono text-xs font-bold text-[#111111]/75 bg-white px-2 py-0.5 border border-[#111111]/30 tracking-wider">
-                                {getMemberInitials(member.name)}
-                              </span>
-                            </div>
-                          )}
+                        {photoUrl ? (
+                          <img
+                            src={photoUrl}
+                            loading="lazy"
+                            width={320}
+                            height={320}
+                            alt={`${member.name}, ${member.roles.join(', ')}`}
+                            className="w-full aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
+                          />
+                        ) : (
+                          <div
+                            className="w-full aspect-square bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center gap-2 shrink-0 select-none"
+                            aria-label={member.name}
+                          >
+                            <UserIcon className="w-12 h-12 text-[#111111]/35 stroke-[1.5]" />
+                            <span className="font-mono text-xs font-bold text-[#111111]/75 bg-white px-2 py-0.5 border border-[#111111]/30 tracking-wider">
+                              {getMemberInitials(member.name)}
+                            </span>
+                          </div>
+                        )}
 
-                          <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
                             <h4 className="font-display font-black text-lg sm:text-xl text-[#111111] leading-tight break-words">
                               {member.name}
                             </h4>
@@ -3148,24 +3148,28 @@ export const SinglePage: React.FC = () => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 aria-label={`${member.name} on LinkedIn`}
-                                className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0"
+                                className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0 min-h-[32px] min-w-[32px]"
                               >
                                 <Linkedin className="w-4 h-4 text-[#111111]" />
                               </a>
                             )}
                           </div>
-                        </div>
 
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {member.roles.map((r, roleIdx) => (
-                            <span
-                              key={roleIdx}
-                              className="inline-block px-2 py-0.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px] sm:text-xs font-bold text-[#111111] shadow-[1px_1px_0px_#111111] uppercase tracking-wider"
-                              style={{ fontVariant: 'all-small-caps' }}
-                            >
-                              {r}
-                            </span>
-                          ))}
+                          <div className="flex flex-wrap gap-1.5">
+                            {member.roles.map((r, roleIdx) => (
+                              <span
+                                key={roleIdx}
+                                className={`inline-block px-2 py-0.5 border border-[#111111] font-mono text-[11px] sm:text-xs font-bold shadow-[1px_1px_0px_#111111] uppercase tracking-wider ${
+                                  r.toLowerCase().includes('convenor') || r.toLowerCase().includes('lead organiser')
+                                    ? 'bg-[#FFD400] text-[#111111]'
+                                    : 'bg-[#FFF8EC] text-[#111111]'
+                                }`}
+                                style={{ fontVariant: 'all-small-caps' }}
+                              >
+                                {r}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     );
