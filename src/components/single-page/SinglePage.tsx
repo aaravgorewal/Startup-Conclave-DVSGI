@@ -25,6 +25,7 @@ import {
   Download,
   QrCode,
   ExternalLink,
+  Linkedin,
 } from 'lucide-react';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import {
@@ -37,7 +38,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '../../services/firebase.ts';
 import { mapAuthError } from '../../services/errorMapping.ts';
-import { CONFIG, type LogoItem, type TeamMember } from '../../config.ts';
+import { CONFIG, type LogoItem, type TeamMember, type Guest } from '../../config.ts';
 import {
   createRegistration,
   createPartnerEnquiry,
@@ -518,14 +519,18 @@ export const SinglePage: React.FC = () => {
       ];
     }
 
-    const confirmedSpeakers = (CONFIG.speakersInvestors?.speakers || []).filter(
-      (s: any) => s.status === 'confirmed' && s.name
+    const confirmedGuests = (CONFIG.guests || []).filter(
+      (g: any) => g.confirmed && g.name
     );
-    if (confirmedSpeakers.length > 0) {
-      eventNode.performer = confirmedSpeakers.map((s: any) => ({
+    if (confirmedGuests.length > 0) {
+      eventNode.performer = confirmedGuests.map((g: any) => ({
         '@type': 'Person',
-        name: s.name,
-        jobTitle: s.title || undefined,
+        name: g.name,
+        jobTitle: g.designation ? `${g.designation}, ${g.organisation}` : g.organisation || undefined,
+        worksFor: g.organisation ? {
+          '@type': 'Organization',
+          name: g.organisation,
+        } : undefined,
       }));
     }
 
@@ -1035,6 +1040,8 @@ export const SinglePage: React.FC = () => {
       setTimeout(() => {
         const element =
           document.getElementById(anchor) ||
+          (anchor === 'speakers' ? document.getElementById('guests') : null) ||
+          (anchor === 'guests' ? document.getElementById('speakers') : null) ||
           (anchor === 'team' ? document.getElementById('behind') : null) ||
           (anchor === 'behind' ? document.getElementById('team') : null);
         if (element) {
@@ -1788,10 +1795,10 @@ export const SinglePage: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => handleNavClick('speakers')}
+              onClick={() => handleNavClick('guests')}
               className="w-full text-left py-2 px-2 hover:bg-white/40 min-h-[44px] flex items-center justify-between group transition-colors cursor-pointer"
             >
-              <span>05 • Speakers</span>
+              <span>05 • Guests</span>
               <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">→</span>
             </button>
             <button
@@ -2314,79 +2321,180 @@ export const SinglePage: React.FC = () => {
       </section>
 
       {/* =================================================================== */}
-      {/* 7. SPEAKERS & INVESTORS (05)                                        */}
+      {/* 7. GUESTS (05)                                                      */}
       {/* =================================================================== */}
-      <section id="speakers" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
+      <section id="guests" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-10">
         
         {/* Section Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-            {CONFIG.speakersInvestors.sectionNum}
-          </span>
-          <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-            Lineup
-          </span>
-        </div>
-
-        {/* Bold Coming Soon Block */}
-        <div className="p-7 sm:p-12 bg-white brutal-border brutal-shadow-lg space-y-5 text-left">
-          <div className="inline-block">
-            <span className="bg-[#FF6B1A] text-[#111111] font-mono text-xs font-black px-3.5 py-1 border-2 border-[#111111] -rotate-1 uppercase tracking-wider inline-block">
-              {CONFIG.speakersInvestors.badge}
+        <div>
+          <div className="flex items-center gap-3 mb-6">
+            <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+              05
+            </span>
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+              Guests
             </span>
           </div>
 
-          <h2 className="font-display font-black text-3xl sm:text-5xl text-[#111111] leading-tight tracking-tight">
-            {CONFIG.speakersInvestors.headline}
-          </h2>
+          <div className="space-y-3">
+            <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-tight tracking-tight">
+              Who you'll hear from
+            </h2>
+            {(() => {
+              const confirmedGuests = (CONFIG.guests || []).filter((g) => g.confirmed);
+              if (confirmedGuests.length === 0) {
+                return (
+                  <p className="text-base sm:text-lg font-sans text-[#111111]/85 max-w-2xl font-medium leading-relaxed">
+                    Guest announcements coming soon.
+                  </p>
+                );
+              }
+              return null;
+            })()}
+          </div>
+        </div>
 
-          <p className="text-base sm:text-lg font-sans text-[#111111]/85 max-w-2xl font-medium leading-relaxed">
-            {CONFIG.speakersInvestors.description}
-          </p>
+        {(() => {
+          const confirmedGuests = (CONFIG.guests || []).filter((g) => g.confirmed);
 
-          {Boolean((CONFIG.contactEmail || CONFIG.contact?.email)?.trim()) && (
-            <div className="pt-2 border-t-2 border-[#111111]">
-              <a
-                href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()}?subject=Speaking%20Inquiry%20-%20Startup%20Conclave%201.0`}
-                className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
-              >
-                <span>Interested in speaking? Contact us</span>
-                <span aria-hidden="true">→</span>
-              </a>
-            </div>
-          )}
-
-          {/* If speakers array in src/config.ts is non-empty, only items with status "confirmed" may render */}
-          {(() => {
-            const confirmedSpeakers = (CONFIG.speakersInvestors.speakers || []).filter(
-              (s) => s.status === 'confirmed'
-            );
-            if (confirmedSpeakers.length === 0) return null;
-
+          // If there are no confirmed guests, show 3 placeholder cards
+          if (confirmedGuests.length === 0) {
             return (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6 border-t-2 border-[#111111]">
-                {confirmedSpeakers.map((speaker) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((placeholderIndex) => (
                   <div
-                    key={speaker.id}
-                    className="p-5 bg-white brutal-border brutal-shadow space-y-2 text-left"
+                    key={`guest-placeholder-${placeholderIndex}`}
+                    className="p-6 bg-white/60 border-2 border-dashed border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-4 text-left"
                   >
-                    <h3 className="font-display font-black text-xl text-[#111111]">
-                      {speaker.name}
-                    </h3>
-                    <p className="font-mono text-xs font-bold text-[#FF6B1A] uppercase tracking-wide">
-                      {speaker.title}
-                    </p>
-                    {speaker.bio && (
-                      <p className="text-sm font-sans text-[#111111]/85 font-medium leading-relaxed">
-                        {speaker.bio}
+                    <div
+                      aria-hidden="true"
+                      className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFF8EC] border-2 border-dashed border-[#111111] flex items-center justify-center font-display font-black text-2xl text-[#111111]/40 shrink-0 select-none"
+                    >
+                      ?
+                    </div>
+                    <div>
+                      <p className="font-display font-black text-base sm:text-lg text-[#111111]/70">
+                        To be announced
                       </p>
-                    )}
+                    </div>
                   </div>
                 ))}
               </div>
             );
-          })()}
-        </div>
+          }
+
+          // Order of guest types: chief-guest, speaker, jury, investor, mentor
+          const guestTypeGroups: { type: Guest['type']; label: string }[] = [
+            { type: 'chief-guest', label: 'Chief Guest' },
+            { type: 'speaker', label: 'Speakers' },
+            { type: 'jury', label: 'Jury' },
+            { type: 'investor', label: 'Investors' },
+            { type: 'mentor', label: 'Mentors' },
+          ];
+
+          const getInitials = (name: string): string => {
+            const parts = name.trim().split(/\s+/).filter(Boolean);
+            if (parts.length === 0) return '?';
+            if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+          };
+
+          return (
+            <div className="space-y-12">
+              {guestTypeGroups.map((group) => {
+                const groupGuests = confirmedGuests.filter((g) => g.type === group.type);
+                if (groupGuests.length === 0) return null;
+
+                return (
+                  <div key={group.type} className="space-y-6">
+                    <div className="flex items-center gap-3 border-b-2 border-[#111111] pb-3">
+                      <span className="w-3 h-3 bg-[#FF6B1A] border border-[#111111] inline-block" />
+                      <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-wide">
+                        {group.label}
+                      </h3>
+                      <span className="font-mono text-xs font-bold text-[#111111]/70">
+                        ({groupGuests.length})
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {groupGuests.map((guest, idx) => (
+                        <div
+                          key={`${guest.name}-${idx}`}
+                          className="p-5 sm:p-6 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-4 text-left transition-transform hover:-translate-y-0.5"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            {guest.photo ? (
+                              <img
+                                src={guest.photo}
+                                loading="lazy"
+                                width={80}
+                                height={80}
+                                alt={`${guest.name}, ${guest.organisation}`}
+                                className="w-16 h-16 sm:w-20 sm:h-20 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 bg-[#FFF8EC]"
+                              />
+                            ) : (
+                              <div
+                                className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center font-display font-black text-xl sm:text-2xl text-[#111111] shrink-0"
+                                aria-label={guest.name}
+                              >
+                                {getInitials(guest.name)}
+                              </div>
+                            )}
+
+                            {guest.linkedin && guest.linkedin.startsWith('https://') && (
+                              <a
+                                href={guest.linkedin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`${guest.name} on LinkedIn`}
+                                className="inline-flex items-center justify-center w-11 h-11 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0 min-h-[44px] min-w-[44px]"
+                              >
+                                <Linkedin className="w-5 h-5 text-[#111111]" />
+                              </a>
+                            )}
+                          </div>
+
+                          <div className="space-y-1.5 flex-1">
+                            <h4 className="font-display font-black text-xl sm:text-2xl text-[#111111] leading-tight">
+                              {guest.name}
+                            </h4>
+                            <p className="font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] uppercase tracking-wide">
+                              {guest.designation}
+                            </p>
+                            <p className="font-sans text-sm text-[#111111]/90 font-bold">
+                              {guest.organisation}
+                            </p>
+                            {guest.topic && (
+                              <p className="text-xs sm:text-sm font-sans text-[#111111]/85 italic pt-2 border-t border-[#111111]/15 mt-2">
+                                <span className="font-bold not-italic font-mono text-[11px] uppercase tracking-wider text-[#111111] block mb-0.5">
+                                  Topic
+                                </span>
+                                "{guest.topic}"
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        {Boolean((CONFIG.contactEmail || CONFIG.contact?.email)?.trim()) && (
+          <div className="pt-4 border-t-2 border-[#111111]">
+            <a
+              href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()}?subject=Speaking%20Inquiry%20-%20Startup%20Conclave%201.0`}
+              className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
+            >
+              <span>Interested in speaking? Contact us</span>
+              <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        )}
       </section>
 
       {/* =================================================================== */}
