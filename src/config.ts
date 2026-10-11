@@ -26,6 +26,17 @@ export interface SpeakerItem {
   status: 'confirmed' | 'pending' | string;
 }
 
+export interface Guest {
+  name: string;
+  designation: string;
+  organisation: string;
+  topic?: string;
+  photo?: string;
+  linkedin?: string;
+  type: 'speaker' | 'investor' | 'jury' | 'mentor' | 'chief-guest';
+  confirmed: boolean;
+}
+
 export interface TeamMember {
   name: string;
   role: string;
@@ -291,6 +302,8 @@ export const CONFIG = {
     speakers: [] as SpeakerItem[],
   },
 
+  guests: [] as Guest[],
+
   partners: {
     sectionNum: "06",
     headline: "For Partners",
@@ -375,8 +388,8 @@ export const CONFIG = {
   ],
 
   contact: {
-    email: 'aarav@dewaninstitutes.org',
-    phone: '9286153090',
+    email: 'event@dewaninstitutes.org',
+    phone: '',
     campus: "Dewan V.S. Institute of Engineering & Technology (DVSIET)",
     city: "Meerut, Uttar Pradesh, India",
     socials: {
