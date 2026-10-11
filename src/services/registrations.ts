@@ -11,6 +11,14 @@ export interface CollegeInfo {
   listed: boolean;
 }
 
+export interface TeamMemberDetail {
+  name: string;
+  email: string;
+  phone: string;
+  college?: string;
+  role?: string;
+}
+
 export interface PaymentInfo {
   required: boolean;
   status: 'not_required' | 'pending' | 'verified' | 'rejected';
@@ -19,13 +27,16 @@ export interface PaymentInfo {
   method?: 'upi' | 'razorpay';
   orderId?: string;
   paymentId?: string;
+  screenshotUrl?: string;
+  screenshotPath?: string;
+  rejectionReason?: string;
 }
 
 export interface RegistrationInput {
   name: string;
   email: string;
   phone: string;
-  ticket?: 'participant' | 'pitch';
+  ticket?: 'participant' | 'pitch' | 'stall';
   college: string | CollegeInfo;
   collegeState?: string;
   collegeCity?: string;
@@ -41,8 +52,11 @@ export interface RegistrationInput {
   sector?: string;
   stage?: 'Idea' | 'Prototype' | 'Launched' | 'Revenue' | string;
   pitchDeckLink?: string;
-  teamSize?: string | number;
+  teamSize?: '2' | '3' | string | number;
+  teamMembers?: TeamMemberDetail[];
   paymentUtr?: string;
+  paymentScreenshotUrl?: string;
+  paymentScreenshotPath?: string;
   emailVerified?: boolean;
 }
 
@@ -50,7 +64,7 @@ export interface RegistrationRecord {
   id: string;
   registrationId?: string;
   ticketCode?: string;
-  ticket: 'participant' | 'pitch';
+  ticket: 'participant' | 'pitch' | 'stall';
   emailVerified: boolean;
   verifiedAt?: string | null;
   name: string;
@@ -69,12 +83,17 @@ export interface RegistrationRecord {
   stage?: string;
   pitchDeckLink?: string;
   teamSize?: string;
+  teamMembers?: TeamMemberDetail[];
   payment: PaymentInfo;
   paymentStatus?: 'not_required' | 'pending' | 'verified' | 'rejected' | string;
   paymentAmount?: number;
   paymentUtr?: string;
+  paymentScreenshotUrl?: string;
+  paymentScreenshotPath?: string;
   paymentVerifiedAt?: string | null;
   paymentVerifiedBy?: string | null;
+  paymentRejectionReason?: string | null;
+  rejectionReason?: string | null;
   status: string;
   createdAt: string;
 }
@@ -352,39 +371,107 @@ export const createRegistration = async (
     };
   }
 
-  // 3b. Determine ticket type and validate pitch requirements
-  const ticket: 'participant' | 'pitch' =
-    input.ticket === 'pitch' || input.wantsToPitch ? 'pitch' : 'participant';
+  // 3b. Determine ticket type and validate pitch / stall requirements
+  const ticket: 'participant' | 'pitch' | 'stall' =
+    input.ticket === 'stall'
+      ? 'stall'
+      : input.ticket === 'pitch' || input.wantsToPitch
+        ? 'pitch'
+        : 'participant';
   const isPitch = ticket === 'pitch';
+  const isStall = ticket === 'stall';
+  const isPaid = isPitch || isStall;
 
-  if (isPitch) {
+  if (isPaid) {
     if (!CONFIG.payment.upiId?.trim() || !CONFIG.payment.payeeName?.trim()) {
       return {
         success: false,
         isNetworkError: false,
-        error: 'Pitch registrations open soon.',
+        error: isStall ? 'Stall bookings open soon.' : 'Pitch registrations open soon.',
       };
     }
     if (!input.startupName?.trim()) {
-      return { success: false, isNetworkError: false, error: 'Startup name is required for pitch registrations.' };
+      return {
+        success: false,
+        isNetworkError: false,
+        error: isStall ? 'Startup / product name is required for stall bookings.' : 'Startup name is required for pitch registrations.',
+      };
     }
     if (!input.startupPitch?.trim()) {
-      return { success: false, isNetworkError: false, error: 'Startup pitch description is required for pitch registrations.' };
+      return {
+        success: false,
+        isNetworkError: false,
+        error: isStall ? 'Product / showcase description is required for stall bookings.' : 'Startup pitch description is required for pitch registrations.',
+      };
     }
     if (!input.sector?.trim()) {
-      return { success: false, isNetworkError: false, error: 'Sector is required for pitch registrations.' };
+      return { success: false, isNetworkError: false, error: 'Sector is required.' };
     }
     if (!input.stage?.trim()) {
-      return { success: false, isNetworkError: false, error: 'Stage is required for pitch registrations.' };
+      return { success: false, isNetworkError: false, error: 'Stage is required.' };
     }
+
+    // Team Size Validation: minimum 2, maximum 3 members for paid registrations
+    const numTeamSize = Number(input.teamSize);
+    if (!input.teamSize || (numTeamSize !== 2 && numTeamSize !== 3)) {
+      return {
+        success: false,
+        isNetworkError: false,
+        error: 'Team size must be exactly 2 or 3 members for paid registrations.',
+      };
+    }
+
+    // Team Members Validation
+    const members = Array.isArray(input.teamMembers) ? input.teamMembers : [];
+    if (members.length !== numTeamSize) {
+      return {
+        success: false,
+        isNetworkError: false,
+        error: `Please provide details for all ${numTeamSize} team members.`,
+      };
+    }
+
+    for (let i = 0; i < members.length; i++) {
+      const m = members[i];
+      if (!m.name || !m.name.trim()) {
+        return {
+          success: false,
+          isNetworkError: false,
+          error: `Member ${i + 1} name is required.`,
+        };
+      }
+      if (!m.email || !isValidEmail(m.email.trim())) {
+        return {
+          success: false,
+          isNetworkError: false,
+          error: `Member ${i + 1} email is invalid.`,
+        };
+      }
+      if (!m.phone || !isValidIndianPhone(m.phone.trim())) {
+        return {
+          success: false,
+          isNetworkError: false,
+          error: `Member ${i + 1} phone number must be a valid 10-digit number.`,
+        };
+      }
+    }
+
+    // Payment Screenshot Validation
+    if (!input.paymentScreenshotUrl || !input.paymentScreenshotUrl.trim()) {
+      return {
+        success: false,
+        isNetworkError: false,
+        error: 'Payment screenshot is required for paid registrations.',
+      };
+    }
+  }
+
+  if (isPitch) {
     if (!input.pitchDeckLink?.trim()) {
       return { success: false, isNetworkError: false, error: 'Pitch deck link is required for pitch registrations.' };
     }
     if (!isValidPitchDeckUrl(input.pitchDeckLink.trim())) {
       return { success: false, isNetworkError: false, error: 'Pitch deck link must be a Google Drive or Canva URL.' };
-    }
-    if (!input.teamSize) {
-      return { success: false, isNetworkError: false, error: 'Team size is required for pitch registrations.' };
     }
   }
 
@@ -392,7 +479,7 @@ export const createRegistration = async (
   const cleanUtr = input.paymentUtr ? input.paymentUtr.trim() : '';
   let paymentInfo: PaymentInfo;
 
-  if (isPitch) {
+  if (isPaid) {
     if (!isValidUtr(cleanUtr)) {
       return {
         success: false,
@@ -407,12 +494,15 @@ export const createRegistration = async (
         error: 'This UPI Reference Number (UTR) has already been submitted on this device. If you are sure you have not registered, contact the organisers.',
       };
     }
+    const amountPaise = isStall ? 129900 : 99900;
     paymentInfo = {
       required: true,
       status: 'pending',
-      amountPaise: 99900,
+      amountPaise,
       utr: cleanUtr,
       method: 'upi',
+      screenshotUrl: input.paymentScreenshotUrl ? input.paymentScreenshotUrl.trim() : '',
+      screenshotPath: input.paymentScreenshotPath ? input.paymentScreenshotPath.trim() : '',
     };
   } else {
     paymentInfo = {
@@ -444,16 +534,29 @@ export const createRegistration = async (
     role: input.role,
     city: input.city?.trim() || 'Meerut',
     wantsToPitch: isPitch,
-    startupName: isPitch ? (input.startupName?.trim() || '') : '',
-    startupPitch: isPitch ? (input.startupPitch?.trim() || '') : '',
-    sector: isPitch ? (input.sector?.trim() || '') : '',
-    stage: isPitch ? (input.stage?.trim() || '') : '',
+    startupName: isPaid ? (input.startupName?.trim() || '') : '',
+    startupPitch: isPaid ? (input.startupPitch?.trim() || '') : '',
+    sector: isPaid ? (input.sector?.trim() || '') : '',
+    stage: isPaid ? (input.stage?.trim() || '') : '',
     pitchDeckLink: isPitch ? (input.pitchDeckLink?.trim() || '') : '',
-    teamSize: isPitch ? (input.teamSize ? String(input.teamSize).trim() : '') : '',
+    teamSize: isPaid ? (input.teamSize ? String(input.teamSize).trim() : '') : '',
+    teamMembers: isPaid && Array.isArray(input.teamMembers)
+      ? input.teamMembers.map((m) => ({
+          name: m.name.trim(),
+          email: m.email.trim().toLowerCase(),
+          phone: m.phone.trim(),
+          college: m.college?.trim() || '',
+          role: m.role?.trim() || '',
+        }))
+      : [],
     payment: paymentInfo,
     paymentStatus: paymentInfo.status,
     paymentAmount: Math.round(paymentInfo.amountPaise / 100),
     paymentUtr: paymentInfo.utr || '',
+    paymentScreenshotUrl: isPaid && input.paymentScreenshotUrl ? input.paymentScreenshotUrl.trim() : '',
+    paymentScreenshotPath: isPaid && input.paymentScreenshotPath ? input.paymentScreenshotPath.trim() : '',
+    paymentRejectionReason: null,
+    rejectionReason: null,
     paymentVerifiedAt: null,
     paymentVerifiedBy: null,
     status: 'registered',
@@ -469,7 +572,7 @@ export const createRegistration = async (
     const counterRef = doc(customDb, 'counters', 'registrations');
     const regDocRef = doc(customDb, 'registrations', emailHash);
     const phoneDocRef = doc(customDb, 'phoneIndex', phoneHash);
-    const utrDocRef = isPitch && cleanUtr ? doc(customDb, 'utrIndex', cleanUtr) : null;
+    const utrDocRef = isPaid && cleanUtr ? doc(customDb, 'utrIndex', cleanUtr) : null;
     const settingsRef = doc(customDb, 'settings', 'event');
 
     const result = await runTransaction(customDb, async (transaction) => {
@@ -544,10 +647,15 @@ export const createRegistration = async (
         stage: record.stage || '',
         pitchDeckLink: record.pitchDeckLink || '',
         teamSize: record.teamSize || '',
+        teamMembers: record.teamMembers || [],
         payment: record.payment,
         paymentStatus: record.paymentStatus || 'not_required',
         paymentAmount: record.paymentAmount || 0,
         paymentUtr: record.paymentUtr || '',
+        paymentScreenshotUrl: record.paymentScreenshotUrl || '',
+        paymentScreenshotPath: record.paymentScreenshotPath || '',
+        paymentRejectionReason: null,
+        rejectionReason: null,
         paymentVerifiedAt: null,
         paymentVerifiedBy: null,
         status: assignedStatus,
@@ -616,7 +724,7 @@ export const createRegistration = async (
     phones.push(phoneClean);
     localStorage.setItem(LOCAL_REGISTERED_PHONES_KEY, JSON.stringify(phones));
 
-    if (isPitch && cleanUtr) {
+    if (isPaid && cleanUtr) {
       const rawUtrs = localStorage.getItem(LOCAL_REGISTERED_UTRS_KEY);
       const utrs: string[] = rawUtrs ? JSON.parse(rawUtrs) : [];
       if (!utrs.includes(cleanUtr)) {

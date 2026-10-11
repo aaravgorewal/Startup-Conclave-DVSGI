@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Payment Screenshots: public create with constraints, read restricted to admin / auth
+    match /payment-screenshots/{allPaths=**} {
+      allow write: if request.resource.size <= 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/(jpeg|png|webp|jpg)');
+      allow read: if request.auth != null;
+    }
+
+    // Default deny for all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

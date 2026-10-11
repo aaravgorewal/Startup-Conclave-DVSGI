@@ -46,9 +46,17 @@ export interface TeamMember {
   tier: 'core' | 'lead';
 }
 
+export type ParticipationCategory = 'participant' | 'pitch' | 'stall';
+
 export interface TicketConfig {
   label: string;
+  name?: string;
   fee: number; // INR, whole rupees
+  badge?: string;
+  description?: string;
+  features?: string[];
+  ctaText?: string;
+  notice?: string;
 }
 
 /** Converts whole rupees to paise integer */
@@ -82,14 +90,57 @@ export interface StatItem {
 
 export const CONFIG = {
   tickets: {
-    participant: { label: 'Participant', fee: 0 },
-    pitch: { label: 'Pitch your startup', fee: 999 },
-  } as Record<'participant' | 'pitch', TicketConfig>,
+    participant: {
+      label: 'General Attendee',
+      name: 'General Attendee Pass',
+      fee: 0,
+      badge: 'FREE',
+      description: 'Participate as an audience delegate. Attend keynote sessions, panel discussions, and stage viewing.',
+      features: [
+        'Full 2-day attendee access to all open sessions',
+        'Audience access to the Startup Pitch Arena',
+        'Campus entrepreneurship & peer networking',
+        'Official attendee digital entry pass',
+      ],
+      ctaText: 'Register as an Attendee — Free',
+      notice: 'General Attendee pass does not include a pitch slot, startup stall, event kit, goodies, or lunch.',
+    },
+    pitch: {
+      label: 'Hall Pitch',
+      name: 'Hall Pitch Pass',
+      fee: 999,
+      badge: '₹999',
+      description: 'Present your startup live on stage with a dedicated 5-minute pitch followed by 5-minute Q&A.',
+      features: [
+        '5-minute live pitch + 5-minute jury & attendee Q&A',
+        'Official conclave event kit & goodies included',
+        'Complimentary lunch for delegate',
+        'Actionable jury feedback on validation & presentation',
+      ],
+      ctaText: 'Register for Hall Pitch — ₹999',
+      notice: 'Pitch slots are subject to published venue capacity and eligibility verification.',
+    },
+    stall: {
+      label: 'Startup Stall',
+      name: 'Startup Showcase Stall',
+      fee: 1299,
+      badge: '₹1,299',
+      description: 'Dedicated exhibition stall to showcase your startup, demo prototypes, and engage attendees.',
+      features: [
+        'Dedicated startup / product showcase stall space',
+        'Display prototypes, software demos & products',
+        'Direct footfall from attendees, mentors & guests',
+        'Founder showcase passes for team entry',
+      ],
+      ctaText: 'Book a Startup Stall — ₹1,299',
+      notice: 'Stall availability, setup details, dimensions, included facilities and timings will be communicated after registration.',
+    },
+  } as Record<ParticipationCategory, TicketConfig>,
 
   payment: {
     upiId: '9286153090@upi',
     payeeName: 'Aarav Saini',
-    refundPolicyText: '',
+    refundPolicyText: 'Registration fees for Hall Pitch (₹999) and Startup Stall (₹1,299) are non-refundable once slot allocation is confirmed. If a submission cannot be accommodated due to capacity limits, cancellation terms will apply.',
   } as PaymentConfig,
 
   // Stats strip: render only when non-empty, labelled "Targets"
@@ -273,35 +324,28 @@ export const CONFIG = {
   pitchArena: {
     sectionNum: "04",
     headline: "Startup Pitch Arena",
-    tagline: "Pitch your startup live to an expert jury.",
+    tagline: "Where Ideas Meet Capital.",
     description:
-      "About 10 finalist startups pitch on stage for 5 minutes followed by 5 minutes of Q&A.",
-    process: [
-      { step: "01", label: "Apply", desc: "Submit your details" },
-      { step: "02", label: "Shortlist", desc: "Screening review" },
-      { step: "03", label: "Finalists", desc: "About 10 chosen" },
-      { step: "04", label: "Live Pitch", desc: "5m pitch + 5m Q&A" },
-      { step: "05", label: "Winner", desc: "Awards & recognition" },
-    ],
+      "Pitch your startup live in front of the jury and audience. Pitch format: 5-minute pitch followed by 5-minute Q&A.",
     facts: [
       { label: "Pitch Format", value: "5 min pitch + 5 min Q&A" },
-      { label: "Cohort Size", value: "About 10 finalist startups" },
-      { label: "Stage", value: "Day 2 Main Stage" },
-      { label: "Prizes", value: "To be announced" },
+      { label: "Hall Pitch Fee", value: "₹999 (Includes kit, goodies & lunch)" },
+      { label: "Startup Stall Fee", value: "₹1,299 (Showcase stall space)" },
+      { label: "General Attendee", value: "Free (Audience access)" },
     ],
     // Core benefits for participating startups
     whatStartupsGet: [
       {
-        title: "Pitch + Q&A Slot",
-        desc: "5 minutes on-stage live pitch followed by 5 minutes of dedicated Q&A before attendees.",
+        title: "5m Pitch + 5m Q&A",
+        desc: "Strict 5-minute pitch followed by 5 minutes of focused jury and attendee Q&A.",
       },
       {
-        title: "Actionable Feedback",
-        desc: "Constructive feedback on product validation, business model, and deck presentation.",
+        title: "Kit, Goodies & Lunch",
+        desc: "All Hall Pitch registrations receive the complete conclave delegate kit, event goodies, and lunch.",
       },
       {
         title: "Ecosystem Visibility",
-        desc: "Direct spotlight in front of attendee founders, student builders, and collegiate networks.",
+        desc: "Spotlight your product in front of regional founders, operators, and engineering talent.",
       },
     ],
     // Confirmation flags for Pitch Arena (unconfirmed items remain hidden)
@@ -425,7 +469,7 @@ export const CONFIG = {
       tier: "lead",
     },
     {
-      name: "Nitika Ruhela",
+      name: "Nitika",
       roles: ["Startup & Investor Relations"],
       photo: "nitika.jpeg",
       confirmed: true,

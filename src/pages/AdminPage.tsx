@@ -193,7 +193,7 @@ export const AdminPage: React.FC = () => {
   // Search & Filter State (Registrations Table)
   const [searchQuery, setSearchQuery] = useState('');
   const [collegeSearchQuery, setCollegeSearchQuery] = useState('');
-  const [ticketFilter, setTicketFilter] = useState<'All' | 'participant' | 'pitch'>('All');
+  const [ticketFilter, setTicketFilter] = useState<'All' | 'participant' | 'pitch' | 'stall'>('All');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('All');
   const [verifiedFilter, setVerifiedFilter] = useState<'All' | 'verified' | 'unverified'>('All');
   const [stateFilter, setStateFilter] = useState<string>('All');
@@ -617,18 +617,32 @@ export const AdminPage: React.FC = () => {
       return;
     }
 
+    let rejectionReason: string | undefined = undefined;
+    if (newStatus === 'rejected') {
+      const inputReason = window.prompt(
+        'Optional: Enter rejection reason (e.g. Invalid UTR, Unreadable screenshot, Amount mismatch):',
+        'Invalid or unverified transaction'
+      );
+      if (inputReason === null) {
+        return; // User clicked Cancel
+      }
+      rejectionReason = inputReason.trim() || 'Payment unverified';
+    }
+
     setActionInProgressId(reg.id);
     try {
       const adminEmail = currentUser.email || 'admin@dvsiet.ac.in';
       const timestamp = new Date().toISOString();
       const isVerified = newStatus === 'verified';
+      const isRejected = newStatus === 'rejected';
 
       const ok = await updatePaymentStatus(
         reg.id,
         newStatus,
         adminEmail,
         reg.docId,
-        reg.payment
+        reg.payment,
+        rejectionReason
       );
 
       if (ok) {
@@ -638,14 +652,18 @@ export const AdminPage: React.FC = () => {
               ? {
                   ...r,
                   paymentStatus: newStatus,
-                  paymentVerifiedBy: isVerified ? adminEmail : null,
-                  paymentVerifiedAt: isVerified ? timestamp : null,
+                  status: isVerified ? 'confirmed' : isRejected ? 'rejected' : r.status,
+                  paymentVerifiedBy: isVerified ? adminEmail : undefined,
+                  paymentVerifiedAt: isVerified ? timestamp : undefined,
                   verifiedAt: isVerified ? timestamp : r.verifiedAt,
+                  paymentRejectionReason: isRejected ? (rejectionReason || undefined) : undefined,
+                  rejectionReason: isRejected ? (rejectionReason || undefined) : undefined,
                   payment: {
                     ...(r.payment || {}),
                     required: r.payment?.required ?? true,
                     status: newStatus,
                     amountPaise: r.payment?.amountPaise ?? 99900,
+                    rejectionReason: isRejected ? (rejectionReason || undefined) : undefined,
                   },
                   updatedAt: timestamp,
                   updatedBy: adminEmail,
@@ -659,14 +677,18 @@ export const AdminPage: React.FC = () => {
               ? {
                   ...prev,
                   paymentStatus: newStatus,
-                  paymentVerifiedBy: isVerified ? adminEmail : null,
-                  paymentVerifiedAt: isVerified ? timestamp : null,
+                  status: isVerified ? 'confirmed' : isRejected ? 'rejected' : prev.status,
+                  paymentVerifiedBy: isVerified ? adminEmail : undefined,
+                  paymentVerifiedAt: isVerified ? timestamp : undefined,
                   verifiedAt: isVerified ? timestamp : prev.verifiedAt,
+                  paymentRejectionReason: isRejected ? (rejectionReason || undefined) : undefined,
+                  rejectionReason: isRejected ? (rejectionReason || undefined) : undefined,
                   payment: {
                     ...(prev.payment || {}),
                     required: prev.payment?.required ?? true,
                     status: newStatus,
                     amountPaise: prev.payment?.amountPaise ?? 99900,
+                    rejectionReason: isRejected ? (rejectionReason || undefined) : undefined,
                   },
                   updatedAt: timestamp,
                   updatedBy: adminEmail,
@@ -906,27 +928,43 @@ export const AdminPage: React.FC = () => {
   // Top Stat Cards Calculations (Registrations Tab Only)
   const stats = useMemo(() => {
     const total = registrations.length;
+    const pitchFee = CONFIG.tickets.pitch.fee;
+    const stallFee = CONFIG.tickets.stall.fee;
+
     const participants = registrations.filter(
       (r) => r.ticket === 'participant' || (!r.ticket && !r.wantsToPitch)
     ).length;
     const pitch = registrations.filter(
-      (r) => r.ticket === 'pitch' || r.wantsToPitch
+      (r) => r.ticket === 'pitch' || (r.wantsToPitch && r.ticket !== 'stall')
     ).length;
+    const stall = registrations.filter((r) => r.ticket === 'stall').length;
 
     const pitchVerified = registrations.filter((r) => {
-      const isPitch = r.ticket === 'pitch' || r.wantsToPitch;
+      const isPitch = r.ticket === 'pitch' || (r.wantsToPitch && r.ticket !== 'stall');
       const pStatus = r.payment?.status || r.paymentStatus;
       return isPitch && pStatus === 'verified';
     }).length;
 
+    const stallVerified = registrations.filter((r) => {
+      const isStall = r.ticket === 'stall';
+      const pStatus = r.payment?.status || r.paymentStatus;
+      return isStall && pStatus === 'verified';
+    }).length;
+
     const pitchPending = registrations.filter((r) => {
-      const isPitch = r.ticket === 'pitch' || r.wantsToPitch;
+      const isPitch = r.ticket === 'pitch' || (r.wantsToPitch && r.ticket !== 'stall');
       const pStatus = r.payment?.status || r.paymentStatus || 'pending';
       return isPitch && pStatus === 'pending';
     }).length;
 
-    const pitchFee = CONFIG.tickets.pitch.fee;
-    const expectedRevenue = pitchVerified * pitchFee;
+    const stallPending = registrations.filter((r) => {
+      const isStall = r.ticket === 'stall';
+      const pStatus = r.payment?.status || r.paymentStatus || 'pending';
+      return isStall && pStatus === 'pending';
+    }).length;
+
+    const expectedRevenue =
+      pitchVerified * pitchFee + stallVerified * stallFee;
 
     const confirmed = registrations.filter((r) => r.status === 'confirmed').length;
     const registered = registrations.filter((r) => r.status === 'registered').length;
@@ -945,9 +983,13 @@ export const AdminPage: React.FC = () => {
       total,
       participants,
       pitch,
+      stall,
       pitchVerified,
+      stallVerified,
       pitchPending,
+      stallPending,
       pitchFee,
+      stallFee,
       expectedRevenue,
       confirmed,
       registered,
@@ -1041,14 +1083,19 @@ export const AdminPage: React.FC = () => {
         const matchesCollege = !cQuery || colName.includes(cQuery);
 
         // 3. Ticket filter
-        const isPitch = r.ticket === 'pitch' || r.wantsToPitch;
+        const isStall = r.ticket === 'stall';
+        const isPitch = r.ticket === 'pitch' || (Boolean(r.wantsToPitch) && !isStall);
+        const isParticipant = !isStall && !isPitch;
+
         const matchesTicket =
           ticketFilter === 'All' ||
+          (ticketFilter === 'stall' && isStall) ||
           (ticketFilter === 'pitch' && isPitch) ||
-          (ticketFilter === 'participant' && !isPitch);
+          (ticketFilter === 'participant' && isParticipant);
 
         // 4. Payment status filter
-        const pStatus = r.payment?.status || r.paymentStatus || (isPitch ? 'pending' : 'not_required');
+        const isPaid = isStall || isPitch;
+        const pStatus = r.payment?.status || r.paymentStatus || (isPaid ? 'pending' : 'not_required');
         const matchesPayment =
           paymentStatusFilter === 'All' || pStatus === paymentStatusFilter;
 
@@ -1142,7 +1189,8 @@ export const AdminPage: React.FC = () => {
   // CSV Exporters
   const handleExportRegistrations = () => {
     const exportData = registrations.map((r) => {
-      const pStatus = r.payment?.status || r.paymentStatus || (r.ticket === 'pitch' ? 'pending' : 'not_required');
+      const isPaid = r.ticket === 'pitch' || r.ticket === 'stall' || r.wantsToPitch;
+      const pStatus = r.payment?.status || r.paymentStatus || (isPaid ? 'pending' : 'not_required');
       const pAmount = r.payment ? Math.round(r.payment.amountPaise / 100) : (r.paymentAmount ?? 0);
       const pUtr = r.payment?.utr || r.paymentUtr || '';
       return {
@@ -1170,14 +1218,17 @@ export const AdminPage: React.FC = () => {
         Stage: r.stage || '',
         'Pitch Deck Link': r.pitchDeckLink || '',
         'Team Size': r.teamSize || '',
+        'Team Members': r.teamMembers && r.teamMembers.length ? r.teamMembers.map(m => `${m.name} (${m.email}, ${m.phone})`).join('; ') : '',
         Status: r.status,
         'Pitch Status': r.pitchStatus || '',
         'Payment Status': pStatus.toUpperCase(),
-        'Payment Required': (r.payment?.required ?? (r.ticket === 'pitch')) ? 'Yes' : 'No',
+        'Payment Required': (r.payment?.required ?? isPaid) ? 'Yes' : 'No',
         'Payment Amount (INR)': pAmount,
         'Payment Amount (Paise)': r.payment?.amountPaise ?? (pAmount * 100),
         'Payment UTR': pUtr,
         'Payment Method': r.payment?.method || (pUtr ? 'upi' : ''),
+        'Payment Screenshot URL': r.paymentScreenshotUrl || r.payment?.screenshotUrl || '',
+        'Payment Rejection Reason': r.paymentRejectionReason || r.rejectionReason || '',
         'Payment Verified By': r.paymentVerifiedBy || '',
         'Payment Verified At': r.paymentVerifiedAt || '',
         Notes: r.notes || '',
@@ -1871,8 +1922,8 @@ export const AdminPage: React.FC = () => {
                   <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
                     ₹{stats.expectedRevenue.toLocaleString('en-IN')}
                   </div>
-                  <div className="text-[10px] font-mono font-bold text-[#FF6B1A] truncate" title={`${stats.pitchVerified} verified × ₹${stats.pitchFee}`}>
-                    {stats.pitchVerified} verified × ₹{stats.pitchFee}
+                  <div className="text-[10px] font-mono font-bold text-[#FF6B1A] truncate" title={`Pitch: ${stats.pitchVerified} × ₹${stats.pitchFee} | Stall: ${stats.stallVerified} × ₹${stats.stallFee}`}>
+                    {stats.pitchVerified} pitch + {stats.stallVerified} stall verified
                   </div>
                 </div>
 
@@ -2060,8 +2111,9 @@ export const AdminPage: React.FC = () => {
                     className="p-2 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px]"
                   >
                     <option value="All">All Tickets</option>
-                    <option value="participant">Participant</option>
-                    <option value="pitch">Pitch</option>
+                    <option value="participant">General Attendee (Free)</option>
+                    <option value="pitch">Hall Pitch (₹999)</option>
+                    <option value="stall">Startup Stall (₹1,299)</option>
                   </select>
 
                   {/* Payment Status Filter */}
@@ -2274,13 +2326,17 @@ export const AdminPage: React.FC = () => {
                         <div className="text-[10px] text-[#111111]/60">{reg.phone}</div>
                       </td>
                       <td className="p-3 text-center">
-                        {reg.ticket === 'pitch' || reg.wantsToPitch ? (
+                        {reg.ticket === 'stall' ? (
+                          <span className="font-mono text-[10px] font-bold text-[#111111] bg-[#FFD400] px-1.5 py-0.5 border border-[#111111]">
+                            STALL
+                          </span>
+                        ) : reg.ticket === 'pitch' || reg.wantsToPitch ? (
                           <span className="font-mono text-[10px] font-bold text-white bg-[#FF6B1A] px-1.5 py-0.5 border border-[#111111]">
                             PITCH
                           </span>
                         ) : (
-                          <span className="font-mono text-[10px] font-bold text-[#111111] bg-[#FFD400] px-1.5 py-0.5 border border-[#111111]">
-                            PARTICIPANT
+                          <span className="font-mono text-[10px] font-bold text-[#111111] bg-[#FFF8EC] px-1.5 py-0.5 border border-[#111111]">
+                            ATTENDEE
                           </span>
                         )}
                       </td>
@@ -2308,9 +2364,9 @@ export const AdminPage: React.FC = () => {
                       </td>
                       <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                         {(() => {
-                          const isPitch = reg.ticket === 'pitch' || reg.wantsToPitch;
-                          const pStatus = reg.payment?.status || reg.paymentStatus || (isPitch ? 'pending' : 'not_required');
-                          const isPendingPitch = isPitch && pStatus === 'pending';
+                          const isPaid = reg.ticket === 'pitch' || reg.ticket === 'stall' || reg.wantsToPitch;
+                          const pStatus = reg.payment?.status || reg.paymentStatus || (isPaid ? 'pending' : 'not_required');
+                          const isPendingPaid = isPaid && pStatus === 'pending';
 
                           return (
                             <div className="flex flex-col items-center gap-1">
@@ -2327,7 +2383,7 @@ export const AdminPage: React.FC = () => {
                               >
                                 {pStatus === 'not_required' ? 'NOT REQUIRED' : pStatus}
                               </span>
-                              {isPendingPitch && (
+                              {isPendingPaid && (
                                 <div className="flex items-center gap-1 mt-0.5">
                                   <button
                                     type="button"
@@ -3614,12 +3670,87 @@ export const AdminPage: React.FC = () => {
                   <div>Type: {activeDetailItem.college.type || '—'} {activeDetailItem.college.listed ? '(Listed)' : ''}</div>
                 </div>
               )}
-              <div>Ticket: <strong>{activeDetailItem.ticket ? (activeDetailItem.ticket === 'pitch' ? 'Pitch Your Startup' : 'Participant') : (activeDetailItem.wantsToPitch ? 'Pitch' : 'Participant')}</strong></div>
+              <div>Ticket: <strong>{activeDetailItem.ticket === 'stall' ? 'Startup Stall (₹1,299)' : activeDetailItem.ticket === 'pitch' || activeDetailItem.wantsToPitch ? 'Hall Pitch (₹999)' : 'General Attendee (Free)'}</strong></div>
               <div>Email Verified: <strong>{activeDetailItem.emailVerified ? 'Yes' : 'No'}</strong></div>
               <div>Course: {activeDetailItem.course || '—'} ({activeDetailItem.year || '—'})</div>
               <div>Role: <strong>{activeDetailItem.role}</strong></div>
               <div>City: {activeDetailItem.city}</div>
             </div>
+
+            {/* Team & Startup Showcase Details (Paid Pitch & Stall) */}
+            {(activeDetailItem.startupName || activeDetailItem.teamSize) && (
+              <div className="p-4 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2 text-xs font-mono">
+                <div className="flex items-center justify-between border-b border-[#111111]/20 pb-1">
+                  <span className="font-bold uppercase tracking-wider text-[#111111]">
+                    {activeDetailItem.ticket === 'stall' ? 'Showcase Stall Details' : 'Pitch Deck & Venture Details'}
+                  </span>
+                  {activeDetailItem.teamSize && (
+                    <span className="bg-[#FFD400] text-[#111111] font-bold px-1.5 py-0.5 border border-[#111111] text-[10px]">
+                      {activeDetailItem.teamSize} Members
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[#111111]/70 block text-[11px]">Venture / Product:</span>
+                  <strong className="text-sm text-[#111111]">{activeDetailItem.startupName || '—'}</strong>
+                </div>
+                {activeDetailItem.startupPitch && (
+                  <p className="text-[11px] text-[#111111]/80 italic bg-[#FFF8EC] p-2 border border-[#111111]/20">
+                    "{activeDetailItem.startupPitch}"
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>Sector: <strong>{activeDetailItem.sector || '—'}</strong></div>
+                  <div>Stage: <strong>{activeDetailItem.stage || '—'}</strong></div>
+                </div>
+                {activeDetailItem.pitchDeckLink && (
+                  <div className="pt-1">
+                    <a
+                      href={activeDetailItem.pitchDeckLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[#FF6B1A] font-bold underline text-xs"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>View Pitch Deck</span>
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Team Members List */}
+            {activeDetailItem.teamMembers && activeDetailItem.teamMembers.length > 0 && (
+              <div className="p-4 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2.5 text-xs font-mono">
+                <div className="flex items-center justify-between border-b border-[#111111]/20 pb-1">
+                  <span className="font-bold uppercase tracking-wider text-[#111111]">
+                    Team Members ({activeDetailItem.teamMembers.length})
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {activeDetailItem.teamMembers.map((member, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1 text-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[#111111]">
+                          Member {idx + 1}: {member.name}
+                        </span>
+                        <span className="text-[9px] uppercase font-bold text-[#FF6B1A] bg-white px-1.5 py-0.5 border border-[#111111]">
+                          {member.role || (idx === 0 ? 'Lead' : 'Member')}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-[#111111]/80 space-y-0.5">
+                        <div>Email: <a href={`mailto:${member.email}`} className="underline font-bold">{member.email}</a></div>
+                        <div>Phone: <a href={`tel:${member.phone}`} className="underline font-bold">{member.phone}</a></div>
+                        {member.college && <div>College: {member.college}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Resend Confirmation Pass Email */}
             <button
@@ -3644,7 +3775,8 @@ export const AdminPage: React.FC = () => {
                   Payment & Fee Verification
                 </span>
                 {(() => {
-                  const pStatus = activeDetailItem.payment?.status || activeDetailItem.paymentStatus || (activeDetailItem.ticket === 'pitch' ? 'pending' : 'not_required');
+                  const isPaid = activeDetailItem.ticket === 'pitch' || activeDetailItem.ticket === 'stall' || activeDetailItem.wantsToPitch;
+                  const pStatus = activeDetailItem.payment?.status || activeDetailItem.paymentStatus || (isPaid ? 'pending' : 'not_required');
                   return (
                     <span
                       className={`px-2 py-0.5 border border-[#111111] font-bold uppercase text-[10px] ${
@@ -3676,6 +3808,48 @@ export const AdminPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Payment Screenshot Preview */}
+              {(() => {
+                const screenshotUrl =
+                  activeDetailItem.paymentScreenshotUrl ||
+                  activeDetailItem.payment?.screenshotUrl;
+                if (!screenshotUrl) return null;
+                return (
+                  <div className="p-2.5 bg-white border border-[#111111] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold uppercase tracking-wide text-[10px] text-[#111111]">
+                        Payment Screenshot
+                      </span>
+                      <a
+                        href={screenshotUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#FF6B1A] underline cursor-pointer"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>View Full Image</span>
+                      </a>
+                    </div>
+                    <div className="border border-[#111111]/30 bg-[#FFF8EC] overflow-hidden flex items-center justify-center max-h-48">
+                      <img
+                        src={screenshotUrl}
+                        alt="Payment receipt screenshot"
+                        className="w-full h-auto max-h-48 object-contain cursor-pointer"
+                        onClick={() => window.open(screenshotUrl, '_blank', 'noopener,noreferrer')}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Rejection Reason Display */}
+              {(activeDetailItem.rejectionReason || activeDetailItem.paymentRejectionReason) && (
+                <div className="p-2 bg-red-50 border border-red-400 text-red-900 text-[11px] space-y-0.5">
+                  <span className="font-bold uppercase tracking-wider block text-[10px]">Rejection Reason:</span>
+                  <p>{activeDetailItem.rejectionReason || activeDetailItem.paymentRejectionReason}</p>
+                </div>
+              )}
+
               {activeDetailItem.paymentVerifiedBy && (
                 <div className="text-[11px] text-[#111111]/80 border-t border-[#111111]/20 pt-1.5 space-y-0.5">
                   <div>Verified By: <strong>{activeDetailItem.paymentVerifiedBy}</strong></div>
@@ -3689,102 +3863,23 @@ export const AdminPage: React.FC = () => {
               <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-[#111111]/20">
                 <button
                   type="button"
-                  onClick={async () => {
-                    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
-                    const ok = await updatePaymentStatus(activeDetailItem.id, 'verified', adminEmail, activeDetailItem.docId, activeDetailItem.payment);
-                    if (ok) {
-                      setRegistrations((prev) =>
-                        prev.map((r) =>
-                          r.id === activeDetailItem.id
-                            ? {
-                                ...r,
-                                paymentStatus: 'verified',
-                                paymentVerifiedBy: adminEmail,
-                                paymentVerifiedAt: new Date().toISOString(),
-                                payment: {
-                                  ...(r.payment || {}),
-                                  required: r.payment?.required ?? true,
-                                  status: 'verified',
-                                  amountPaise: r.payment?.amountPaise ?? 99900,
-                                },
-                              }
-                            : r
-                        )
-                      );
-                      setActiveDetailItem((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              paymentStatus: 'verified',
-                              paymentVerifiedBy: adminEmail,
-                              paymentVerifiedAt: new Date().toISOString(),
-                              payment: {
-                                ...(prev.payment || {}),
-                                required: prev.payment?.required ?? true,
-                                status: 'verified',
-                                amountPaise: prev.payment?.amountPaise ?? 99900,
-                              },
-                            }
-                          : null
-                      );
-                      setAdminSuccessToast(`Marked ${activeDetailItem.id} as VERIFIED`);
-                    } else {
-                      setAdminActionError('Could not update payment status');
-                    }
-                  }}
-                  className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold border border-[#111111] text-[10px] uppercase cursor-pointer text-center"
+                  disabled={actionInProgressId === activeDetailItem.id}
+                  onClick={() => handleMarkPayment(activeDetailItem, 'verified')}
+                  className="px-2 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold border border-[#111111] text-[10px] uppercase cursor-pointer text-center disabled:opacity-50"
                 >
                   Mark Verified
                 </button>
                 <button
                   type="button"
-                  onClick={async () => {
-                    const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
-                    const ok = await updatePaymentStatus(activeDetailItem.id, 'rejected', adminEmail, activeDetailItem.docId, activeDetailItem.payment);
-                    if (ok) {
-                      setRegistrations((prev) =>
-                        prev.map((r) =>
-                          r.id === activeDetailItem.id
-                            ? {
-                                ...r,
-                                paymentStatus: 'rejected',
-                                paymentVerifiedBy: adminEmail,
-                                payment: {
-                                  ...(r.payment || {}),
-                                  required: r.payment?.required ?? true,
-                                  status: 'rejected',
-                                  amountPaise: r.payment?.amountPaise ?? 99900,
-                                },
-                              }
-                            : r
-                        )
-                      );
-                      setActiveDetailItem((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              paymentStatus: 'rejected',
-                              paymentVerifiedBy: adminEmail,
-                              payment: {
-                                ...(prev.payment || {}),
-                                required: prev.payment?.required ?? true,
-                                status: 'rejected',
-                                amountPaise: prev.payment?.amountPaise ?? 99900,
-                              },
-                            }
-                          : null
-                      );
-                      setAdminSuccessToast(`Payment marked as REJECTED for ${activeDetailItem.id}`);
-                    } else {
-                      setAdminActionError('Could not update payment status');
-                    }
-                  }}
-                  className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-950 font-bold border border-[#111111] text-[10px] uppercase cursor-pointer text-center"
+                  disabled={actionInProgressId === activeDetailItem.id}
+                  onClick={() => handleMarkPayment(activeDetailItem, 'rejected')}
+                  className="px-2 py-1.5 bg-red-100 hover:bg-red-200 text-red-950 font-bold border border-[#111111] text-[10px] uppercase cursor-pointer text-center disabled:opacity-50"
                 >
                   Reject
                 </button>
                 <button
                   type="button"
+                  disabled={actionInProgressId === activeDetailItem.id}
                   onClick={async () => {
                     const adminEmail = currentUser?.email || 'admin@dvsiet.ac.in';
                     const ok = await updatePaymentStatus(activeDetailItem.id, 'pending', adminEmail, activeDetailItem.docId, activeDetailItem.payment);
@@ -3797,6 +3892,8 @@ export const AdminPage: React.FC = () => {
                                 paymentStatus: 'pending',
                                 paymentVerifiedBy: null,
                                 paymentVerifiedAt: null,
+                                paymentRejectionReason: null,
+                                rejectionReason: null,
                                 payment: {
                                   ...(r.payment || {}),
                                   required: r.payment?.required ?? true,
@@ -3814,6 +3911,8 @@ export const AdminPage: React.FC = () => {
                               paymentStatus: 'pending',
                               paymentVerifiedBy: null,
                               paymentVerifiedAt: null,
+                              paymentRejectionReason: null,
+                              rejectionReason: null,
                               payment: {
                                 ...(prev.payment || {}),
                                 required: prev.payment?.required ?? true,
@@ -3828,9 +3927,9 @@ export const AdminPage: React.FC = () => {
                       setAdminActionError('Could not update payment status');
                     }
                   }}
-                  className="px-2 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold border border-[#111111] text-[10px] uppercase cursor-pointer text-center"
+                  className="px-2 py-1.5 bg-white hover:bg-stone-100 text-[#111111] font-bold border border-[#111111] text-[10px] uppercase cursor-pointer text-center disabled:opacity-50"
                 >
-                  Pending
+                  Reset Pending
                 </button>
               </div>
             </div>

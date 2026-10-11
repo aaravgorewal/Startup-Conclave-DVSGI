@@ -28,6 +28,8 @@ import {
   Linkedin,
   User as UserIcon,
   UserCheck,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import {
@@ -40,7 +42,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '../../services/firebase.ts';
 import { mapAuthError } from '../../services/errorMapping.ts';
-import { CONFIG, type LogoItem, type TeamMember, type Guest, type SponsorNeed } from '../../config.ts';
+import { CONFIG, type LogoItem, type TeamMember, type Guest, type SponsorNeed, type ParticipationCategory } from '../../config.ts';
 import { getTeamMemberPhoto } from '../teamPhotos.ts';
 import {
   createRegistration,
@@ -52,7 +54,12 @@ import {
   isValidUtr,
   fetchPublicRegistrationCount,
   RegistrationInput,
+  TeamMemberDetail,
 } from '../../services/registrations.ts';
+import {
+  uploadPaymentScreenshot,
+  validatePaymentScreenshotFile,
+} from '../../services/storage.ts';
 import { getEventSettings } from '../../services/admin.ts';
 import {
   checkFormFillTime,
@@ -683,7 +690,7 @@ export const SinglePage: React.FC = () => {
   const [googleAuthError, setGoogleAuthError] = useState('');
   const [googleAuthErrorCode, setGoogleAuthErrorCode] = useState('');
   const [copiedPageLink, setCopiedPageLink] = useState(false);
-  const [ticket, setTicket] = useState<'participant' | 'pitch'>('participant');
+  const [ticket, setTicket] = useState<ParticipationCategory>('participant');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -703,22 +710,276 @@ export const SinglePage: React.FC = () => {
   const [pitchSector, setPitchSector] = useState('');
   const [pitchStage, setPitchStage] = useState<'Idea' | 'Prototype' | 'Launched' | 'Revenue' | ''>('');
   const [pitchDeckLink, setPitchDeckLink] = useState('');
-  const [pitchTeamSize, setPitchTeamSize] = useState('');
+  const [pitchTeamSize, setPitchTeamSize] = useState<'2' | '3' | ''>('2');
+  const [teamMembers, setTeamMembers] = useState<TeamMemberDetail[]>([
+    { name: '', email: '', phone: '', college: '', role: 'Team Lead' },
+    { name: '', email: '', phone: '', college: '', role: 'Co-Founder' },
+  ]);
+  const [paymentScreenshotFile, setPaymentScreenshotFile] = useState<File | null>(null);
+  const [paymentScreenshotPreview, setPaymentScreenshotPreview] = useState<string | null>(null);
+  const [paymentScreenshotName, setPaymentScreenshotName] = useState<string>('');
+  const [isUploadingScreenshot, setIsUploadingScreenshot] = useState<boolean>(false);
   const [paymentUtr, setPaymentUtr] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(false);
   const [honeypot, setHoneypot] = useState('');
 
+  // Handle Team Member field updates
+  const handleMemberChange = (index: number, field: keyof TeamMemberDetail, value: string) => {
+    setTeamMembers((prev) => {
+      const copy = [...prev];
+      if (!copy[index]) {
+        copy[index] = { name: '', email: '', phone: '', college: '', role: index === 0 ? 'Team Lead' : 'Member' };
+      }
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+    if (errors[`member_${index}_${field}`]) {
+      setErrors((prev) => {
+        const copy = { ...prev };
+        delete copy[`member_${index}_${field}`];
+        return copy;
+      });
+    }
+  };
+
+  // Handle Team Size changes (strictly 2 or 3)
+  const handleTeamSizeChange = (newSize: '2' | '3' | '') => {
+    setPitchTeamSize(newSize);
+    if (errors.pitchTeamSize) {
+      setErrors((prev) => {
+        const copy = { ...prev };
+        delete copy.pitchTeamSize;
+        return copy;
+      });
+    }
+    const count = Number(newSize);
+    setTeamMembers((prev) => {
+      const copy = [...prev];
+      if (count === 3 && copy.length < 3) {
+        copy.push({ name: '', email: '', phone: '', college: '', role: 'Member' });
+      } else if (count === 2 && copy.length > 2) {
+        return copy.slice(0, 2);
+      }
+      return copy;
+    });
+  };
+
+  // Handle Payment Screenshot File selection
+  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const check = validatePaymentScreenshotFile(file);
+    if (!check.valid) {
+      setErrors((prev) => ({ ...prev, paymentScreenshot: check.error || 'Invalid file format or size.' }));
+      return;
+    }
+
+    setErrors((prev) => {
+      const copy = { ...prev };
+      delete copy.paymentScreenshot;
+      return copy;
+    });
+
+    setPaymentScreenshotFile(file);
+    setPaymentScreenshotName(file.name);
+    try {
+      const preview = URL.createObjectURL(file);
+      setPaymentScreenshotPreview(preview);
+    } catch {
+      // Fallback
+    }
+  };
+
+  const handleRemoveScreenshot = () => {
+    if (paymentScreenshotPreview) {
+      try {
+        URL.revokeObjectURL(paymentScreenshotPreview);
+      } catch {}
+    }
+    setPaymentScreenshotFile(null);
+    setPaymentScreenshotPreview(null);
+    setPaymentScreenshotName('');
+    const input = document.getElementById('reg-paymentScreenshot') as HTMLInputElement;
+    if (input) input.value = '';
+  };
+
+  // Dynamic Team Member Detail Groups based on Team Size (strictly 2 or 3)
+  const renderTeamMemberFields = () => {
+    const count = pitchTeamSize === '3' ? 3 : 2;
+    return (
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between border-b border-[#111111]/20 pb-1.5">
+          <span className="font-bold text-[#111111] block text-xs sm:text-sm">
+            Team Member Details ({count} Members) *
+          </span>
+          <span className="font-mono text-[11px] text-[#111111]/70">
+            Showing exactly {count} members
+          </span>
+        </div>
+
+        {Array.from({ length: count }).map((_, idx) => {
+          const isLead = idx === 0;
+          const member = teamMembers[idx] || { name: '', email: '', phone: '', college: '', role: '' };
+          const memberName = isLead ? (member.name || fullName) : member.name;
+          const memberEmail = isLead ? (member.email || email) : member.email;
+          const memberPhone = isLead ? (member.phone || phone) : member.phone;
+
+          return (
+            <div
+              key={`member-group-${idx}`}
+              className="p-3 sm:p-3.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-3 text-left"
+            >
+              <div className="flex items-center justify-between border-b border-[#111111]/20 pb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs px-2 py-0.5 bg-[#FFD400] text-[#111111] font-bold border border-[#111111]">
+                    Member {idx + 1}
+                  </span>
+                  <span className="font-bold text-xs sm:text-sm text-[#111111]">
+                    {isLead ? 'Team Lead (Primary Contact)' : idx === 1 ? 'Co-Founder / Member 2' : 'Member 3'}
+                  </span>
+                </div>
+                {isLead && (
+                  <span className="text-[10px] font-mono text-[#111111]/60 uppercase">
+                    Primary Registrant
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Full Name */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor={`reg-member-${idx}-name`}
+                    className="font-bold text-[#111111] block text-xs cursor-pointer"
+                  >
+                    Full Name *
+                  </label>
+                  <input
+                    id={`reg-member-${idx}-name`}
+                    type="text"
+                    required
+                    value={memberName}
+                    onChange={(e) => {
+                      handleMemberChange(idx, 'name', e.target.value);
+                      if (isLead && !fullName) setFullName(e.target.value);
+                    }}
+                    placeholder={`Member ${idx + 1} full name`}
+                    aria-invalid={Boolean(errors[`member_${idx}_name`])}
+                    aria-describedby={errors[`member_${idx}_name`] ? `reg-member-${idx}-name-error` : undefined}
+                    className={`w-full p-2 bg-[#FFF8EC] border-2 ${
+                      errors[`member_${idx}_name`] ? 'border-red-600' : 'border-[#111111]'
+                    } font-sans text-sm min-h-[42px]`}
+                  />
+                  {errors[`member_${idx}_name`] && (
+                    <p id={`reg-member-${idx}-name-error`} role="alert" className="text-xs text-red-600 font-bold">
+                      {errors[`member_${idx}_name`]}
+                    </p>
+                  )}
+                </div>
+
+                {/* Email Address */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor={`reg-member-${idx}-email`}
+                    className="font-bold text-[#111111] block text-xs cursor-pointer"
+                  >
+                    Email Address *
+                  </label>
+                  <input
+                    id={`reg-member-${idx}-email`}
+                    type="email"
+                    required
+                    value={memberEmail}
+                    onChange={(e) => {
+                      handleMemberChange(idx, 'email', e.target.value);
+                      if (isLead && !email) setEmail(e.target.value);
+                    }}
+                    placeholder={`member${idx + 1}@example.com`}
+                    aria-invalid={Boolean(errors[`member_${idx}_email`])}
+                    aria-describedby={errors[`member_${idx}_email`] ? `reg-member-${idx}-email-error` : undefined}
+                    className={`w-full p-2 bg-[#FFF8EC] border-2 ${
+                      errors[`member_${idx}_email`] ? 'border-red-600' : 'border-[#111111]'
+                    } font-sans text-sm min-h-[42px]`}
+                  />
+                  {errors[`member_${idx}_email`] && (
+                    <p id={`reg-member-${idx}-email-error`} role="alert" className="text-xs text-red-600 font-bold">
+                      {errors[`member_${idx}_email`]}
+                    </p>
+                  )}
+                </div>
+
+                {/* Mobile */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor={`reg-member-${idx}-phone`}
+                    className="font-bold text-[#111111] block text-xs cursor-pointer"
+                  >
+                    10-Digit Mobile *
+                  </label>
+                  <input
+                    id={`reg-member-${idx}-phone`}
+                    type="tel"
+                    required
+                    inputMode="numeric"
+                    maxLength={10}
+                    value={memberPhone}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      handleMemberChange(idx, 'phone', val);
+                      if (isLead && !phone) setPhone(val);
+                    }}
+                    placeholder="9876543210"
+                    aria-invalid={Boolean(errors[`member_${idx}_phone`])}
+                    aria-describedby={errors[`member_${idx}_phone`] ? `reg-member-${idx}-phone-error` : undefined}
+                    className={`w-full p-2 bg-[#FFF8EC] border-2 ${
+                      errors[`member_${idx}_phone`] ? 'border-red-600' : 'border-[#111111]'
+                    } font-mono text-sm min-h-[42px]`}
+                  />
+                  {errors[`member_${idx}_phone`] && (
+                    <p id={`reg-member-${idx}-phone-error`} role="alert" className="text-xs text-red-600 font-bold">
+                      {errors[`member_${idx}_phone`]}
+                    </p>
+                  )}
+                </div>
+
+                {/* Role / Designation */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor={`reg-member-${idx}-role`}
+                    className="font-bold text-[#111111] block text-xs cursor-pointer"
+                  >
+                    Role in Startup
+                  </label>
+                  <input
+                    id={`reg-member-${idx}-role`}
+                    type="text"
+                    value={member.role || (isLead ? 'Team Lead' : idx === 1 ? 'Co-Founder' : 'Member')}
+                    onChange={(e) => handleMemberChange(idx, 'role', e.target.value)}
+                    placeholder="e.g. Co-Founder, CTO, Pitcher"
+                    className="w-full p-2 bg-[#FFF8EC] border-2 border-[#111111] font-sans text-sm min-h-[42px]"
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Pitch ticket is open only when both upiId and payeeName are configured
   const isPitchOpen = Boolean(CONFIG.payment.upiId?.trim() && CONFIG.payment.payeeName?.trim());
 
-  // Memoized client-side UPI payment deep-link URL (upi://pay?pa=&pn=&am=999&cu=INR)
+  // Memoized client-side UPI payment deep-link URL (dynamic amount for pitch or stall)
   const upiPayUrl = useMemo(() => {
     const upiId = CONFIG.payment.upiId?.trim();
     const payee = CONFIG.payment.payeeName?.trim();
     if (!upiId || !payee) return '';
-    return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payee)}&am=${CONFIG.tickets.pitch.fee}&cu=INR`;
-  }, []);
+    const fee = ticket === 'stall' ? CONFIG.tickets.stall.fee : CONFIG.tickets.pitch.fee;
+    return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payee)}&am=${fee}&cu=INR`;
+  }, [ticket]);
 
   // Form Validation & Submission State
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -726,7 +987,7 @@ export const SinglePage: React.FC = () => {
   const [submittedRecord, setSubmittedRecord] = useState<{
     id: string;
     ticketCode?: string;
-    ticket?: 'participant' | 'pitch';
+    ticket?: ParticipationCategory;
     name: string;
     email: string;
     phone: string;
@@ -740,9 +1001,11 @@ export const SinglePage: React.FC = () => {
     stage?: string;
     pitchDeckLink?: string;
     teamSize?: string;
+    teamMembers?: TeamMemberDetail[];
     paymentStatus?: string;
     paymentAmount?: number;
     paymentUtr?: string;
+    paymentScreenshotUrl?: string;
     status?: string;
   } | null>(null);
 
@@ -1105,11 +1368,15 @@ export const SinglePage: React.FC = () => {
       }
     }
 
-    const isPitch = ticket === 'pitch' || wantsToPitch;
+    const isPitch = ticket === 'pitch';
+    const isStall = ticket === 'stall';
+    const isPaid = isPitch || isStall;
 
-    if (isPitch) {
+    if (isPaid) {
       if (!startupName.trim()) {
-        newErrors.startupName = 'Startup name is required for pitch registrations.';
+        newErrors.startupName = isStall
+          ? 'Startup / product name is required for stall bookings.'
+          : 'Startup name is required for pitch registrations.';
       }
       if (!pitchSector) {
         newErrors.pitchSector = 'Please select a sector.';
@@ -1118,20 +1385,62 @@ export const SinglePage: React.FC = () => {
         newErrors.pitchStage = 'Please select a stage.';
       }
       if (!startupPitch.trim()) {
-        newErrors.startupPitch = 'Startup pitch description is required for pitch registrations.';
-      }
-      if (!pitchDeckLink.trim()) {
-        newErrors.pitchDeckLink = 'Pitch deck link is required for pitch registrations.';
-      } else if (!isValidPitchDeckUrl(pitchDeckLink.trim())) {
-        newErrors.pitchDeckLink = 'Pitch deck link must be a Google Drive (drive.google.com) or Canva (canva.com) URL.';
-      }
-      if (!pitchTeamSize) {
-        newErrors.pitchTeamSize = 'Please select your team size.';
+        newErrors.startupPitch = isStall
+          ? 'Product / showcase description is required for stall bookings.'
+          : 'Startup pitch description is required for pitch registrations.';
       }
 
-      // Block pitch registration if UPI ID or payeeName is not configured (no fake UPI)
+      // 1. Team Size Validation (strictly 2 or 3)
+      const numTeam = Number(pitchTeamSize);
+      if (!pitchTeamSize || (numTeam !== 2 && numTeam !== 3)) {
+        newErrors.pitchTeamSize = 'Team size must be exactly 2 or 3 members for paid registrations.';
+      }
+
+      // 2. Team Members Validation
+      const requiredMembers = numTeam === 3 ? 3 : 2;
+      for (let i = 0; i < requiredMembers; i++) {
+        const m = teamMembers[i] || { name: '', email: '', phone: '' };
+        const memberName = i === 0 ? (m.name.trim() || fullName.trim()) : m.name.trim();
+        const memberEmail = i === 0 ? (m.email.trim() || emailTrim) : m.email.trim();
+        const memberPhone = i === 0 ? (m.phone.trim() || phoneTrim) : m.phone.replace(/\D/g, '').slice(0, 10);
+
+        if (!memberName) {
+          newErrors[`member_${i}_name`] = `Member ${i + 1} full name is required.`;
+        }
+        if (!memberEmail || !isValidEmail(memberEmail)) {
+          newErrors[`member_${i}_email`] = `Member ${i + 1} valid email is required.`;
+        }
+        if (!memberPhone || !isValidIndianPhone(memberPhone)) {
+          newErrors[`member_${i}_phone`] = `Member ${i + 1} 10-digit phone number is required.`;
+        }
+      }
+
+      // Check unique emails across team members
+      const memberEmails: string[] = [];
+      for (let i = 0; i < requiredMembers; i++) {
+        const emailVal = (i === 0 ? (teamMembers[i]?.email?.trim() || emailTrim) : teamMembers[i]?.email?.trim() || '').toLowerCase();
+        if (emailVal) {
+          if (memberEmails.includes(emailVal)) {
+            newErrors[`member_${i}_email`] = `Team members must have unique email addresses.`;
+          } else {
+            memberEmails.push(emailVal);
+          }
+        }
+      }
+
+      // 3. Payment Screenshot Validation
+      if (!paymentScreenshotFile) {
+        newErrors.paymentScreenshot = 'Payment screenshot is required for paid registrations.';
+      } else {
+        const check = validatePaymentScreenshotFile(paymentScreenshotFile);
+        if (!check.valid) {
+          newErrors.paymentScreenshot = check.error || 'Invalid payment screenshot file.';
+        }
+      }
+
+      // 4. UTR Validation
       if (!isPitchOpen) {
-        newErrors.form = 'Pitch registrations open soon.';
+        newErrors.form = isStall ? 'Stall bookings open soon.' : 'Pitch registrations open soon.';
       } else {
         const cleanUtr = paymentUtr.trim();
         if (!cleanUtr) {
@@ -1139,6 +1448,14 @@ export const SinglePage: React.FC = () => {
         } else if (!/^\d{12}$/.test(cleanUtr)) {
           newErrors.paymentUtr = 'Please enter a valid 12-digit numeric UPI Reference Number (UTR).';
         }
+      }
+    }
+
+    if (isPitch) {
+      if (!pitchDeckLink.trim()) {
+        newErrors.pitchDeckLink = 'Pitch deck link is required for pitch registrations.';
+      } else if (!isValidPitchDeckUrl(pitchDeckLink.trim())) {
+        newErrors.pitchDeckLink = 'Pitch deck link must be a Google Drive (drive.google.com) or Canva (canva.com) URL.';
       }
     }
 
@@ -1164,6 +1481,16 @@ export const SinglePage: React.FC = () => {
         { key: 'startupPitch', id: 'reg-startupPitch' },
         { key: 'pitchDeckLink', id: 'reg-pitchDeckLink' },
         { key: 'pitchTeamSize', id: 'reg-pitchTeamSize' },
+        { key: 'member_0_name', id: 'reg-member-0-name' },
+        { key: 'member_0_email', id: 'reg-member-0-email' },
+        { key: 'member_0_phone', id: 'reg-member-0-phone' },
+        { key: 'member_1_name', id: 'reg-member-1-name' },
+        { key: 'member_1_email', id: 'reg-member-1-email' },
+        { key: 'member_1_phone', id: 'reg-member-1-phone' },
+        { key: 'member_2_name', id: 'reg-member-2-name' },
+        { key: 'member_2_email', id: 'reg-member-2-email' },
+        { key: 'member_2_phone', id: 'reg-member-2-phone' },
+        { key: 'paymentScreenshot', id: 'reg-paymentScreenshot' },
         { key: 'paymentUtr', id: 'reg-paymentUtr' },
         { key: 'consent', id: 'reg-consentCheck' },
       ];
@@ -1198,24 +1525,60 @@ export const SinglePage: React.FC = () => {
     setIsSubmitting(true);
     setIsNetworkError(false);
 
+    let screenshotUrl = '';
+    let screenshotPath = '';
+
+    if (isPaid && paymentScreenshotFile) {
+      setIsUploadingScreenshot(true);
+      const uploadRes = await uploadPaymentScreenshot(paymentScreenshotFile, emailTrim);
+      setIsUploadingScreenshot(false);
+
+      if (!uploadRes.success || !uploadRes.url) {
+        setIsSubmitting(false);
+        setErrors({
+          paymentScreenshot: uploadRes.error || 'Failed to upload payment screenshot. Please try again.',
+        });
+        return;
+      }
+      screenshotUrl = uploadRes.url;
+      screenshotPath = uploadRes.storagePath || '';
+    }
+
+    const requiredMembers = Number(pitchTeamSize) === 3 ? 3 : 2;
+    const effectiveTeamMembers: TeamMemberDetail[] = isPaid
+      ? Array.from({ length: requiredMembers }).map((_, idx) => {
+          const m = teamMembers[idx] || { name: '', email: '', phone: '' };
+          return {
+            name: idx === 0 ? (m.name.trim() || fullName.trim()) : m.name.trim(),
+            email: (idx === 0 ? (m.email.trim() || emailTrim) : m.email.trim()).toLowerCase(),
+            phone: idx === 0 ? (m.phone.trim() || phoneTrim) : m.phone.trim(),
+            college: m.college?.trim() || (idx === 0 ? college.trim() : ''),
+            role: m.role?.trim() || (idx === 0 ? 'Team Lead' : idx === 1 ? 'Co-Founder' : 'Member'),
+          };
+        })
+      : [];
+
     const inputData: RegistrationInput = {
       name: fullName.trim(),
       email: emailTrim,
       phone: phoneTrim,
-      ticket: isPitch ? 'pitch' : 'participant',
+      ticket,
       college: college.trim(),
       course: effectiveCourse.slice(0, 100),
       year: effectiveYear.slice(0, 50),
       role,
       city: city.trim() || 'Meerut',
       wantsToPitch: isPitch,
-      startupName: isPitch ? startupName.trim() : undefined,
-      startupPitch: isPitch ? startupPitch.trim() : undefined,
-      sector: isPitch ? pitchSector : undefined,
-      stage: isPitch ? pitchStage : undefined,
+      startupName: isPaid ? startupName.trim() : undefined,
+      startupPitch: isPaid ? startupPitch.trim() : undefined,
+      sector: isPaid ? pitchSector : undefined,
+      stage: isPaid ? pitchStage : undefined,
       pitchDeckLink: isPitch ? pitchDeckLink.trim() : undefined,
-      teamSize: isPitch ? pitchTeamSize : undefined,
-      paymentUtr: isPitch && paymentUtr.trim() ? paymentUtr.trim() : undefined,
+      teamSize: isPaid ? pitchTeamSize : undefined,
+      teamMembers: isPaid ? effectiveTeamMembers : undefined,
+      paymentUtr: isPaid && paymentUtr.trim() ? paymentUtr.trim() : undefined,
+      paymentScreenshotUrl: isPaid ? screenshotUrl : undefined,
+      paymentScreenshotPath: isPaid ? screenshotPath : undefined,
       emailVerified: true,
     };
 
@@ -1230,7 +1593,7 @@ export const SinglePage: React.FC = () => {
       setSubmittedRecord({
         id: res.id,
         ticketCode: res.ticketCode,
-        ticket: isPitch ? 'pitch' : 'participant',
+        ticket,
         name: fullName.trim(),
         email: emailTrim,
         phone: phoneTrim,
@@ -1238,15 +1601,17 @@ export const SinglePage: React.FC = () => {
         role,
         city: city.trim() || 'Meerut',
         wantsToPitch: isPitch,
-        startupName: isPitch ? startupName.trim() : undefined,
-        startupPitch: isPitch ? startupPitch.trim() : undefined,
-        sector: isPitch ? pitchSector : undefined,
-        stage: isPitch ? pitchStage : undefined,
+        startupName: isPaid ? startupName.trim() : undefined,
+        startupPitch: isPaid ? startupPitch.trim() : undefined,
+        sector: isPaid ? pitchSector : undefined,
+        stage: isPaid ? pitchStage : undefined,
         pitchDeckLink: isPitch ? pitchDeckLink.trim() : undefined,
-        teamSize: isPitch ? pitchTeamSize : undefined,
-        paymentStatus: isPitch ? 'pending' : 'not_required',
-        paymentAmount: isPitch ? CONFIG.tickets.pitch.fee : 0,
-        paymentUtr: isPitch ? paymentUtr.trim() : undefined,
+        teamSize: isPaid ? pitchTeamSize : undefined,
+        teamMembers: isPaid ? effectiveTeamMembers : undefined,
+        paymentStatus: isPaid ? 'pending' : 'not_required',
+        paymentAmount: isStall ? CONFIG.tickets.stall.fee : isPitch ? CONFIG.tickets.pitch.fee : 0,
+        paymentUtr: isPaid ? paymentUtr.trim() : undefined,
+        paymentScreenshotUrl: isPaid ? screenshotUrl : undefined,
         status: res.status || 'registered',
       });
       setRegistrationCount((prev) => prev + 1);
@@ -1297,7 +1662,12 @@ export const SinglePage: React.FC = () => {
     setPitchSector('');
     setPitchStage('');
     setPitchDeckLink('');
-    setPitchTeamSize('');
+    setPitchTeamSize('2');
+    setTeamMembers([
+      { name: '', email: '', phone: '', college: '', role: 'Team Lead' },
+      { name: '', email: '', phone: '', college: '', role: 'Co-Founder' },
+    ]);
+    handleRemoveScreenshot();
     setConsentAgreed(false);
     setErrors({});
     setGoogleAuthError('');
@@ -1403,15 +1773,16 @@ export const SinglePage: React.FC = () => {
       ctx.font = '900 40px monospace';
       ctx.fillText(submittedRecord.id, 95, 248);
 
-      const isPitchPending = submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified';
+      const isPaid = submittedRecord.ticket === 'pitch' || submittedRecord.ticket === 'stall';
+      const isPaidPending = isPaid && submittedRecord.paymentStatus !== 'verified';
       const statusBadge = submittedRecord.status === 'waitlist'
         ? 'STATUS: WAITLIST'
-        : isPitchPending
+        : isPaidPending
           ? 'STATUS: PAYMENT PENDING'
           : 'STATUS: CONFIRMED';
       ctx.fillStyle = submittedRecord.status === 'waitlist'
         ? '#78350F'
-        : isPitchPending
+        : isPaidPending
           ? '#92400E'
           : '#065F46';
       ctx.font = '800 16px monospace';
@@ -1423,14 +1794,24 @@ export const SinglePage: React.FC = () => {
       ctx.fillText(`Attendee: ${submittedRecord.name}`, 70, 315);
 
       const colName = typeof submittedRecord.college === 'object' && submittedRecord.college ? (submittedRecord.college as any).name : submittedRecord.college;
-      const ticketLabel = submittedRecord.ticket === 'pitch' ? CONFIG.tickets.pitch.label : CONFIG.tickets.participant.label;
+      const ticketLabel = submittedRecord.ticket === 'stall'
+        ? CONFIG.tickets.stall.label
+        : submittedRecord.ticket === 'pitch'
+          ? CONFIG.tickets.pitch.label
+          : CONFIG.tickets.participant.label;
+
+      const expectedFee = submittedRecord.ticket === 'stall'
+        ? CONFIG.tickets.stall.fee
+        : submittedRecord.ticket === 'pitch'
+          ? CONFIG.tickets.pitch.fee
+          : 0;
 
       ctx.font = '500 17px sans-serif';
       ctx.fillText(`Pass / Ticket: ${ticketLabel}   |   College: ${colName}`, 70, 350);
       ctx.fillText(`Phone: ${submittedRecord.phone}   |   Email: ${submittedRecord.email}`, 70, 385);
       const paymentInfoStr = submittedRecord.paymentStatus === 'not_required'
         ? 'Payment: Not Required (Free)'
-        : `Payment: ${(submittedRecord.paymentStatus || 'pending').toUpperCase()} (₹${submittedRecord.paymentAmount ?? CONFIG.tickets.pitch.fee})`;
+        : `Payment: ${(submittedRecord.paymentStatus || 'pending').toUpperCase()} (₹${submittedRecord.paymentAmount ?? expectedFee})`;
       ctx.fillText(`Category: ${submittedRecord.role} · ${submittedRecord.city}   |   ${paymentInfoStr}`, 70, 420);
 
       // Security ticket code display if present
@@ -2118,7 +2499,7 @@ export const SinglePage: React.FC = () => {
         {/* 6. PITCH ARENA (04) — 1-LINE INTRO                                  */}
         {/* =================================================================== */}
         <section id="pitch" className="bg-[#FF6B1A] text-[#111111] border-b-2 border-[#111111] py-12 md:py-14 lg:py-16 px-4 md:px-6 lg:px-10">
-          <div className="max-w-6xl xl:max-w-7xl mx-auto text-left space-y-5 lg:space-y-6">
+          <div className="max-w-6xl xl:max-w-7xl mx-auto text-left space-y-6 lg:space-y-8">
 
             {/* Header */}
             <div className="flex items-center gap-3">
@@ -2126,7 +2507,7 @@ export const SinglePage: React.FC = () => {
                 {CONFIG.pitchArena.sectionNum}
               </span>
               <span className="font-mono text-xs font-black uppercase tracking-wider bg-white text-[#111111] px-2.5 py-1 border-2 border-[#111111] -rotate-1">
-                Live Stage Pitch
+                Pitch Arena & Participation Tracks
               </span>
             </div>
 
@@ -2137,28 +2518,206 @@ export const SinglePage: React.FC = () => {
               <p className="font-display text-lg sm:text-xl lg:text-2xl text-[#111111] font-extrabold">
                 {CONFIG.pitchArena.tagline}
               </p>
-              {/* 1-Line Intro */}
               <p className="text-sm sm:text-base font-sans text-[#111111] font-medium leading-relaxed">
                 {CONFIG.pitchArena.description}
               </p>
             </div>
 
-            {/* Process in One Row */}
-            <div className="p-4 sm:p-5 lg:p-6 bg-white brutal-border brutal-shadow">
-              <span className="text-xs font-mono font-black uppercase text-[#111111] tracking-wider block mb-2.5 sm:mb-3">
-                Competition Flow
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 font-sans">
-                {CONFIG.pitchArena.process.map((p, idx) => (
-                  <div key={p.step} className="p-2.5 sm:p-3 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-black text-[#FF6B1A]">{p.step}</span>
-                      {idx < 4 && <span className="font-mono text-xs text-[#111111]/70 hidden sm:inline">→</span>}
-                    </div>
-                    <div className="font-display font-black text-sm sm:text-base text-[#111111]">{p.label}</div>
-                    <div className="text-xs text-[#111111]/70">{p.desc}</div>
+            {/* 3 Responsive Participation Category Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6 items-stretch">
+              {/* Card 1: Hall Pitch — ₹999 */}
+              <div className="bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] flex flex-col justify-between p-5 sm:p-6 relative">
+                <div className="space-y-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-black uppercase px-2.5 py-1 bg-[#FF6B1A] text-[#111111] border border-[#111111]">
+                      Stage Pitch
+                    </span>
+                    <span className="font-mono text-sm font-black bg-[#FFD400] text-[#111111] px-2.5 py-1 border border-[#111111]">
+                      ₹999
+                    </span>
                   </div>
-                ))}
+
+                  <div>
+                    <h3 className="font-display font-black text-2xl text-[#111111]">
+                      Hall Pitch
+                    </h3>
+                    <p className="font-mono text-xs font-bold text-[#FF6B1A] mt-0.5">
+                      5m Pitch + 5m Q&A Format
+                    </p>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-[#111111]/85 font-medium leading-relaxed">
+                    Present your startup live on stage directly before our expert jury, guest founders, and conclave attendees.
+                  </p>
+
+                  <ul className="space-y-2 pt-1 border-t border-[#111111]/15 text-xs sm:text-[13px] text-[#111111]">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-[#FF6B1A] stroke-[3] shrink-0 mt-0.5" />
+                      <span><strong>5-minute live pitch</strong> followed by 5-minute Q&A</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-[#FF6B1A] stroke-[3] shrink-0 mt-0.5" />
+                      <span><strong>Event kit, goodies & lunch</strong> included for delegate</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-[#FF6B1A] stroke-[3] shrink-0 mt-0.5" />
+                      <span>Actionable evaluation & feedback from expert jury</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-[#FF6B1A] stroke-[3] shrink-0 mt-0.5" />
+                      <span>Full 2-day conclave access & ecosystem spotlight</span>
+                    </li>
+                  </ul>
+
+                  <div className="p-2.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px] text-[#111111]/80 leading-normal">
+                    <strong>Notice:</strong> Pitch slots are subject to published venue capacity and eligibility verification rules.
+                  </div>
+                </div>
+
+                <div className="pt-5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTicket('pitch');
+                      setWantsToPitch(true);
+                      handleNavClick('register');
+                    }}
+                    className="brutal-btn w-full bg-[#FF6B1A] hover:bg-[#FFD400] text-[#111111] px-4 py-3 font-display font-black text-sm uppercase tracking-wider border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center gap-2 cursor-pointer transition-colors min-h-[46px]"
+                  >
+                    <span>Register for Hall Pitch — ₹999</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 2: Startup Stall — ₹1,299 */}
+              <div className="bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] flex flex-col justify-between p-5 sm:p-6 relative">
+                <div className="space-y-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-black uppercase px-2.5 py-1 bg-[#FFD400] text-[#111111] border border-[#111111]">
+                      Product Showcase
+                    </span>
+                    <span className="font-mono text-sm font-black bg-[#FF6B1A] text-[#111111] px-2.5 py-1 border border-[#111111]">
+                      ₹1,299
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="font-display font-black text-2xl text-[#111111]">
+                      Startup Stall
+                    </h3>
+                    <p className="font-mono text-xs font-bold text-[#111111]/80 mt-0.5">
+                      Product & Prototype Showcase Stall
+                    </p>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-[#111111]/85 font-medium leading-relaxed">
+                    Set up an exhibition stall space to demo products, display prototypes, and connect with students, builders and mentors.
+                  </p>
+
+                  <ul className="space-y-2 pt-1 border-t border-[#111111]/15 text-xs sm:text-[13px] text-[#111111]">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
+                      <span><strong>Dedicated showcase stall space</strong> to exhibit your venture</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
+                      <span>Display working prototypes, software demos & products</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
+                      <span>Direct high footfall engagement from conclave attendees</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
+                      <span>Founder passes included for team exhibition entry</span>
+                    </li>
+                  </ul>
+
+                  <div className="p-2.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px] text-[#111111]/80 leading-normal">
+                    <strong>Notice:</strong> Stall availability, setup details, dimensions, included facilities and timings will be communicated after registration.
+                  </div>
+                </div>
+
+                <div className="pt-5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTicket('stall');
+                      setWantsToPitch(false);
+                      handleNavClick('register');
+                    }}
+                    className="brutal-btn w-full bg-[#FFD400] hover:bg-[#FF6B1A] text-[#111111] px-4 py-3 font-display font-black text-sm uppercase tracking-wider border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center gap-2 cursor-pointer transition-colors min-h-[46px]"
+                  >
+                    <span>Book a Startup Stall — ₹1,299</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 3: General Attendee — Free */}
+              <div className="bg-[#FFF8EC] border-2 border-[#111111] shadow-[4px_4px_0px_#111111] flex flex-col justify-between p-5 sm:p-6 relative">
+                <div className="space-y-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-black uppercase px-2.5 py-1 bg-white text-[#111111] border border-[#111111]">
+                      Audience Pass
+                    </span>
+                    <span className="font-mono text-sm font-black bg-white text-[#111111] px-2.5 py-1 border border-[#111111]">
+                      FREE
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="font-display font-black text-2xl text-[#111111]">
+                      General Attendee
+                    </h3>
+                    <p className="font-mono text-xs font-bold text-[#111111]/70 mt-0.5">
+                      2-Day Delegate Admission
+                    </p>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-[#111111]/85 font-medium leading-relaxed">
+                    Participate as an audience member. Watch startup pitches, attend keynote sessions, and network with creators.
+                  </p>
+
+                  <ul className="space-y-2 pt-1 border-t border-[#111111]/15 text-xs sm:text-[13px] text-[#111111]">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
+                      <span><strong>Full 2-day attendee delegate access</strong> to open sessions</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
+                      <span>Audience delegate access to the Startup Pitch Arena</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
+                      <span>Campus entrepreneurship & collegiate peer networking</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
+                      <span>Official digital entry pass with gate verification QR</span>
+                    </li>
+                  </ul>
+
+                  <div className="p-2.5 bg-[#FFF2D6] border border-[#111111] font-mono text-[11px] text-[#111111]/80 leading-normal">
+                    <strong>Notice:</strong> General Attendee pass does not include a pitch slot, startup stall, event kit, goodies, or lunch.
+                  </div>
+                </div>
+
+                <div className="pt-5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTicket('participant');
+                      setWantsToPitch(false);
+                      handleNavClick('register');
+                    }}
+                    className="brutal-btn w-full bg-white hover:bg-[#FFD400] text-[#111111] px-4 py-3 font-display font-black text-sm uppercase tracking-wider border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center gap-2 cursor-pointer transition-colors min-h-[46px]"
+                  >
+                    <span>Register as an Attendee — Free</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -2183,42 +2742,12 @@ export const SinglePage: React.FC = () => {
                     </div>
                   </div>
                 ))}
-                {CONFIG.pitchArena.juryConfirmed && (
-                  <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
-                    <div className="font-display font-black text-base text-[#111111]">
-                      Jury Evaluation
-                    </div>
-                    <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
-                      Direct live scoring and review by confirmed industry jury members.
-                    </div>
-                  </div>
-                )}
-                {CONFIG.pitchArena.investorsConfirmed && (
-                  <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
-                    <div className="font-display font-black text-base text-[#111111]">
-                      Investor Access
-                    </div>
-                    <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
-                      Direct interaction opportunities with confirmed institutional investors and angels.
-                    </div>
-                  </div>
-                )}
-                {CONFIG.pitchArena.awardsConfirmed && (
-                  <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
-                    <div className="font-display font-black text-base text-[#111111]">
-                      Awards &amp; Recognition
-                    </div>
-                    <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
-                      Conclave trophies, official certificates, and stage recognition for winning teams.
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Key Facts & Action */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-1">
-              <div className="flex flex-wrap items-center gap-3 font-mono text-xs sm:text-sm font-bold text-[#111111]">
+            {/* Key Facts Strip */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 font-mono text-xs sm:text-sm font-bold text-[#111111]">
                 {CONFIG.pitchArena.facts.map((fact) => (
                   <span key={fact.label} className="bg-white px-3.5 py-1.5 border-2 border-[#111111] shadow-[2px_2px_0px_#111111]">
                     <strong>{fact.label}:</strong> {fact.value}
@@ -2228,6 +2757,7 @@ export const SinglePage: React.FC = () => {
 
               <button
                 onClick={() => {
+                  setTicket('pitch');
                   setWantsToPitch(true);
                   handleNavClick('register');
                 }}
@@ -2755,13 +3285,13 @@ export const SinglePage: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`font-mono text-xs font-black uppercase tracking-wider px-2 py-0.5 border border-[#111111] ${submittedRecord.status === 'waitlist'
                         ? 'bg-amber-300 text-amber-950'
-                        : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                        : (submittedRecord.ticket === 'pitch' || submittedRecord.ticket === 'stall') && submittedRecord.paymentStatus !== 'verified'
                           ? 'bg-[#FFD400] text-[#111111]'
                           : 'bg-white text-[#FF6B1A]'
                       }`}>
                       {submittedRecord.status === 'waitlist'
                         ? 'WAITLIST ENTRY'
-                        : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                        : (submittedRecord.ticket === 'pitch' || submittedRecord.ticket === 'stall') && submittedRecord.paymentStatus !== 'verified'
                           ? 'PAYMENT VERIFICATION PENDING'
                           : 'REGISTRATION CONFIRMED'}
                     </span>
@@ -2774,7 +3304,7 @@ export const SinglePage: React.FC = () => {
                   <h2 className="font-display font-extrabold text-2xl text-[#111111] leading-tight">
                     {submittedRecord.status === 'waitlist'
                       ? 'You are on the waitlist.'
-                      : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                      : (submittedRecord.ticket === 'pitch' || submittedRecord.ticket === 'stall') && submittedRecord.paymentStatus !== 'verified'
                         ? 'Registration received. Payment verification pending'
                         : "You're registered for the conclave."}
                   </h2>
@@ -2984,7 +3514,11 @@ export const SinglePage: React.FC = () => {
                   <div>
                     <span className="text-[#111111]/70 text-xs block">Ticket / Pass:</span>
                     <span className="font-bold text-[#111111]">
-                      {submittedRecord.ticket === 'pitch' ? CONFIG.tickets.pitch.label : CONFIG.tickets.participant.label}
+                      {submittedRecord.ticket === 'stall'
+                        ? CONFIG.tickets.stall.label
+                        : submittedRecord.ticket === 'pitch'
+                          ? CONFIG.tickets.pitch.label
+                          : CONFIG.tickets.participant.label}
                     </span>
                   </div>
                   <div>
@@ -3011,13 +3545,13 @@ export const SinglePage: React.FC = () => {
                     <span className="text-[#111111]/70 text-xs block">Status:</span>
                     <span className={`font-bold ${submittedRecord.status === 'waitlist'
                         ? 'text-amber-800'
-                        : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                        : (submittedRecord.ticket === 'pitch' || submittedRecord.ticket === 'stall') && submittedRecord.paymentStatus !== 'verified'
                           ? 'text-amber-800'
                           : 'text-emerald-800'
                       }`}>
                       {submittedRecord.status === 'waitlist'
                         ? 'Waitlist (Capacity reached)'
-                        : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                        : (submittedRecord.ticket === 'pitch' || submittedRecord.ticket === 'stall') && submittedRecord.paymentStatus !== 'verified'
                           ? 'Payment Verification Pending'
                           : 'Registered'}
                     </span>
@@ -3100,6 +3634,60 @@ export const SinglePage: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Team Members List if registered with a team */}
+                {submittedRecord.teamMembers && submittedRecord.teamMembers.length > 0 && (
+                  <div className="pt-3 border-t border-[#111111]/20 space-y-2 text-left">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF6B1A] block">
+                      👥 Team Members ({submittedRecord.teamMembers.length})
+                    </span>
+                    <div className="space-y-1.5">
+                      {submittedRecord.teamMembers.map((tm, idx) => (
+                        <div key={idx} className="p-2 bg-white border border-[#111111] text-xs flex flex-wrap items-center justify-between gap-1">
+                          <div>
+                            <span className="font-bold text-[#111111]">{idx + 1}. {tm.name}</span>
+                            <span className="text-[#111111]/70 ml-1.5">({tm.role || (idx === 0 ? 'Team Lead' : 'Member')})</span>
+                          </div>
+                          <div className="font-mono text-[11px] text-[#111111]/80">
+                            <span>{tm.email}</span> · <span>{tm.phone}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Payment Screenshot Preview if uploaded */}
+                {submittedRecord.paymentScreenshotUrl && (
+                  <div className="pt-3 border-t border-[#111111]/20 space-y-1.5 text-left">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF6B1A] block">
+                      🧾 Payment Receipt Proof
+                    </span>
+                    <div className="flex items-center gap-3 p-2 bg-white border border-[#111111]">
+                      <img
+                        src={submittedRecord.paymentScreenshotUrl}
+                        alt="Payment receipt proof"
+                        className="w-14 h-14 object-cover border border-[#111111] bg-[#FFF8EC]"
+                      />
+                      <div className="text-xs font-mono space-y-0.5">
+                        <a
+                          href={submittedRecord.paymentScreenshotUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-[#FF6B1A] underline hover:text-[#111111] inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          View Full Screenshot <ExternalLink className="w-3 h-3" />
+                        </a>
+                        {submittedRecord.paymentUtr && (
+                          <p className="text-[#111111]/80">UTR: {submittedRecord.paymentUtr}</p>
+                        )}
+                        <span className="text-[10px] text-amber-800 font-bold block">
+                          Status: Verification Pending by Organisers
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-2 flex items-center justify-between border-t-2 border-[#111111]">
@@ -3173,34 +3761,50 @@ export const SinglePage: React.FC = () => {
                   />
                 </div>
 
-                {/* Ticket Type Selection */}
-                <div className="space-y-2">
-                  <label className="font-bold text-[#111111] block">Select Ticket / Pass *</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Participation Track Selection */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-[#111111] text-sm sm:text-base block">
+                      Select Participation Track *
+                    </label>
+                    <span className="font-mono text-[11px] text-[#111111]/70">
+                      3 tracks available
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* 1. General Attendee — Free */}
                     <button
                       type="button"
                       onClick={() => {
                         setTicket('participant');
                         setWantsToPitch(false);
                       }}
-                      className={`p-3.5 border-2 border-[#111111] text-left transition-all cursor-pointer ${ticket === 'participant'
-                          ? 'bg-[#FFD400] shadow-[3px_3px_0px_#111111]'
-                          : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111]'
-                        }`}
+                      className={`p-3.5 border-2 border-[#111111] text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        ticket === 'participant'
+                          ? 'bg-[#FFD400] text-[#111111] shadow-[3px_3px_0px_#111111]'
+                          : 'bg-white hover:bg-[#FFF8EC] text-[#111111] shadow-[1px_1px_0px_#111111]'
+                      }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm sm:text-base text-[#111111]">
-                          {CONFIG.tickets.participant.label}
-                        </span>
-                        <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-white">
-                          {CONFIG.tickets.participant.fee === 0 ? 'FREE' : `₹${CONFIG.tickets.participant.fee}`}
-                        </span>
+                      <div>
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="font-bold text-sm sm:text-base">
+                            {CONFIG.tickets.participant.label}
+                          </span>
+                          <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-white text-[#111111] shrink-0">
+                            FREE
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#111111]/80 mt-1.5 leading-snug">
+                          Audience delegate pass for keynotes & arena viewing.
+                        </p>
                       </div>
-                      <p className="text-xs text-[#111111]/70 mt-1">
-                        Full 2-day attendee delegate pass
-                      </p>
+                      <div className="mt-3 pt-2 border-t border-[#111111]/15 font-mono text-[11px] text-[#111111]/70">
+                        No payment required
+                      </div>
                     </button>
 
+                    {/* 2. Hall Pitch — ₹999 */}
                     <button
                       type="button"
                       onClick={() => {
@@ -3216,27 +3820,98 @@ export const SinglePage: React.FC = () => {
                         setTicket('pitch');
                         setWantsToPitch(true);
                       }}
-                      className={`p-3.5 border-2 border-[#111111] text-left transition-all ${!isPitchOpen
+                      className={`p-3.5 border-2 border-[#111111] text-left transition-all flex flex-col justify-between ${
+                        !isPitchOpen
                           ? 'opacity-80 bg-[#F4EFE6] cursor-not-allowed shadow-[1px_1px_0px_#111111]'
                           : ticket === 'pitch'
                             ? 'bg-[#FF6B1A] text-[#111111] shadow-[3px_3px_0px_#111111] cursor-pointer'
-                            : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111] cursor-pointer'
-                        }`}
+                            : 'bg-white hover:bg-[#FFF8EC] text-[#111111] shadow-[1px_1px_0px_#111111] cursor-pointer'
+                      }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm sm:text-base text-[#111111]">
-                          {CONFIG.tickets.pitch.label}
+                      <div>
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="font-bold text-sm sm:text-base">
+                            {CONFIG.tickets.pitch.label}
+                          </span>
+                          <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FFD400] text-[#111111] shrink-0">
+                            {!isPitchOpen ? 'SOON' : `₹${CONFIG.tickets.pitch.fee}`}
+                          </span>
+                        </div>
+                        <p className={`text-xs mt-1.5 leading-snug ${ticket === 'pitch' && isPitchOpen ? 'text-[#111111]/90 font-medium' : 'text-[#111111]/80'}`}>
+                          5m pitch + 5m Q&A, event kit, goodies & lunch.
+                        </p>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-[#111111]/15 font-mono text-[11px] text-[#111111]/70">
+                        Live stage pitch slot
+                      </div>
+                    </button>
+
+                    {/* 3. Startup Stall — ₹1,299 */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isPitchOpen) {
+                          setErrors((prev) => ({ ...prev, form: 'Stall bookings open soon.' }));
+                          return;
+                        }
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.form;
+                          return next;
+                        });
+                        setTicket('stall');
+                        setWantsToPitch(false);
+                      }}
+                      className={`p-3.5 border-2 border-[#111111] text-left transition-all flex flex-col justify-between ${
+                        !isPitchOpen
+                          ? 'opacity-80 bg-[#F4EFE6] cursor-not-allowed shadow-[1px_1px_0px_#111111]'
+                          : ticket === 'stall'
+                            ? 'bg-[#FFD400] text-[#111111] shadow-[3px_3px_0px_#111111] cursor-pointer'
+                            : 'bg-white hover:bg-[#FFF8EC] text-[#111111] shadow-[1px_1px_0px_#111111] cursor-pointer'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="font-bold text-sm sm:text-base">
+                            {CONFIG.tickets.stall.label}
+                          </span>
+                          <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FF6B1A] text-[#111111] shrink-0">
+                            {!isPitchOpen ? 'SOON' : `₹${CONFIG.tickets.stall.fee}`}
+                          </span>
+                        </div>
+                        <p className={`text-xs mt-1.5 leading-snug ${ticket === 'stall' && isPitchOpen ? 'text-[#111111]/90 font-medium' : 'text-[#111111]/80'}`}>
+                          Product showcase & demo exhibition stall space.
+                        </p>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-[#111111]/15 font-mono text-[11px] text-[#111111]/70">
+                        Dedicated showcase space
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Selected Track Overview & Notice Box */}
+                  <div className="p-3.5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-black uppercase tracking-wider bg-[#111111] text-white px-2 py-0.5">
+                          Selected Track
                         </span>
-                        <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FFD400] text-[#111111]">
-                          {!isPitchOpen ? 'OPENS SOON' : `₹${CONFIG.tickets.pitch.fee}`}
+                        <span className="font-bold text-sm text-[#111111]">
+                          {CONFIG.tickets[ticket].label}
                         </span>
                       </div>
-                      <p className={`text-xs mt-1 ${ticket === 'pitch' && isPitchOpen ? 'text-[#111111]/85 font-medium' : 'text-[#111111]/70'}`}>
-                        {!isPitchOpen
-                          ? 'Pitch registrations open soon'
-                          : 'Pitch your startup to jury & investors + delegate entry'}
+                      <span className="font-mono text-xs font-black bg-[#FFD400] px-2 py-0.5 border border-[#111111]">
+                        {CONFIG.tickets[ticket].fee === 0 ? 'FREE' : `₹${CONFIG.tickets[ticket].fee}`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#111111]/85 font-medium leading-relaxed">
+                      {CONFIG.tickets[ticket].description}
+                    </p>
+                    {CONFIG.tickets[ticket].notice && (
+                      <p className="text-[11px] font-mono text-[#111111]/75 pt-1 border-t border-[#111111]/15 italic">
+                        <strong>Notice:</strong> {CONFIG.tickets[ticket].notice}
                       </p>
-                    </button>
+                    )}
                   </div>
                 </div>
 
@@ -3884,53 +4559,236 @@ export const SinglePage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Team Size Dropdown */}
+                        {/* Team Size Selector (strictly 2 or 3) */}
                         <div className="space-y-1.5">
                           <label htmlFor="reg-pitchTeamSize" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                            Team Size *
+                            Team Size * <span className="font-mono text-xs font-normal text-[#111111]/70">(2 to 3 members)</span>
                           </label>
                           <select
                             id="reg-pitchTeamSize"
                             value={pitchTeamSize}
-                            onChange={(e) => {
-                              setPitchTeamSize(e.target.value);
-                              if (errors.pitchTeamSize) setErrors((prev) => ({ ...prev, pitchTeamSize: '' }));
-                            }}
+                            onChange={(e) => handleTeamSizeChange(e.target.value as '2' | '3' | '')}
                             aria-invalid={Boolean(errors.pitchTeamSize)}
                             aria-describedby={errors.pitchTeamSize ? 'reg-pitchTeamSize-error' : undefined}
-                            className={`w-full p-2.5 bg-white border-2 ${errors.pitchTeamSize ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                            className={`w-full p-2.5 bg-white border-2 ${errors.pitchTeamSize ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer font-bold`}
                           >
-                            <option value="">Select Team Size</option>
-                            <option value="1">1 (Solo Founder)</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                            <option value="6">6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                            <option value="10">10</option>
+                            <option value="2">2 Members</option>
+                            <option value="3">3 Members</option>
                           </select>
                           {errors.pitchTeamSize && (
                             <p id="reg-pitchTeamSize-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchTeamSize}</p>
                           )}
                         </div>
                       </div>
+
+                      {/* Team Member Details Groups (2 or 3 groups) */}
+                      {renderTeamMemberFields()}
                     </div>
                   )}
 
-                  {/* 5.5 UPI Fee Payment Block (Rendered for Pitch pass) */}
-                  {ticket === 'pitch' && (
+                  {/* 5a. Startup Stall Showcase Section */}
+                  {ticket === 'stall' && (
+                    <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] space-y-3.5 animate-in fade-in">
+                      <div className="flex items-center justify-between border-b border-[#111111]/20 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-base">🏪</span>
+                          <span className="font-bold text-[#111111] uppercase tracking-wide text-xs sm:text-sm">
+                            Startup Stall Showcase Details
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTicket('participant');
+                            setWantsToPitch(false);
+                          }}
+                          className="text-[11px] font-mono underline text-[#111111]/70 hover:text-[#FF6B1A] cursor-pointer"
+                        >
+                          Switch to Attendee pass
+                        </button>
+                      </div>
+
+                      {/* 1. Startup / Product Name */}
+                      <div className="space-y-1.5">
+                        <label htmlFor="reg-startupName" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                          Startup / Product Name *
+                        </label>
+                        <input
+                          id="reg-startupName"
+                          type="text"
+                          autoComplete="organization"
+                          required
+                          value={startupName}
+                          onChange={(e) => {
+                            setStartupName(e.target.value);
+                            if (errors.startupName) setErrors((prev) => ({ ...prev, startupName: '' }));
+                          }}
+                          placeholder="e.g. KisanAI or RoboClean"
+                          aria-invalid={Boolean(errors.startupName)}
+                          aria-describedby={errors.startupName ? 'reg-startupName-error' : undefined}
+                          className={`w-full p-2.5 bg-white border-2 ${errors.startupName ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                        />
+                        {errors.startupName && (
+                          <p id="reg-startupName-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.startupName}</p>
+                        )}
+                      </div>
+
+                      {/* 2. Sector & Stage */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Sector Dropdown */}
+                        <div className="space-y-1.5">
+                          <label htmlFor="reg-pitchSector" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                            Sector *
+                          </label>
+                          <select
+                            id="reg-pitchSector"
+                            value={pitchSector}
+                            onChange={(e) => {
+                              setPitchSector(e.target.value);
+                              if (errors.pitchSector) setErrors((prev) => ({ ...prev, pitchSector: '' }));
+                            }}
+                            aria-invalid={Boolean(errors.pitchSector)}
+                            aria-describedby={errors.pitchSector ? 'reg-pitchSector-error' : undefined}
+                            className={`w-full p-2.5 bg-white border-2 ${errors.pitchSector ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                          >
+                            <option value="">Select Sector</option>
+                            <option value="Agritech">Agritech</option>
+                            <option value="AI / ML">AI / ML</option>
+                            <option value="Cleantech & Energy">Cleantech & Energy</option>
+                            <option value="D2C & Consumer">D2C & Consumer</option>
+                            <option value="Edtech">Edtech</option>
+                            <option value="Fintech">Fintech</option>
+                            <option value="Healthcare & Biotech">Healthcare & Biotech</option>
+                            <option value="Robotics & Hardware">Robotics & Hardware</option>
+                            <option value="SaaS & Enterprise">SaaS & Enterprise</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          {errors.pitchSector && (
+                            <p id="reg-pitchSector-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchSector}</p>
+                          )}
+                        </div>
+
+                        {/* Stage Dropdown */}
+                        <div className="space-y-1.5">
+                          <label htmlFor="reg-pitchStage" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                            Stage *
+                          </label>
+                          <select
+                            id="reg-pitchStage"
+                            value={pitchStage}
+                            onChange={(e) => {
+                              setPitchStage(e.target.value as any);
+                              if (errors.pitchStage) setErrors((prev) => ({ ...prev, pitchStage: '' }));
+                            }}
+                            aria-invalid={Boolean(errors.pitchStage)}
+                            aria-describedby={errors.pitchStage ? 'reg-pitchStage-error' : undefined}
+                            className={`w-full p-2.5 bg-white border-2 ${errors.pitchStage ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                          >
+                            <option value="">Select Stage</option>
+                            <option value="Idea">Idea</option>
+                            <option value="Prototype">Prototype (Working Demo)</option>
+                            <option value="Launched">Launched (Early Users)</option>
+                            <option value="Revenue">Revenue Generating</option>
+                          </select>
+                          {errors.pitchStage && (
+                            <p id="reg-pitchStage-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchStage}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 3. Product / Showcase Description */}
+                      <div className="space-y-1.5">
+                        <label htmlFor="reg-startupPitch" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                          Product / Showcase Description *
+                        </label>
+                        <textarea
+                          id="reg-startupPitch"
+                          required
+                          maxLength={300}
+                          value={startupPitch}
+                          onChange={(e) => {
+                            setStartupPitch(e.target.value.slice(0, 300));
+                            if (errors.startupPitch) setErrors((prev) => ({ ...prev, startupPitch: '' }));
+                          }}
+                          placeholder="Briefly describe what product or prototype you will display at your stall (max 300 characters)..."
+                          aria-invalid={Boolean(errors.startupPitch)}
+                          aria-describedby={errors.startupPitch ? 'reg-startupPitch-error' : undefined}
+                          className={`w-full p-2.5 bg-white border-2 ${errors.startupPitch ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[76px] text-sm resize-none`}
+                        />
+                        <div className="flex items-center justify-between text-[11px] font-mono text-[#111111]/60">
+                          <span>{300 - startupPitch.length} characters remaining</span>
+                        </div>
+                        {errors.startupPitch && (
+                          <p id="reg-startupPitch-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.startupPitch}</p>
+                        )}
+                      </div>
+
+                      {/* 4. Team Size / Booth Representatives (strictly 2 or 3) */}
+                      <div className="space-y-1.5">
+                        <label htmlFor="reg-pitchTeamSize" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                          Team Size / Booth Representatives * <span className="font-mono text-xs font-normal text-[#111111]/70">(2 to 3 members)</span>
+                        </label>
+                        <select
+                          id="reg-pitchTeamSize"
+                          value={pitchTeamSize}
+                          onChange={(e) => handleTeamSizeChange(e.target.value as '2' | '3' | '')}
+                          aria-invalid={Boolean(errors.pitchTeamSize)}
+                          aria-describedby={errors.pitchTeamSize ? 'reg-pitchTeamSize-error' : undefined}
+                          className={`w-full p-2.5 bg-white border-2 ${errors.pitchTeamSize ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer font-bold`}
+                        >
+                          <option value="2">2 Members</option>
+                          <option value="3">3 Members</option>
+                        </select>
+                        {errors.pitchTeamSize && (
+                          <p id="reg-pitchTeamSize-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchTeamSize}</p>
+                        )}
+                      </div>
+
+                      {/* Team Member Details Groups (2 or 3 groups) */}
+                      {renderTeamMemberFields()}
+
+                      <div className="p-2.5 bg-white border border-[#111111] font-mono text-[11px] text-[#111111]/80">
+                        <strong>Notice:</strong> Stall availability, setup details, dimensions, included facilities and timings will be communicated after registration.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Free General Attendee Checkout Summary */}
+                  {ticket === 'participant' && (
+                    <div className="p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-2.5">
+                      <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
+                        <div>
+                          <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FFD400] text-[#111111] px-2 py-0.5 border border-[#111111]">
+                            GENERAL ATTENDEE CHECKOUT
+                          </span>
+                          <h3 className="font-display font-black text-xl text-[#111111] mt-1">
+                            FREE <span className="text-xs font-mono font-normal text-[#111111]/70">/ No Payment Required</span>
+                          </h3>
+                        </div>
+                        <span className="font-mono text-xs font-bold uppercase px-2.5 py-1 bg-emerald-100 text-emerald-900 border border-emerald-600">
+                          Instant Pass
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#111111]/80 leading-relaxed">
+                        Registration as a General Attendee is completely free. You will receive an official entry pass with a unique gate security QR immediately upon submitting.
+                      </p>
+                      <p className="text-[11px] font-mono text-[#111111]/65 italic border-t border-[#111111]/15 pt-1.5">
+                        Notice: General Attendee pass does not include pitch slots, startup stalls, event kits, goodies or lunch.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 5.5 UPI Fee Payment Block (Rendered for Pitch and Stall passes) */}
+                  {(ticket === 'pitch' || ticket === 'stall') && (
                     !isPitchOpen ? (
                       <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
                         <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
                           <div>
                             <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-[#111111] px-2 py-0.5 border border-[#111111]">
-                              {CONFIG.tickets.pitch.label.toUpperCase()}
+                              {CONFIG.tickets[ticket].label.toUpperCase()}
                             </span>
                             <h3 className="font-display font-black text-xl text-[#111111] mt-1">
-                              ₹{CONFIG.tickets.pitch.fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ Startup Pitch Pass</span>
+                              ₹{CONFIG.tickets[ticket].fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ {CONFIG.tickets[ticket].label}</span>
                             </h3>
                           </div>
                           <span className="font-mono text-xs font-bold uppercase px-2 py-1 bg-[#FFD400] text-[#111111] border border-[#111111]">
@@ -3938,9 +4796,9 @@ export const SinglePage: React.FC = () => {
                           </span>
                         </div>
                         <div className="p-3.5 bg-white border-2 border-[#111111] space-y-1">
-                          <p className="font-bold text-[#111111] text-sm">Pitch registrations open soon</p>
+                          <p className="font-bold text-[#111111] text-sm">Registrations open soon</p>
                           <p className="text-xs text-[#111111]/70">
-                            Pitch ticket UPI payment details will be published once pitch slots are unlocked. In the meantime, you can register with a free Attendee Delegate pass.
+                            Payment details will be published once slots are unlocked. In the meantime, you can register with a free Attendee pass.
                           </p>
                         </div>
                         <button
@@ -3959,10 +4817,10 @@ export const SinglePage: React.FC = () => {
                         <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
                           <div>
                             <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-[#111111] px-2 py-0.5 border border-[#111111]">
-                              {CONFIG.tickets.pitch.label.toUpperCase()} FEE
+                              {CONFIG.tickets[ticket].label.toUpperCase()} CHECKOUT
                             </span>
                             <h3 className="font-display font-black text-xl text-[#111111] mt-1">
-                              ₹{CONFIG.tickets.pitch.fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ Startup Pitch Pass</span>
+                              ₹{CONFIG.tickets[ticket].fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ {CONFIG.tickets[ticket].label} Pass</span>
                             </h3>
                           </div>
                           <div className="text-right">
@@ -4013,7 +4871,7 @@ export const SinglePage: React.FC = () => {
                             <div className="space-y-3 text-center sm:text-left flex-1">
                               <div>
                                 <span className="font-bold text-sm text-[#111111] block">
-                                  Scan QR Code to Pay ₹{CONFIG.tickets.pitch.fee}
+                                  Scan QR Code to Pay ₹{CONFIG.tickets[ticket].fee}
                                 </span>
                                 <p className="text-xs text-[#111111]/70 mt-0.5">
                                   Scan with Google Pay, PhonePe, Paytm, BHIM, or any UPI app.
@@ -4031,11 +4889,108 @@ export const SinglePage: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* 12-digit UTR Input */}
+                          {/* Payment Screenshot Upload */}
+                          <div className="space-y-2">
+                            <label
+                              htmlFor="reg-paymentScreenshot"
+                              className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer"
+                            >
+                              Payment Screenshot *
+                            </label>
+                            <p className="text-xs text-[#111111]/80 font-medium">
+                              Upload a screenshot of your successful payment.
+                            </p>
+
+                            {!paymentScreenshotPreview ? (
+                              <div className={`p-4 bg-white border-2 border-dashed ${
+                                errors.paymentScreenshot ? 'border-red-600 bg-red-50/20' : 'border-[#111111]'
+                              } text-center space-y-2 relative transition-colors`}>
+                                <div className="flex flex-col items-center justify-center gap-1.5 py-1">
+                                  <div className="w-10 h-10 rounded-full bg-[#FFD400] border-2 border-[#111111] flex items-center justify-center">
+                                    <Upload className="w-5 h-5 text-[#111111]" />
+                                  </div>
+                                  <label
+                                    htmlFor="reg-paymentScreenshot"
+                                    className="font-bold text-xs sm:text-sm text-[#FF6B1A] underline hover:text-[#111111] cursor-pointer"
+                                  >
+                                    Choose screenshot file
+                                  </label>
+                                  <span className="text-[11px] font-mono text-[#111111]/70">
+                                    Supports JPG, JPEG, PNG, WebP (Max 5 MB)
+                                  </span>
+                                </div>
+                                <input
+                                  id="reg-paymentScreenshot"
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                                  onChange={handleScreenshotChange}
+                                  aria-invalid={Boolean(errors.paymentScreenshot)}
+                                  aria-describedby={errors.paymentScreenshot ? 'reg-paymentScreenshot-error' : undefined}
+                                  className="w-full text-xs font-mono cursor-pointer file:mr-3 file:py-1.5 file:px-3 file:border file:border-[#111111] file:text-xs file:font-bold file:bg-[#FFD400] file:text-[#111111] hover:file:bg-[#FF6B1A] file:cursor-pointer"
+                                />
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2.5">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFF8EC] border-2 border-[#111111] shrink-0 overflow-hidden flex items-center justify-center">
+                                    <img
+                                      src={paymentScreenshotPreview}
+                                      alt="Screenshot preview"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <ImageIcon className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                                      <span className="font-mono text-xs font-bold text-[#111111] truncate block">
+                                        {paymentScreenshotName}
+                                      </span>
+                                    </div>
+                                    <span className="text-[11px] font-mono text-emerald-700 block mt-0.5">
+                                      ✓ Ready to upload on submit
+                                    </span>
+                                    <div className="mt-2 flex items-center gap-2">
+                                      <label
+                                        htmlFor="reg-paymentScreenshot"
+                                        className="text-xs font-mono font-bold text-[#111111] px-2.5 py-1 bg-[#FFD400] hover:bg-[#FF6B1A] border border-[#111111] cursor-pointer inline-flex items-center gap-1"
+                                      >
+                                        Replace screenshot
+                                      </label>
+                                      <button
+                                        type="button"
+                                        onClick={handleRemoveScreenshot}
+                                        className="text-xs font-mono text-red-600 underline hover:text-red-800 cursor-pointer"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                                <input
+                                  id="reg-paymentScreenshot"
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                                  onChange={handleScreenshotChange}
+                                  className="sr-only"
+                                />
+                              </div>
+                            )}
+
+                            {errors.paymentScreenshot && (
+                              <p id="reg-paymentScreenshot-error" role="alert" className="text-xs text-red-600 font-bold">
+                                {errors.paymentScreenshot}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* UTR / Transaction Reference Number Input */}
                           <div className="space-y-1.5">
                             <label htmlFor="reg-paymentUtr" className="font-bold text-[#111111] block cursor-pointer">
-                              12-Digit UPI Reference Number (UTR / Txn ID) *
+                              UTR / Transaction Reference Number *
                             </label>
+                            <p className="text-xs text-[#111111]/80 font-medium">
+                              Enter the UTR or transaction reference number shown in your payment app.
+                            </p>
                             <input
                               id="reg-paymentUtr"
                               type="text"
@@ -4056,13 +5011,10 @@ export const SinglePage: React.FC = () => {
                             {errors.paymentUtr && (
                               <p id="reg-paymentUtr-error" role="alert" className="text-xs text-red-600 font-bold">{errors.paymentUtr}</p>
                             )}
-                            <p className="text-[11px] font-mono text-[#111111]/70">
-                              Enter the 12-digit numeric reference shown in your UPI app payment receipt after paying.
-                            </p>
                           </div>
 
                           {CONFIG.payment.refundPolicyText && (
-                            <p className="text-[11px] font-sans text-[#111111]/60 italic border-t border-[#111111]/20 pt-2">
+                            <p className="text-[11px] font-sans text-[#111111]/70 italic border-t border-[#111111]/20 pt-2">
                               Refund Policy: {CONFIG.payment.refundPolicyText}
                             </p>
                           )}
@@ -4113,10 +5065,10 @@ export const SinglePage: React.FC = () => {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      disabled={!authUser || isSubmitting || (ticket === 'pitch' && !isPitchOpen)}
+                      disabled={!authUser || isSubmitting || ((ticket === 'pitch' || ticket === 'stall') && !isPitchOpen)}
                       className={`w-full brutal-btn text-[#111111] p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${!authUser
                           ? 'bg-neutral-400 text-neutral-800 opacity-60 cursor-not-allowed shadow-none border-2 border-[#111111]'
-                          : ticket === 'pitch' && !isPitchOpen
+                          : (ticket === 'pitch' || ticket === 'stall') && !isPitchOpen
                             ? 'bg-neutral-400 text-neutral-800 opacity-70 cursor-not-allowed shadow-none border-2 border-[#111111]'
                             : isSubmitting
                               ? 'bg-[#FF6B1A] opacity-60 cursor-not-allowed pointer-events-none'
@@ -4128,16 +5080,22 @@ export const SinglePage: React.FC = () => {
                           <Lock className="w-4 h-4" />
                           <span>Sign in with Google above to unlock</span>
                         </span>
-                      ) : ticket === 'pitch' && !isPitchOpen ? (
-                        <span>Pitch registrations open soon</span>
+                      ) : (ticket === 'pitch' || ticket === 'stall') && !isPitchOpen ? (
+                        <span>Registrations open soon</span>
                       ) : isSubmitting ? (
                         <span className="flex items-center gap-2">
                           <RotateCw className="w-5 h-5 animate-spin" />
-                          <span>Submitting registration...</span>
+                          <span>{isUploadingScreenshot ? 'Uploading screenshot & registering...' : 'Submitting registration...'}</span>
                         </span>
                       ) : (
                         <>
-                          <span>{ticket === 'pitch' ? 'Submit Pitch Registration' : 'Register for Startup Conclave 1.0'}</span>
+                          <span>
+                            {ticket === 'stall'
+                              ? 'Book a Startup Stall — ₹1,299'
+                              : ticket === 'pitch'
+                                ? 'Register for Hall Pitch — ₹999'
+                                : 'Register as an Attendee — Free'}
+                          </span>
                           <ArrowRight className="w-5 h-5" />
                         </>
                       )}

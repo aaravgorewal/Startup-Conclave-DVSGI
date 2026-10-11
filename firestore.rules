@@ -49,8 +49,9 @@ service cloud.firestore {
           'name', 'email', 'emailLower', 'phone', 'college', 'course', 'year',
           'role', 'city', 'notes', 'wantsToPitch', 'startupName',
           'startupPitch', 'pitchStatus', 'status', 'createdAt',
-          'sector', 'stage', 'pitchDeckLink', 'teamSize',
+          'sector', 'stage', 'pitchDeckLink', 'teamSize', 'teamMembers',
           'paymentStatus', 'paymentAmount', 'paymentUtr', 'paymentVerifiedAt', 'paymentVerifiedBy',
+          'paymentScreenshotUrl', 'paymentScreenshotPath', 'paymentRejectionReason', 'rejectionReason',
           'ticket', 'emailVerified', 'verifiedAt', 'payment'
         ])
         && data.ticketCode is string && data.ticketCode.size() == 16 && data.ticketCode.matches('^[A-Za-z0-9]{16}$')
@@ -81,8 +82,22 @@ service cloud.firestore {
         && (!('sector' in data) || (data.sector is string && data.sector.size() <= 100))
         && (!('stage' in data) || (data.stage is string && data.stage.size() <= 50))
         && (!('pitchDeckLink' in data) || (data.pitchDeckLink is string && data.pitchDeckLink.size() <= 1000))
-        && (!('teamSize' in data) || (data.teamSize is string && data.teamSize.size() <= 50) || data.teamSize is int)
-        && (!('ticket' in data) || (data.ticket is string && data.ticket in ['participant', 'pitch']))
+        && (!('teamSize' in data) || (
+          (data.ticket in ['pitch', 'stall'] && (data.teamSize in ['2', '3', 2, 3]))
+          || ((!('ticket' in data) || data.ticket == 'participant') && ((data.teamSize is string && data.teamSize.size() <= 50) || data.teamSize is int))
+        ))
+        && (!('teamMembers' in data) || (
+          data.teamMembers is list
+          && (
+            (data.ticket in ['pitch', 'stall'] && (data.teamMembers.size() == 2 || data.teamMembers.size() == 3))
+            || (!('ticket' in data) || data.ticket == 'participant')
+          )
+        ))
+        && (!('paymentScreenshotUrl' in data) || (data.paymentScreenshotUrl is string && data.paymentScreenshotUrl.size() <= 2000))
+        && (!('paymentScreenshotPath' in data) || (data.paymentScreenshotPath is string && data.paymentScreenshotPath.size() <= 500))
+        && (!('paymentRejectionReason' in data) || data.paymentRejectionReason == null || (data.paymentRejectionReason is string && data.paymentRejectionReason.size() <= 500))
+        && (!('rejectionReason' in data) || data.rejectionReason == null || (data.rejectionReason is string && data.rejectionReason.size() <= 500))
+        && (!('ticket' in data) || (data.ticket is string && data.ticket in ['participant', 'pitch', 'stall']))
         && (!('emailVerified' in data) || data.emailVerified is bool)
         && (!('verifiedAt' in data) || data.verifiedAt == null || data.verifiedAt is timestamp || data.verifiedAt is string)
         && data.payment is map
@@ -97,6 +112,15 @@ service cloud.firestore {
             && data.payment.utr.matches('^[0-9]{12}$')
             && existsAfter(/databases/$(database)/documents/utrIndex/$(data.payment.utr))
           ) || (
+            data.ticket == 'stall'
+            && data.payment.required == true
+            && data.payment.status == 'pending'
+            && data.payment.amountPaise == 129900
+            && data.payment.method == 'upi'
+            && data.payment.utr is string
+            && data.payment.utr.matches('^[0-9]{12}$')
+            && existsAfter(/databases/$(database)/documents/utrIndex/$(data.payment.utr))
+          ) || (
             (!('ticket' in data) || data.ticket == 'participant')
             && data.payment.required == false
             && data.payment.status == 'not_required'
@@ -104,11 +128,12 @@ service cloud.firestore {
           )
         )
         && (!('paymentStatus' in data) || (
-          (data.ticket == 'pitch' && data.paymentStatus == 'pending')
+          (data.ticket in ['pitch', 'stall'] && data.paymentStatus == 'pending')
           || ((!('ticket' in data) || data.ticket == 'participant') && data.paymentStatus in ['not_required', 'free'])
         ))
         && (!('paymentAmount' in data) || (
           (data.ticket == 'pitch' && data.paymentAmount == 999)
+          || (data.ticket == 'stall' && data.paymentAmount == 1299)
           || (data.paymentAmount == 0)
         ))
         && (!('paymentUtr' in data) || (data.paymentUtr is string && data.paymentUtr.size() <= 30))

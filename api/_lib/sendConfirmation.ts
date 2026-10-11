@@ -90,8 +90,13 @@ export async function sendConfirmationEmailForDoc(
   }
 
   const attendeeName = regData.name || regData.fullName || 'Attendee';
+  const isStall = regData.ticket === 'stall';
   const isPitch = regData.ticket === 'pitch' || regData.wantsToPitch === true;
-  const ticketTypeDisplay = isPitch ? 'Startup Pitch Pass' : 'Participant Pass';
+  const ticketTypeDisplay = isStall
+    ? 'Startup Stall Pass'
+    : isPitch
+      ? 'Hall Pitch Pass'
+      : 'General Attendee Pass';
 
   let collegeDisplay = '';
   if (typeof regData.college === 'string') {

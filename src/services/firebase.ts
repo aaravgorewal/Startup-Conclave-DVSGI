@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import {
   getAuth,
   GoogleAuthProvider,
@@ -27,6 +28,7 @@ export const db = firebaseConfig.firestoreDatabaseId
   : getFirestore(app);
 
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 
 // Set persistence to browserLocalPersistence with a fallback to browserSessionPersistence
 if (typeof window !== 'undefined') {

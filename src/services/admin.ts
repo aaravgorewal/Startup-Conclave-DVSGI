@@ -360,22 +360,28 @@ export const updatePaymentStatus = async (
   paymentStatus: 'not_required' | 'pending' | 'verified' | 'rejected',
   adminEmail?: string,
   docId?: string,
-  existingPayment?: any
+  existingPayment?: any,
+  rejectionReason?: string
 ): Promise<boolean> => {
   const timestamp = new Date().toISOString();
   const isVerified = paymentStatus === 'verified';
+  const isRejected = paymentStatus === 'rejected';
   return updateRegistration(
     id,
     {
       paymentStatus,
       paymentVerifiedAt: isVerified ? timestamp : null,
       paymentVerifiedBy: isVerified ? (adminEmail || 'admin') : null,
+      paymentRejectionReason: isRejected ? (rejectionReason?.trim() || 'Payment unverified') : null,
+      rejectionReason: isRejected ? (rejectionReason?.trim() || 'Payment unverified') : null,
       verifiedAt: isVerified ? timestamp : null,
+      status: isVerified ? 'confirmed' : isRejected ? 'rejected' : 'registered',
       payment: {
         ...(existingPayment || {}),
         required: existingPayment?.required ?? (paymentStatus !== 'not_required'),
         status: paymentStatus,
         amountPaise: existingPayment?.amountPaise ?? (paymentStatus === 'not_required' ? 0 : 99900),
+        rejectionReason: isRejected ? (rejectionReason?.trim() || 'Payment unverified') : null,
       },
       updatedAt: timestamp,
       updatedBy: adminEmail || 'admin',
