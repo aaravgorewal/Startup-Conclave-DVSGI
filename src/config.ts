@@ -39,13 +39,11 @@ export interface Guest {
 
 export interface TeamMember {
   name: string;
-  role: string;
+  roles: string[];
   photo?: string;
-  photoUrl?: string;
-  initials?: string;
+  linkedin?: string;
   confirmed: boolean;
-  group?: 'faculty' | 'student-lead' | 'head';
-  order?: number;
+  tier: 'core' | 'lead';
 }
 
 export interface TicketConfig {
@@ -67,6 +65,13 @@ export interface PartnerTier {
   name: string;
   price?: string; // empty string shows "Contact us for details"
   benefits: string[];
+}
+
+export interface SponsorNeed {
+  title: string;
+  description: string;
+  amount?: string;
+  confirmed: boolean;
 }
 
 export interface StatItem {
@@ -159,6 +164,12 @@ export const CONFIG = {
     { name: 'Ministry of MSME', logo: msmeLogo, confirmed: false, width: 250, height: 194 },
     { name: 'StartInUP', logo: startInUpLogo, confirmed: false, width: 200, height: 200 },
   ] as LogoItem[],
+
+  // Sponsorship needs & deck
+  sponsorNeeds: [] as SponsorNeed[],
+  sponsorDeckUrl: '',
+  sponsorContactEmail: '',
+
   // Contact details & Social URLs (all initially empty strings)
   contactEmail: "",
   contactPhone: "",
@@ -371,13 +382,173 @@ export const CONFIG = {
 
   // Behind the event: Faculty and Student leadership
   faculty: [] as TeamMember[],
-  students: [] as TeamMember[],
+  students: [
+    {
+      name: "Aarav Saini",
+      roles: ["Overall Student Head", "Sponsorship"],
+      linkedin: "https://www.linkedin.com/in/aaravgorewal/",
+      confirmed: true,
+      tier: "core",
+    },
+    {
+      name: "Mayank Sharma",
+      roles: ["Technical Head", "Operations"],
+      linkedin: "https://www.linkedin.com/in/mayank-sharma-878516311/",
+      confirmed: true,
+      tier: "core",
+    },
+    {
+      name: "Vani Sharma",
+      roles: ["Media Head", "Social Media"],
+      linkedin: "https://www.linkedin.com/in/vani-sharma-798273404",
+      confirmed: true,
+      tier: "core",
+    },
+    {
+      name: "Kartik Gupta",
+      roles: ["Pitching Competition Head", "Speaker Relations"],
+      linkedin: "https://www.linkedin.com/in/kartik-gupta-553859366/",
+      confirmed: true,
+      tier: "core",
+    },
+    {
+      name: "Gagan Kumar",
+      roles: ["Marketing"],
+      confirmed: true,
+      tier: "lead",
+    },
+    {
+      name: "Nitika Ruhela",
+      roles: ["Startup & Investor Relations"],
+      confirmed: true,
+      tier: "lead",
+    },
+    {
+      name: "Yash Mishra",
+      roles: ["Marketing"],
+      confirmed: true,
+      tier: "lead",
+    },
+    {
+      name: "Hetisha Bhardwaj",
+      roles: ["Branding & Creative"],
+      confirmed: true,
+      tier: "lead",
+    },
+    {
+      name: "Mahima Chaudhary",
+      roles: ["Hospitality"],
+      confirmed: true,
+      tier: "lead",
+    },
+    {
+      name: "Kunal Dhama",
+      roles: ["Finance"],
+      confirmed: true,
+      tier: "lead",
+    },
+    {
+      name: "Aaditya Chaudhary",
+      roles: ["Technical"],
+      confirmed: true,
+      tier: "lead",
+    },
+    {
+      name: "Arpita Rajput",
+      roles: ["Anchoring"],
+      confirmed: true,
+      tier: "lead",
+    },
+    {
+      name: "Shiva Maitray",
+      roles: ["Security"],
+      confirmed: true,
+      tier: "lead",
+    },
+  ] as TeamMember[],
   volunteerFormUrl: '',
   team: {
     headline: "Behind the event",
     note: "Faculty and student leadership will be announced soon.",
     faculty: [] as TeamMember[],
-    students: [] as TeamMember[],
+    students: [
+      {
+        name: "Aarav Saini",
+        roles: ["Overall Student Head", "Sponsorship"],
+        linkedin: "https://www.linkedin.com/in/aaravgorewal/",
+        confirmed: true,
+        tier: "core",
+      },
+      {
+        name: "Mayank Sharma",
+        roles: ["Technical Head", "Operations"],
+        linkedin: "https://www.linkedin.com/in/mayank-sharma-878516311/",
+        confirmed: true,
+        tier: "core",
+      },
+      {
+        name: "Vani Sharma",
+        roles: ["Media Head", "Social Media"],
+        linkedin: "https://www.linkedin.com/in/vani-sharma-798273404",
+        confirmed: true,
+        tier: "core",
+      },
+      {
+        name: "Kartik Gupta",
+        roles: ["Pitching Competition Head", "Speaker Relations"],
+        linkedin: "https://www.linkedin.com/in/kartik-gupta-553859366/",
+        confirmed: true,
+        tier: "core",
+      },
+      {
+        name: "Nitika Ruhela",
+        roles: ["Startup & Investor Relations"],
+        confirmed: true,
+        tier: "lead",
+      },
+      {
+        name: "Yash Mishra",
+        roles: ["Marketing"],
+        confirmed: true,
+        tier: "lead",
+      },
+      {
+        name: "Hetisha Bhardwaj",
+        roles: ["Branding & Creative"],
+        confirmed: true,
+        tier: "lead",
+      },
+      {
+        name: "Mahima Chaudhary",
+        roles: ["Hospitality"],
+        confirmed: true,
+        tier: "lead",
+      },
+      {
+        name: "Kunal Dhama",
+        roles: ["Finance"],
+        confirmed: true,
+        tier: "lead",
+      },
+      {
+        name: "Aaditya Chaudhary",
+        roles: ["Technical"],
+        confirmed: true,
+        tier: "lead",
+      },
+      {
+        name: "Arpita Rajput",
+        roles: ["Anchoring"],
+        confirmed: true,
+        tier: "lead",
+      },
+      {
+        name: "Shiva Maitray",
+        roles: ["Security"],
+        confirmed: true,
+        tier: "lead",
+      },
+    ] as TeamMember[],
     volunteerFormUrl: '',
   },
 

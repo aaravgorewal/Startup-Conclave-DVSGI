@@ -39,6 +39,7 @@ import {
 import { auth, googleProvider } from '../../services/firebase.ts';
 import { mapAuthError } from '../../services/errorMapping.ts';
 import { CONFIG, type LogoItem, type TeamMember, type Guest } from '../../config.ts';
+import { getTeamMemberPhoto } from '../teamPhotos.ts';
 import {
   createRegistration,
   createPartnerEnquiry,
@@ -2658,29 +2659,9 @@ export const SinglePage: React.FC = () => {
             : CONFIG.students || [];
 
         const confirmedFaculty = facultyList.filter((m) => m.confirmed);
-
-        // Student leadership sorting: student-lead first, then heads sorted by order (then name)
-        const sortStudentMembers = (a: TeamMember, b: TeamMember) => {
-          const isHeadA = a.group === 'head';
-          const isHeadB = b.group === 'head';
-
-          if (isHeadA !== isHeadB) {
-            return isHeadA ? 1 : -1;
-          }
-
-          const orderA = typeof a.order === 'number' ? a.order : Infinity;
-          const orderB = typeof b.order === 'number' ? b.order : Infinity;
-
-          if (orderA !== orderB) {
-            return orderA - orderB;
-          }
-
-          return a.name.localeCompare(b.name);
-        };
-
-        const confirmedStudents = studentsList
-          .filter((m) => m.confirmed)
-          .sort(sortStudentMembers);
+        const confirmedStudents = studentsList.filter((m) => m.confirmed);
+        const coreStudents = confirmedStudents.filter((m) => m.tier === 'core');
+        const leadStudents = confirmedStudents.filter((m) => m.tier === 'lead');
 
         const hasFacultyConfirmed = confirmedFaculty.length > 0;
         const hasStudentsConfirmed = confirmedStudents.length > 0;
@@ -2688,15 +2669,26 @@ export const SinglePage: React.FC = () => {
         // Rendered only while at least one group is showing placeholders
         const showPlaceholdersNote = !hasFacultyConfirmed || !hasStudentsConfirmed;
 
-        const getInitials = (name: string, customInitials?: string) => {
-          if (customInitials) return customInitials;
-          return name
-            .split(' ')
-            .filter(Boolean)
-            .map((p) => p[0])
-            .join('')
-            .slice(0, 2)
-            .toUpperCase();
+        const getMemberInitials = (name: string): string => {
+          if (!name || !name.trim()) return '?';
+          const withoutSuffix = name.split(',')[0].trim();
+          const withoutHonorific = withoutSuffix
+            .replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Sh\.|Mr|Mrs|Ms|Dr|Prof|Sh)\s+/i, '')
+            .trim();
+          const parts = withoutHonorific.split(/\s+/).filter(Boolean);
+          if (parts.length === 0) return '?';
+          if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+          return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        };
+
+        const getCleanLinkedInUrl = (url?: string): string | undefined => {
+          if (!url || !url.startsWith('https://www.linkedin.com/')) return undefined;
+          try {
+            const parsed = new URL(url);
+            return `${parsed.origin}${parsed.pathname}`;
+          } catch {
+            return url.split('?')[0].split('#')[0];
+          }
         };
 
         const volunteerUrl = (CONFIG.volunteerFormUrl || (CONFIG.team as any)?.volunteerFormUrl || '').trim();
@@ -2748,10 +2740,13 @@ export const SinglePage: React.FC = () => {
                       key={idx}
                       className="p-5 bg-white brutal-border brutal-shadow flex items-start gap-4 text-left"
                     >
-                      {member.photo || member.photoUrl ? (
+                      {member.photo ? (
                         <img
-                          src={member.photo || member.photoUrl}
-                          alt={member.name}
+                          src={member.photo}
+                          alt={`${member.name}, ${member.roles?.join(', ') || ''}`}
+                          loading="lazy"
+                          width={64}
+                          height={64}
                           className="w-16 h-16 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0"
                         />
                       ) : (
@@ -2760,7 +2755,7 @@ export const SinglePage: React.FC = () => {
                           aria-label={member.name}
                         >
                           <span className="font-display font-black text-xl text-[#111111]">
-                            {getInitials(member.name, member.initials)}
+                            {getMemberInitials(member.name)}
                           </span>
                         </div>
                       )}
@@ -2769,7 +2764,7 @@ export const SinglePage: React.FC = () => {
                           {member.name}
                         </h4>
                         <p className="font-mono text-xs font-bold text-[#FF6B1A] uppercase tracking-wide">
-                          {member.role}
+                          {member.roles?.join(', ')}
                         </p>
                       </div>
                     </div>
@@ -2805,7 +2800,7 @@ export const SinglePage: React.FC = () => {
             </div>
 
             {/* 2. STUDENT LEADERSHIP */}
-            <div className="space-y-4">
+            <div className="space-y-6 sm:space-y-8">
               <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
                 <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
                   Student Leadership
@@ -2815,67 +2810,154 @@ export const SinglePage: React.FC = () => {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {hasStudentsConfirmed ? (
-                  confirmedStudents.map((member, idx) => (
+              {/* CORE TEAM: large cards (1 col at 360px, 2 col >= 400px, 4 col desktop) */}
+              <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                {coreStudents.map((member, idx) => {
+                  const photoUrl = getTeamMemberPhoto(member.name, member.photo);
+                  const cleanLinkedIn = getCleanLinkedInUrl(member.linkedin);
+
+                  return (
                     <div
-                      key={idx}
-                      className="p-5 bg-white brutal-border brutal-shadow flex items-start gap-4 text-left"
+                      key={`core-${member.name}-${idx}`}
+                      className="p-5 sm:p-6 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
                     >
-                      {member.photo || member.photoUrl ? (
-                        <img
-                          src={member.photo || member.photoUrl}
-                          alt={member.name}
-                          className="w-16 h-16 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0"
-                        />
-                      ) : (
-                        <div
-                          className="w-16 h-16 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0"
-                          aria-label={member.name}
-                        >
-                          <span className="font-display font-black text-xl text-[#111111]">
-                            {getInitials(member.name, member.initials)}
+                      <div className="space-y-4">
+                        {photoUrl ? (
+                          <img
+                            src={photoUrl}
+                            loading="lazy"
+                            width={320}
+                            height={320}
+                            alt={`${member.name}, ${member.roles.join(', ')}`}
+                            className="w-full aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
+                          />
+                        ) : (
+                          <div
+                            className="w-full aspect-square bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0 select-none"
+                            aria-label={member.name}
+                          >
+                            <span className="font-display font-black text-3xl sm:text-4xl text-[#111111]">
+                              {getMemberInitials(member.name)}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-display font-black text-lg sm:text-xl text-[#111111] leading-tight break-words">
+                            {member.name}
+                          </h4>
+                          {cleanLinkedIn && (
+                            <a
+                              href={cleanLinkedIn}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`${member.name} on LinkedIn`}
+                              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0"
+                            >
+                              <Linkedin className="w-4 h-4 text-[#111111]" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {member.roles.map((r, roleIdx) => (
+                          <span
+                            key={roleIdx}
+                            className="inline-block px-2 py-0.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px] sm:text-xs font-bold text-[#111111] shadow-[1px_1px_0px_#111111] uppercase tracking-wider"
+                            style={{ fontVariant: 'all-small-caps' }}
+                          >
+                            {r}
                           </span>
-                        </div>
-                      )}
-                      <div className="space-y-1">
-                        <h4 className="font-display font-black text-lg text-[#111111]">
-                          {member.name}
-                        </h4>
-                        <p className="font-mono text-xs font-bold text-[#FF6B1A] uppercase tracking-wide">
-                          {member.role}
-                        </p>
+                        ))}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  // Exactly 2 placeholder cards for Student leadership
-                  [1, 2].map((placeholderIdx) => (
-                    <div
-                      key={placeholderIdx}
-                      className="p-5 bg-white border-2 border-dashed border-[#111111] shadow-[3px_3px_0px_#111111] flex items-start gap-4 text-left"
-                    >
-                      <div
-                        className="w-14 h-14 sm:w-16 sm:h-16 bg-[#FFF8EC] border-2 border-[#111111] flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#111111]"
-                        aria-hidden="true"
-                      >
-                        <span className="font-mono font-black text-2xl text-[#111111]">?</span>
-                      </div>
-                      <div className="space-y-1.5 flex-1">
-                        <span
-                          className="font-mono text-xs font-bold text-[#111111] uppercase tracking-wider block"
-                          style={{ fontVariant: 'all-small-caps' }}
-                        >
-                          Student leadership
-                        </span>
-                        <div className="font-display font-black text-lg sm:text-xl text-[#111111] leading-snug">
-                          To be announced
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
+                  );
+                })}
               </div>
+
+              {/* DEPARTMENT LEADS: smaller cards (2 col mobile, 4 col desktop) */}
+              {leadStudents.length > 0 && (
+                <div className="pt-6 sm:pt-8 space-y-4">
+                  <div className="flex items-center gap-3 border-b-2 border-[#111111] pb-2">
+                    <span className="w-2.5 h-2.5 bg-[#FF6B1A] border border-[#111111] inline-block" />
+                    <h4 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-wide">
+                      Department leads
+                    </h4>
+                    <span className="font-mono text-xs font-bold text-[#111111]/70">
+                      ({leadStudents.length})
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+                    {leadStudents.map((member, idx) => {
+                      const photoUrl = getTeamMemberPhoto(member.name, member.photo);
+                      const cleanLinkedIn = getCleanLinkedInUrl(member.linkedin);
+
+                      return (
+                        <div
+                          key={`lead-${member.name}-${idx}`}
+                          className="p-3.5 sm:p-5 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-3 text-left transition-transform hover:-translate-y-0.5 min-w-0"
+                        >
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              {photoUrl ? (
+                                <img
+                                  src={photoUrl}
+                                  loading="lazy"
+                                  width={160}
+                                  height={160}
+                                  alt={`${member.name}, ${member.roles.join(', ')}`}
+                                  className="w-16 h-16 sm:w-20 sm:h-20 aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
+                                />
+                              ) : (
+                                <div
+                                  className="w-16 h-16 sm:w-20 sm:h-20 aspect-square bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0 select-none"
+                                  aria-label={member.name}
+                                >
+                                  <span className="font-display font-black text-xl sm:text-2xl text-[#111111]">
+                                    {getMemberInitials(member.name)}
+                                  </span>
+                                </div>
+                              )}
+
+                              {cleanLinkedIn && (
+                                <a
+                                  href={cleanLinkedIn}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`${member.name} on LinkedIn`}
+                                  className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0"
+                                >
+                                  <Linkedin className="w-3.5 h-3.5 text-[#111111]" />
+                                </a>
+                              )}
+                            </div>
+
+                            <div>
+                              <h5 className="font-display font-black text-base sm:text-lg text-[#111111] leading-tight break-words">
+                                {member.name}
+                              </h5>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                            {member.roles.map((r, roleIdx) => (
+                              <span
+                                key={roleIdx}
+                                className="inline-block px-1.5 py-0.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[10px] sm:text-[11px] font-bold text-[#111111] shadow-[1px_1px_0px_#111111] uppercase tracking-wider break-words"
+                                style={{ fontVariant: 'all-small-caps' }}
+                              >
+                                {r}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* "Join the team" note only if CONFIG.volunteerFormUrl is non-empty */}
