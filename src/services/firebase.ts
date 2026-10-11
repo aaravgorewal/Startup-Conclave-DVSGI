@@ -30,16 +30,6 @@ export const db = firebaseConfig.firestoreDatabaseId
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
-// Set persistence to browserLocalPersistence with a fallback to browserSessionPersistence
-if (typeof window !== 'undefined') {
-  setPersistence(auth, browserLocalPersistence).catch((localErr) => {
-    console.error('browserLocalPersistence failed, attempting browserSessionPersistence fallback:', localErr);
-    setPersistence(auth, browserSessionPersistence).catch((sessionErr) => {
-      console.error('browserSessionPersistence fallback failed:', sessionErr);
-    });
-  });
-}
-
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account',

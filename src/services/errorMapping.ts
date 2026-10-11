@@ -39,31 +39,39 @@ export const extractErrorCode = (error: any): string => {
  * Logs full error object to console.error without personal data.
  */
 export const mapAuthError = (error: any): AppErrorResult => {
-  // Log full error object without personal data
-  console.error('Firebase Auth operation error:', error);
+  // Log full error object without personal data for debugging
+  console.error('[Firebase Auth Error Diagnostic]:', error);
 
   const code = extractErrorCode(error);
   const msg = String(error?.message || '').toLowerCase();
+  const currentHost = typeof window !== 'undefined' && window.location ? window.location.hostname : 'this domain';
 
   let message = 'Google sign-in is temporarily unavailable. Please try again or contact the organisers.';
 
-  if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized-domain')) {
-    message = 'This domain is not authorized for Google Sign-In. Please ensure it is added to Authorized Domains in the Firebase Console.';
+  if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized-domain') || msg.includes('unauthorized domain')) {
+    message = `Domain "${currentHost}" is not authorized for Google Sign-In. Add "${currentHost}" to Authorized Domains in Firebase Console > Authentication > Settings.`;
   } else if (
     code === 'auth/network-request-failed' ||
     code === 'network-request-failed' ||
     msg.includes('network') ||
-    msg.includes('offline')
+    msg.includes('offline') ||
+    (typeof navigator !== 'undefined' && navigator.onLine === false)
   ) {
     message = 'Network error connecting to Google. Please check your internet connection and try again.';
   } else if (code === 'auth/popup-blocked') {
-    message = 'Popup was blocked by your browser. Please allow popups or use redirect.';
+    message = 'Sign-in popup was blocked by your browser. Tap "Continue with Redirect" below to proceed.';
   } else if (code === 'auth/popup-closed-by-user') {
-    message = 'Google sign-in was closed before completion. Please click "Continue with Google" to try again.';
+    message = 'Sign-in was closed before selecting an account. Please click "Continue with Google" again.';
   } else if (code === 'auth/cancelled-popup-request') {
-    message = 'Sign-in request was cancelled. Please try again.';
+    message = 'Sign-in request was cancelled. Please tap "Continue with Google" to try again.';
+  } else if (code === 'auth/redirect-cancelled-by-user') {
+    message = 'Redirect authentication was cancelled. Please tap "Continue with Google" to try again.';
   } else if (code.includes('app-check') || msg.includes('app check') || msg.includes('appcheck')) {
     message = 'App Check verification failed. Please refresh the page and try again.';
+  } else if (code === 'auth/invalid-api-key' || code === 'auth/configuration-not-found') {
+    message = 'Firebase Authentication configuration error. Please notify the organisers.';
+  } else if (code === 'auth/user-disabled') {
+    message = 'This Google account has been disabled. Please select a different account.';
   } else if (code === 'permission-denied' || msg.includes('permission-denied')) {
     message = 'Authentication was denied. Please ensure you are authorized.';
   } else if (code === 'unavailable' || msg.includes('unavailable')) {

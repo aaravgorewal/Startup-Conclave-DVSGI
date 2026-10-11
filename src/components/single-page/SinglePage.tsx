@@ -686,6 +686,7 @@ export const SinglePage: React.FC = () => {
 
   // Registration Form State (id="register")
   const [authUser, setAuthUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const [googleAuthError, setGoogleAuthError] = useState('');
   const [googleAuthErrorCode, setGoogleAuthErrorCode] = useState('');
@@ -1080,7 +1081,7 @@ export const SinglePage: React.FC = () => {
     }
   };
 
-  const FORM_DRAFT_KEY = 'sc1_reg_form_draft_v1';
+  const FORM_DRAFT_KEY = 'sc1_reg_form_draft_v2';
 
   const saveFormDraft = () => {
     if (typeof window === 'undefined') return;
@@ -1106,69 +1107,93 @@ export const SinglePage: React.FC = () => {
         pitchStage,
         pitchDeckLink,
         pitchTeamSize,
+        teamMembers,
         paymentUtr,
         consentAgreed,
+        timestamp: Date.now(),
       };
-      sessionStorage.setItem(FORM_DRAFT_KEY, JSON.stringify(draft));
-    } catch {
-      // Ignore sessionStorage errors in restricted privacy environments
+      const json = JSON.stringify(draft);
+      try {
+        localStorage.setItem(FORM_DRAFT_KEY, json);
+      } catch {}
+      try {
+        sessionStorage.setItem(FORM_DRAFT_KEY, json);
+      } catch {}
+    } catch (err) {
+      console.warn('[FormDraft] Save draft notice:', err);
     }
   };
 
   const restoreFormDraft = () => {
     if (typeof window === 'undefined') return;
     try {
-      const raw = sessionStorage.getItem(FORM_DRAFT_KEY);
-      if (raw) {
-        const draft = JSON.parse(raw);
-        if (draft.ticket) setTicket(draft.ticket);
-        if (draft.fullName) setFullName((prev) => prev || draft.fullName);
-        if (draft.phone) setPhone((prev) => prev || draft.phone);
-        if (draft.college) setCollege((prev) => prev || draft.college);
-        if (draft.course) setCourse((prev) => prev || draft.course);
-        if (draft.courseSelect) setCourseSelect((prev) => prev || draft.courseSelect);
-        if (draft.customCourse) setCustomCourse((prev) => prev || draft.customCourse);
-        if (draft.year) setYear((prev) => prev || draft.year);
-        if (draft.yearSelect) setYearSelect((prev) => prev || draft.yearSelect);
-        if (draft.customYear) setCustomYear((prev) => prev || draft.customYear);
-        if (draft.role) setRole((prev) => prev || draft.role);
-        if (draft.professionalRole) setProfessionalRole((prev) => prev || draft.professionalRole);
-        if (draft.city) setCity((prev) => prev || draft.city);
-        if (typeof draft.wantsToPitch === 'boolean') setWantsToPitch(draft.wantsToPitch);
-        if (draft.startupName) setStartupName((prev) => prev || draft.startupName);
-        if (draft.startupPitch) setStartupPitch((prev) => prev || draft.startupPitch);
-        if (draft.pitchSector) setPitchSector((prev) => prev || draft.pitchSector);
-        if (draft.pitchStage) setPitchStage((prev) => prev || draft.pitchStage);
-        if (draft.pitchDeckLink) setPitchDeckLink((prev) => prev || draft.pitchDeckLink);
-        if (draft.pitchTeamSize) setPitchTeamSize((prev) => prev || draft.pitchTeamSize);
-        if (draft.paymentUtr) setPaymentUtr((prev) => prev || draft.paymentUtr);
-        if (typeof draft.consentAgreed === 'boolean') setConsentAgreed(draft.consentAgreed);
-        sessionStorage.removeItem(FORM_DRAFT_KEY);
+      let raw: string | null = null;
+      try {
+        raw = localStorage.getItem(FORM_DRAFT_KEY) || sessionStorage.getItem(FORM_DRAFT_KEY);
+      } catch {}
+      if (!raw) return;
+
+      const draft = JSON.parse(raw);
+      // Expire draft after 24 hours
+      if (draft.timestamp && Date.now() - draft.timestamp > 24 * 60 * 60 * 1000) {
+        clearFormDraft();
+        return;
       }
-    } catch {
-      // Ignore
+
+      if (draft.ticket) setTicket(draft.ticket);
+      if (draft.fullName) setFullName((prev) => prev.trim() || draft.fullName);
+      if (draft.phone) setPhone((prev) => prev.trim() || draft.phone);
+      if (draft.college) setCollege((prev) => prev || draft.college);
+      if (draft.course) setCourse((prev) => prev || draft.course);
+      if (draft.courseSelect) setCourseSelect((prev) => prev || draft.courseSelect);
+      if (draft.customCourse) setCustomCourse((prev) => prev || draft.customCourse);
+      if (draft.year) setYear((prev) => prev || draft.year);
+      if (draft.yearSelect) setYearSelect((prev) => prev || draft.yearSelect);
+      if (draft.customYear) setCustomYear((prev) => prev || draft.customYear);
+      if (draft.role) setRole((prev) => prev || draft.role);
+      if (draft.professionalRole) setProfessionalRole((prev) => prev || draft.professionalRole);
+      if (draft.city) setCity((prev) => prev || draft.city);
+      if (typeof draft.wantsToPitch === 'boolean') setWantsToPitch(draft.wantsToPitch);
+      if (draft.startupName) setStartupName((prev) => prev || draft.startupName);
+      if (draft.startupPitch) setStartupPitch((prev) => prev || draft.startupPitch);
+      if (draft.pitchSector) setPitchSector((prev) => prev || draft.pitchSector);
+      if (draft.pitchStage) setPitchStage((prev) => prev || draft.pitchStage);
+      if (draft.pitchDeckLink) setPitchDeckLink((prev) => prev || draft.pitchDeckLink);
+      if (draft.pitchTeamSize === '2' || draft.pitchTeamSize === '3') {
+        setPitchTeamSize(draft.pitchTeamSize);
+      }
+      if (Array.isArray(draft.teamMembers) && draft.teamMembers.length > 0) {
+        setTeamMembers(draft.teamMembers);
+      }
+      if (draft.paymentUtr) setPaymentUtr((prev) => prev || draft.paymentUtr);
+      if (typeof draft.consentAgreed === 'boolean') setConsentAgreed(draft.consentAgreed);
+    } catch (err) {
+      console.warn('[FormDraft] Restore draft notice:', err);
     }
   };
 
-  // Google Sign-In with popup on desktop, redirect on mobile/touch devices (and automatic fallback on blocked/closed popup)
-  const handleGoogleSignIn = async () => {
+  const clearFormDraft = () => {
+    try {
+      localStorage.removeItem(FORM_DRAFT_KEY);
+      sessionStorage.removeItem(FORM_DRAFT_KEY);
+    } catch {}
+  };
+
+  // Google Sign-In: attempts popup first (works smoothly on modern mobile and desktop),
+  // with intelligent fallback to redirect if popup is blocked or unsupported.
+  const handleGoogleSignIn = async (forceRedirect = false) => {
     setIsGoogleSigningIn(true);
     setGoogleAuthError('');
     setGoogleAuthErrorCode('');
     saveFormDraft();
 
-    // Detect mobile or touch devices
-    const isTouchOrMobileDevice =
-      typeof window !== 'undefined' &&
-      ('ontouchstart' in window ||
-        navigator.maxTouchPoints > 0 ||
-        /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-
-    if (isTouchOrMobileDevice) {
+    if (forceRedirect) {
       try {
+        console.info('[Auth] Triggering signInWithRedirect explicitly...');
         await signInWithRedirect(auth, googleProvider);
         return;
       } catch (redirectErr: any) {
+        console.error('[Auth] Explicit signInWithRedirect error:', redirectErr);
         const mapped = mapAuthError(redirectErr);
         setGoogleAuthError(mapped.message);
         setGoogleAuthErrorCode(mapped.code);
@@ -1178,8 +1203,10 @@ export const SinglePage: React.FC = () => {
     }
 
     try {
+      console.info('[Auth] Triggering signInWithPopup...');
       const result = await signInWithPopup(auth, googleProvider);
       if (result.user) {
+        console.info('[Auth] signInWithPopup successful for user:', result.user.email);
         setAuthUser(result.user);
         if (result.user.email) {
           setEmail(result.user.email.toLowerCase());
@@ -1187,30 +1214,34 @@ export const SinglePage: React.FC = () => {
         }
         setGoogleAuthError('');
         setGoogleAuthErrorCode('');
+        restoreFormDraft();
       }
+      setIsGoogleSigningIn(false);
     } catch (err: any) {
       const code = err?.code || '';
-      // Automatic fallback when popup fails with auth/popup-blocked, auth/popup-closed-by-user or auth/cancelled-popup-request
-      if (
-        code === 'auth/popup-blocked' ||
-        code === 'auth/popup-closed-by-user' ||
-        code === 'auth/cancelled-popup-request'
-      ) {
+      console.warn('[Auth] signInWithPopup error code:', code, err);
+
+      // Automatic redirect fallback on popup-blocked or cancelled-popup-request
+      if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request') {
         try {
           saveFormDraft();
+          console.info('[Auth] Popup blocked/cancelled, falling back to signInWithRedirect...');
           await signInWithRedirect(auth, googleProvider);
           return;
         } catch (redirectErr: any) {
+          console.error('[Auth] Fallback redirect failed:', redirectErr);
           const mapped = mapAuthError(redirectErr);
           setGoogleAuthError(mapped.message);
           setGoogleAuthErrorCode(mapped.code);
         }
+      } else if (code === 'auth/popup-closed-by-user') {
+        setGoogleAuthError('Sign-in window was closed. Please tap "Continue with Google" again.');
+        setGoogleAuthErrorCode(code);
       } else {
         const mapped = mapAuthError(err);
         setGoogleAuthError(mapped.message);
         setGoogleAuthErrorCode(mapped.code);
       }
-    } finally {
       setIsGoogleSigningIn(false);
     }
   };
@@ -1230,14 +1261,22 @@ export const SinglePage: React.FC = () => {
 
   // Auth state listener and redirect result handler
   useEffect(() => {
+    let isMounted = true;
+    setIsAuthLoading(true);
+
+    // Track redirect resolution to prevent premature null state
+    let redirectCheckComplete = false;
+
     // Check and restore draft immediately on mount
     restoreFormDraft();
 
-    // 1. Process result from redirect sign-in if returning from Google
+    // 1. Process result from redirect sign-in if returning from Google OAuth
     getRedirectResult(auth)
       .then((result) => {
-        restoreFormDraft();
+        if (!isMounted) return;
+        redirectCheckComplete = true;
         if (result?.user) {
+          console.info('[Auth] getRedirectResult resolved with authenticated user:', result.user.email);
           setAuthUser(result.user);
           if (result.user.email) {
             setEmail(result.user.email.toLowerCase());
@@ -1246,25 +1285,59 @@ export const SinglePage: React.FC = () => {
           setGoogleAuthError('');
           setGoogleAuthErrorCode('');
         }
+        restoreFormDraft();
+        setIsAuthLoading(false);
       })
       .catch((err) => {
+        if (!isMounted) return;
+        redirectCheckComplete = true;
+        console.error('[Auth] getRedirectResult failed:', err);
+        const code = err?.code || '';
+        // Only surface real errors, not no-op redirects
+        if (code && code !== 'auth/null-user') {
+          const mapped = mapAuthError(err);
+          setGoogleAuthError(mapped.message);
+          setGoogleAuthErrorCode(mapped.code);
+        }
         restoreFormDraft();
-        const mapped = mapAuthError(err);
-        setGoogleAuthError(mapped.message);
-        setGoogleAuthErrorCode(mapped.code);
+        setIsAuthLoading(false);
       });
 
-    // 2. Continuous auth state observer
+    // 2. Continuous auth state observer (handles page reloads & active sessions)
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAuthUser(user);
-      if (user?.email) {
-        setEmail(user.email.toLowerCase());
-        setFullName((prev) => prev.trim() || user.displayName || '');
+      if (!isMounted) return;
+      console.info('[Auth] onAuthStateChanged fired:', user ? user.email : 'null');
+      if (user) {
+        setAuthUser(user);
+        if (user.email) {
+          setEmail(user.email.toLowerCase());
+          setFullName((prev) => prev.trim() || user.displayName || '');
+        }
+        setGoogleAuthError('');
+        setGoogleAuthErrorCode('');
+        restoreFormDraft();
+        setIsAuthLoading(false);
+      } else {
+        // Only clear if redirect result has already been evaluated
+        if (redirectCheckComplete) {
+          setAuthUser(null);
+          setIsAuthLoading(false);
+        }
       }
-      restoreFormDraft();
     });
 
-    return () => unsubscribe();
+    // Safety timeout to prevent infinite loading state
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) {
+        setIsAuthLoading(false);
+      }
+    }, 3500);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+      unsubscribe();
+    };
   }, []);
 
   // Smooth scroll handler for nav anchors with guaranteed mobile menu auto-close
@@ -1615,6 +1688,7 @@ export const SinglePage: React.FC = () => {
         status: res.status || 'registered',
       });
       setRegistrationCount((prev) => prev + 1);
+      clearFormDraft();
 
       // Trigger confirmation email send without blocking the success screen
       if (res.ticketCode) {
@@ -1638,6 +1712,7 @@ export const SinglePage: React.FC = () => {
   };
 
   const handleResetRegistration = () => {
+    clearFormDraft();
     setSubmittedRecord(null);
     setEmailStatus('idle');
     setResendCooldown(0);
@@ -3945,6 +4020,22 @@ export const SinglePage: React.FC = () => {
                         Change account
                       </button>
                     </div>
+                  ) : isAuthLoading ? (
+                    <div className="flex items-center gap-3 py-2">
+                      <div className="w-10 h-10 rounded-full bg-[#FFF8EC] border-2 border-[#111111] flex items-center justify-center shrink-0">
+                        <RotateCw className="w-5 h-5 animate-spin text-[#FF6B1A]" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-display font-black text-sm uppercase text-[#111111]">
+                            Verifying Account...
+                          </span>
+                        </div>
+                        <p className="font-mono text-xs text-[#111111]/70 mt-0.5">
+                          Checking Google authentication status. Please wait a moment.
+                        </p>
+                      </div>
+                    </div>
                   ) : isInAppBrowser ? (
                     <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
                       <div className="space-y-1">
@@ -3987,7 +4078,7 @@ export const SinglePage: React.FC = () => {
                       </div>
                       <button
                         type="button"
-                        onClick={handleGoogleSignIn}
+                        onClick={() => handleGoogleSignIn()}
                         disabled={isGoogleSigningIn}
                         className="brutal-btn bg-[#FFD400] hover:bg-[#FFE55B] text-[#111111] border-2 border-[#111111] px-5 py-2.5 font-display font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer shadow-[2px_2px_0px_#111111] min-h-[44px] shrink-0 transition-all disabled:opacity-60"
                       >
@@ -4008,7 +4099,7 @@ export const SinglePage: React.FC = () => {
 
                   {/* Error message displayed once, directly below button */}
                   {googleAuthError && (
-                    <div className="p-2.5 bg-red-100 border-2 border-red-800 text-red-900 font-mono text-xs flex flex-col gap-1 shadow-[1px_1px_0px_#111111]">
+                    <div className="p-2.5 bg-red-100 border-2 border-red-800 text-red-900 font-mono text-xs flex flex-col gap-1.5 shadow-[1px_1px_0px_#111111]">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <AlertCircle className="w-4 h-4 shrink-0 text-red-700" />
@@ -4016,12 +4107,24 @@ export const SinglePage: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          onClick={handleGoogleSignIn}
+                          onClick={() => handleGoogleSignIn()}
                           className="font-bold underline uppercase text-red-900 hover:text-black cursor-pointer shrink-0 text-[11px]"
                         >
                           Retry
                         </button>
                       </div>
+                      {googleAuthErrorCode === 'auth/popup-blocked' && (
+                        <div className="pt-1.5 border-t border-red-300">
+                          <button
+                            type="button"
+                            onClick={() => handleGoogleSignIn(true)}
+                            className="w-full brutal-btn bg-[#FFD400] hover:bg-[#FFE55B] text-[#111111] border-2 border-[#111111] py-2 px-3 font-display font-black text-xs uppercase flex items-center justify-center gap-2 shadow-[2px_2px_0px_#111111] cursor-pointer"
+                          >
+                            <GoogleIcon className="w-3.5 h-3.5" />
+                            <span>Continue with Full-Page Redirect</span>
+                          </button>
+                        </div>
+                      )}
                       {googleAuthErrorCode && (
                         <div className="text-[11px] text-gray-500 font-mono">
                           Error code: {googleAuthErrorCode}
@@ -4034,10 +4137,21 @@ export const SinglePage: React.FC = () => {
                 {/* Form locked banner when not signed in */}
                 {!authUser && (
                   <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2.5 font-mono text-xs text-[#111111]">
-                    <Lock className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                    <span>
-                      <strong>Form locked:</strong> Sign in with Google above to unlock the registration form.
-                    </span>
+                    {isAuthLoading ? (
+                      <>
+                        <RotateCw className="w-4 h-4 text-[#FF6B1A] shrink-0 animate-spin" />
+                        <span>
+                          <strong>Checking status:</strong> Verifying Google account state...
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                        <span>
+                          <strong>Form locked:</strong> Sign in with Google above to unlock the registration form.
+                        </span>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -5077,8 +5191,17 @@ export const SinglePage: React.FC = () => {
                     >
                       {!authUser ? (
                         <span className="flex items-center gap-2">
-                          <Lock className="w-4 h-4" />
-                          <span>Sign in with Google above to unlock</span>
+                          {isAuthLoading ? (
+                            <>
+                              <RotateCw className="w-4 h-4 animate-spin" />
+                              <span>Verifying Google status...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock className="w-4 h-4" />
+                              <span>Sign in with Google above to unlock</span>
+                            </>
+                          )}
                         </span>
                       ) : (ticket === 'pitch' || ticket === 'stall') && !isPitchOpen ? (
                         <span>Registrations open soon</span>
