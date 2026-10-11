@@ -2355,7 +2355,7 @@ export const SinglePage: React.FC = () => {
 
           // Order of guest types: chief-guest, speaker, jury, investor, mentor
           const guestTypeGroups: { type: Guest['type']; label: string }[] = [
-            { type: 'chief-guest', label: 'Chief Guest' },
+            { type: 'chief-guest', label: 'Chief guests' },
             { type: 'speaker', label: 'Speakers' },
             { type: 'jury', label: 'Jury' },
             { type: 'investor', label: 'Investors' },

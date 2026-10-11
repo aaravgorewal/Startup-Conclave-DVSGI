@@ -305,7 +305,6 @@ export const CONFIG = {
   },
 
   guests: [
-    // type is a placeholder: change to 'chief-guest' | 'jury' | 'investor' | 'mentor' if needed
     {
       name: "Mr. Mahip Singh",
       designation: "CEO",
@@ -313,7 +312,6 @@ export const CONFIG = {
       type: "chief-guest",
       confirmed: true,
     },
-    // type is a placeholder: change to 'chief-guest' | 'jury' | 'investor' | 'mentor' if needed
     {
       name: "Sumit Rajesh Mahajan, IAS",
       designation: "CEO",
@@ -321,7 +319,6 @@ export const CONFIG = {
       type: "chief-guest",
       confirmed: true,
     },
-    // type is a placeholder: change to 'chief-guest' | 'jury' | 'investor' | 'mentor' if needed
     {
       name: "Mr. Vivek Kumar",
       designation: "Operations Head",
