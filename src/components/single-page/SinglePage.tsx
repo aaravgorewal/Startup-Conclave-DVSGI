@@ -26,6 +26,8 @@ import {
   QrCode,
   ExternalLink,
   Linkedin,
+  User as UserIcon,
+  UserCheck,
 } from 'lucide-react';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import {
@@ -343,8 +345,8 @@ export const LogoTile: React.FC<{
   loading?: 'lazy' | 'eager';
 }> = ({
   item,
-  heightClass = 'h-12 sm:h-14',
-  tileClass = 'p-2.5 sm:p-3 min-h-[56px] sm:min-h-[64px]',
+  heightClass = 'h-10 sm:h-12',
+  tileClass = 'p-2 sm:p-2.5 min-h-[50px] sm:min-h-[58px]',
   loading = 'lazy',
 }) => {
     const [failed, setFailed] = useState(false);
@@ -358,13 +360,14 @@ export const LogoTile: React.FC<{
         loading={loading}
         decoding="async"
         onError={() => setFailed(true)}
-        className={`${heightClass} w-auto max-w-[180px] sm:max-w-[220px] object-contain`}
+        className={`${heightClass} max-h-full w-auto max-w-[160px] sm:max-w-[200px] object-contain block`}
+        style={{ maxHeight: '100%', objectFit: 'contain' }}
       />
     );
     return (
-      <div className={`bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center ${tileClass}`}>
+      <div className={`bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center overflow-hidden shrink-0 ${tileClass}`}>
         {item.url ? (
-          <a href={item.url} target="_blank" rel="noopener noreferrer" aria-label={item.name}>
+          <a href={item.url} target="_blank" rel="noopener noreferrer" aria-label={item.name} className="flex items-center justify-center max-h-full max-w-full">
             {img}
           </a>
         ) : (
@@ -2323,10 +2326,13 @@ export const SinglePage: React.FC = () => {
                                 />
                               ) : (
                                 <div
-                                  className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center font-display font-black text-xl sm:text-2xl text-[#111111] shrink-0 select-none"
+                                  className="w-16 h-16 sm:w-20 sm:h-20 bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center shrink-0 select-none"
                                   aria-label={guest.name}
                                 >
-                                  {getInitials(guest.name)}
+                                  <UserCheck className="w-6 h-6 sm:w-7 sm:h-7 text-[#111111]/45 stroke-[1.5]" />
+                                  <span className="font-mono text-[10px] sm:text-xs font-bold text-[#111111]/75 mt-0.5">
+                                    {getInitials(guest.name)}
+                                  </span>
                                 </div>
                               )}
 
@@ -2503,7 +2509,7 @@ export const SinglePage: React.FC = () => {
                     return (
                       <div
                         key={`core-${member.name}-${idx}`}
-                        className="p-4 sm:p-5 lg:p-4 xl:p-5 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-3 sm:gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
+                        className="p-4 sm:p-5 lg:p-4 xl:p-5 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-3 sm:gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0 h-full"
                       >
                         <div className="space-y-4">
                           {photoUrl ? (
@@ -2517,10 +2523,11 @@ export const SinglePage: React.FC = () => {
                             />
                           ) : (
                             <div
-                              className="w-full aspect-square bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0 select-none"
+                              className="w-full aspect-square bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center gap-2 shrink-0 select-none"
                               aria-label={member.name}
                             >
-                              <span className="font-display font-black text-3xl sm:text-4xl text-[#111111]">
+                              <UserIcon className="w-12 h-12 text-[#111111]/35 stroke-[1.5]" />
+                              <span className="font-mono text-xs font-bold text-[#111111]/75 bg-white px-2 py-0.5 border border-[#111111]/30 tracking-wider">
                                 {getMemberInitials(member.name)}
                               </span>
                             </div>
@@ -2581,7 +2588,7 @@ export const SinglePage: React.FC = () => {
                         return (
                           <div
                             key={`lead-${member.name}-${idx}`}
-                            className="p-3 sm:p-4 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-2.5 sm:gap-3 text-left transition-transform hover:-translate-y-0.5 min-w-0"
+                            className="p-3 sm:p-4 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-2.5 sm:gap-3 text-left transition-transform hover:-translate-y-0.5 min-w-0 h-full"
                           >
                             <div className="space-y-3">
                               <div className="flex items-start justify-between gap-2">
@@ -2596,10 +2603,11 @@ export const SinglePage: React.FC = () => {
                                   />
                                 ) : (
                                   <div
-                                    className="w-16 h-16 sm:w-20 sm:h-20 aspect-square bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0 select-none"
+                                    className="w-16 h-16 sm:w-20 sm:h-20 aspect-square bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center shrink-0 select-none"
                                     aria-label={member.name}
                                   >
-                                    <span className="font-display font-black text-xl sm:text-2xl text-[#111111]">
+                                    <UserIcon className="w-6 h-6 sm:w-7 sm:h-7 text-[#111111]/40 stroke-[1.5]" />
+                                    <span className="font-mono text-[10px] font-bold text-[#111111]/75 mt-0.5">
                                       {getMemberInitials(member.name)}
                                     </span>
                                   </div>
@@ -3111,7 +3119,7 @@ export const SinglePage: React.FC = () => {
             /* =============================================================== */
             /* CASE C: ACTIVE REGISTRATION FORM (Stored in Firestore & Cache)   */
             /* =============================================================== */
-            <div className="p-6 sm:p-10 bg-white brutal-border brutal-shadow-lg space-y-6">
+            <div className="p-4 sm:p-8 lg:p-10 bg-white brutal-border brutal-shadow-lg space-y-6">
 
               <div className="border-b-2 border-[#111111] pb-4 space-y-1">
                 <h2 className="font-display font-black text-2xl sm:text-4xl text-[#111111]">
@@ -4303,11 +4311,13 @@ export const SinglePage: React.FC = () => {
             <span className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70 mr-1">
               Organised by
             </span>
-            {CONFIG.organisers
-              .filter((o) => o.confirmed)
-              .map((o) => (
-                <LogoTile key={o.name} item={o} heightClass="h-6 sm:h-7" tileClass="h-10 px-3" />
-              ))}
+            <div className="flex flex-wrap items-center gap-3">
+              {CONFIG.organisers
+                .filter((o) => o.confirmed)
+                .map((o) => (
+                  <LogoTile key={o.name} item={o} heightClass="h-7 sm:h-8" tileClass="h-11 px-3.5" />
+                ))}
+            </div>
           </div>
         )}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm font-mono text-[#111111]/70">

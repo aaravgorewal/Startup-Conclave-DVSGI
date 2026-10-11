@@ -49,13 +49,14 @@ body {
 }
 
 /* Base element responsiveness and overflow guards */
-img, svg, video, canvas {
-  max-width: 100%;
-  height: auto;
-}
+@layer base {
+  img, svg, video, canvas {
+    max-width: 100%;
+  }
 
-table {
-  max-width: 100%;
+  table {
+    max-width: 100%;
+  }
 }
 
 /* Fluid Typography Scale */
