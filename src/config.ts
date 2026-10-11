@@ -547,7 +547,7 @@ export const CONFIG = {
         tier: "lead",
       },
       {
-        name: "Nitika Ruhela",
+        name: "Nitika",
         roles: ["Startup & Investor Relations"],
         confirmed: true,
         tier: "lead",

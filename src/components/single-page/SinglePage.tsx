@@ -57,6 +57,7 @@ import {
   checkBrowserRateLimit,
   recordBrowserSubmission,
 } from '../../services/botProtection.ts';
+import { FloatingPartnerCTA } from './FloatingPartnerCTA.tsx';
 
 // Crisp Google Brand Icon
 const GoogleIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
@@ -4314,6 +4315,12 @@ export const SinglePage: React.FC = () => {
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm font-mono text-[#111111]/70">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>© {new Date().getFullYear()} Startup Conclave 1.0. All rights reserved.</span>
+            <a
+              href="/partners"
+              className="text-[#FF6B1A] hover:text-[#111111] underline font-bold cursor-pointer transition-colors"
+            >
+              Partner with us
+            </a>
             <button
               type="button"
               onClick={(e) => handleOpenPrivacyModal(e)}
@@ -4505,6 +4512,9 @@ export const SinglePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Floating Partner with us CTA (Home page only) */}
+      <FloatingPartnerCTA isModalOpen={privacyModalOpen} />
 
     </div>
   );

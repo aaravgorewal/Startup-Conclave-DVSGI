@@ -15,24 +15,77 @@ import {
 import { AlertCircle, RotateCw, Check, Linkedin } from 'lucide-react';
 
 export default function PartnersPage() {
-  // Title and Meta description management
+  // Title, Meta description, Open Graph, and Canonical link management
   useEffect(() => {
     const prevTitle = document.title;
     const metaDesc = document.querySelector('meta[name="description"]');
     const prevDesc = metaDesc ? metaDesc.getAttribute('content') : null;
 
-    document.title = 'Partner with Startup Conclave 1.0 | DVSIET Meerut';
-    if (metaDesc) {
-      metaDesc.setAttribute(
-        'content',
-        'Partner with Startup Conclave 1.0 — a 2-day startup, entrepreneurship and innovation conclave at DVSIET, Meerut.'
-      );
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    const prevOgTitle = ogTitle ? ogTitle.getAttribute('content') : null;
+
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    const prevOgDesc = ogDesc ? ogDesc.getAttribute('content') : null;
+
+    const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+    const prevTwitterTitle = twitterTitle ? twitterTitle.getAttribute('content') : null;
+
+    const twitterDesc = document.querySelector('meta[name="twitter:description"]');
+    const prevTwitterDesc = twitterDesc ? twitterDesc.getAttribute('content') : null;
+
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    const prevOgUrl = ogUrl ? ogUrl.getAttribute('content') : null;
+
+    const pageTitle = 'Partner with Startup Conclave 1.0 | DVSIET Meerut';
+    const pageDesc =
+      'Partner with Startup Conclave 1.0 — a 2-day startup, entrepreneurship and innovation conclave at DVSIET, Meerut.';
+
+    document.title = pageTitle;
+    if (metaDesc) metaDesc.setAttribute('content', pageDesc);
+    if (ogTitle) ogTitle.setAttribute('content', pageTitle);
+    if (ogDesc) ogDesc.setAttribute('content', pageDesc);
+    if (twitterTitle) twitterTitle.setAttribute('content', pageTitle);
+    if (twitterDesc) twitterDesc.setAttribute('content', pageDesc);
+
+    // Canonical link handling (only if VITE_SITE_URL is set)
+    const rawSiteUrl = (import.meta.env.VITE_SITE_URL || '').trim();
+    let canonicalEl = document.querySelector('link[rel="canonical"]');
+    let prevCanonicalHref: string | null = null;
+    let createdCanonical = false;
+
+    if (rawSiteUrl) {
+      const siteBase = rawSiteUrl.replace(/\/+$/, '');
+      const partnersCanonical = `${siteBase}/partners`;
+      if (canonicalEl) {
+        prevCanonicalHref = canonicalEl.getAttribute('href');
+        canonicalEl.setAttribute('href', partnersCanonical);
+      } else {
+        canonicalEl = document.createElement('link');
+        canonicalEl.setAttribute('rel', 'canonical');
+        canonicalEl.setAttribute('href', partnersCanonical);
+        document.head.appendChild(canonicalEl);
+        createdCanonical = true;
+      }
+      if (ogUrl) {
+        ogUrl.setAttribute('content', partnersCanonical);
+      }
     }
 
     return () => {
       document.title = prevTitle;
-      if (metaDesc && prevDesc !== null) {
-        metaDesc.setAttribute('content', prevDesc);
+      if (metaDesc && prevDesc !== null) metaDesc.setAttribute('content', prevDesc);
+      if (ogTitle && prevOgTitle !== null) ogTitle.setAttribute('content', prevOgTitle);
+      if (ogDesc && prevOgDesc !== null) ogDesc.setAttribute('content', prevOgDesc);
+      if (twitterTitle && prevTwitterTitle !== null) twitterTitle.setAttribute('content', prevTwitterTitle);
+      if (twitterDesc && prevTwitterDesc !== null) twitterDesc.setAttribute('content', prevTwitterDesc);
+      if (ogUrl && prevOgUrl !== null) ogUrl.setAttribute('content', prevOgUrl);
+
+      if (rawSiteUrl) {
+        if (createdCanonical && canonicalEl && canonicalEl.parentNode) {
+          canonicalEl.parentNode.removeChild(canonicalEl);
+        } else if (canonicalEl && prevCanonicalHref !== null) {
+          canonicalEl.setAttribute('href', prevCanonicalHref);
+        }
       }
     };
   }, []);
@@ -487,8 +540,9 @@ export default function PartnersPage() {
                 )}
 
                 <div>
-                  <label className="font-bold text-[#111111] block mb-1">Company / Organisation *</label>
+                  <label htmlFor="partner_company" className="font-bold text-[#111111] block mb-1">Company / Organisation *</label>
                   <input
+                    id="partner_company"
                     type="text"
                     required
                     value={formData.company}
@@ -500,8 +554,9 @@ export default function PartnersPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="font-bold text-[#111111] block mb-1">Contact Name *</label>
+                    <label htmlFor="partner_contact" className="font-bold text-[#111111] block mb-1">Contact Name *</label>
                     <input
+                      id="partner_contact"
                       type="text"
                       required
                       value={formData.contactName}
@@ -511,8 +566,9 @@ export default function PartnersPage() {
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-[#111111] block mb-1">Phone Number</label>
+                    <label htmlFor="partner_phone" className="font-bold text-[#111111] block mb-1">Phone Number</label>
                     <input
+                      id="partner_phone"
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -523,8 +579,9 @@ export default function PartnersPage() {
                 </div>
 
                 <div>
-                  <label className="font-bold text-[#111111] block mb-1">Business Email *</label>
+                  <label htmlFor="partner_email" className="font-bold text-[#111111] block mb-1">Business Email *</label>
                   <input
+                    id="partner_email"
                     type="email"
                     required
                     value={formData.email}
@@ -537,8 +594,9 @@ export default function PartnersPage() {
                 {/* Partnership Type & Contribution Range */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="font-bold text-[#111111] block mb-1">Partnership Type *</label>
+                    <label htmlFor="partner_type" className="font-bold text-[#111111] block mb-1">Partnership Type *</label>
                     <select
+                      id="partner_type"
                       value={formData.partnershipType}
                       onChange={(e) => setFormData({ ...formData, partnershipType: e.target.value })}
                       className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
@@ -555,8 +613,9 @@ export default function PartnersPage() {
 
                   {Boolean(CONFIG.partnerRanges && CONFIG.partnerRanges.length > 0) && (
                     <div>
-                      <label className="font-bold text-[#111111] block mb-1">Contribution Range</label>
+                      <label htmlFor="partner_range" className="font-bold text-[#111111] block mb-1">Contribution Range</label>
                       <select
+                        id="partner_range"
                         value={formData.contributionRange}
                         onChange={(e) => setFormData({ ...formData, contributionRange: e.target.value })}
                         className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
@@ -573,8 +632,9 @@ export default function PartnersPage() {
                 </div>
 
                 <div>
-                  <label className="font-bold text-[#111111] block mb-1">Partnership Interest / Message</label>
+                  <label htmlFor="partner_message" className="font-bold text-[#111111] block mb-1">Partnership Interest / Message</label>
                   <textarea
+                    id="partner_message"
                     rows={4}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
