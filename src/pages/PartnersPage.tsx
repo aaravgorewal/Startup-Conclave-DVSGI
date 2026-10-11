@@ -191,7 +191,7 @@ export default function PartnersPage() {
     <div className="min-h-screen bg-[#FFF8EC] text-[#111111] flex flex-col font-sans selection:bg-[#FFD400] selection:text-[#111111]">
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-40 bg-[#FFF8EC] border-b-2 border-[#111111]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-8 py-3 flex items-center justify-between">
+        <div className="max-w-6xl xl:max-w-7xl mx-auto px-4 md:px-6 lg:px-10 py-3 flex items-center justify-between">
           <a
             href="/"
             className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-black uppercase tracking-wider text-[#111111] hover:text-[#FF6B1A] transition-colors min-h-[44px] cursor-pointer"
@@ -208,7 +208,7 @@ export default function PartnersPage() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="px-4 sm:px-8 py-14 sm:py-20 max-w-6xl mx-auto border-b-2 border-[#111111] text-left space-y-6">
+        <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-5 lg:space-y-6">
           <div className="flex items-center gap-3">
             <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
               PARTNERSHIPS OPEN
@@ -218,17 +218,17 @@ export default function PartnersPage() {
             </span>
           </div>
 
-          <div className="space-y-4 max-w-3xl">
-            <h1 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl text-[#111111] tracking-tight leading-[1.08]">
+          <div className="space-y-3 sm:space-y-4 max-w-3xl">
+            <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-[clamp(2.25rem,3.2vw,3.25rem)] text-[#111111] tracking-tight leading-[1.08]">
               Partner with Startup Conclave 1.0
             </h1>
-            <p className="font-sans text-base sm:text-xl text-[#111111]/85 font-medium leading-relaxed">
+            <p className="font-sans text-base sm:text-lg lg:text-xl text-[#111111]/85 font-medium leading-relaxed">
               A 2-day startup, entrepreneurship and innovation conclave at DVSIET, Meerut.
             </p>
           </div>
 
           {/* Action CTAs */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-2">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-1 sm:pt-2">
             <button
               type="button"
               onClick={() => {
@@ -268,9 +268,9 @@ export default function PartnersPage() {
         </section>
 
         {/* Why Partner With Us: 6 benefit cards */}
-        <section className="px-4 sm:px-8 py-14 sm:py-20 max-w-6xl mx-auto border-b-2 border-[#111111] text-left space-y-8">
-          <div className="flex items-center justify-between border-b-2 border-[#111111] pb-3">
-            <h2 className="font-display font-black text-2xl sm:text-3xl text-[#111111] uppercase tracking-tight">
+        <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-6 lg:space-y-7">
+          <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5 sm:pb-3">
+            <h2 className="font-display font-black text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] text-[#111111] uppercase tracking-tight">
               Why partner with us
             </h2>
             <span className="font-mono text-xs text-[#111111]/70 font-bold uppercase tracking-wider">
@@ -301,9 +301,9 @@ export default function PartnersPage() {
         </section>
 
         {/* What We Are Looking For */}
-        <section className="px-4 sm:px-8 py-14 sm:py-20 max-w-6xl mx-auto border-b-2 border-[#111111] text-left space-y-8">
-          <div className="flex items-center justify-between border-b-2 border-[#111111] pb-3">
-            <h2 className="font-display font-black text-2xl sm:text-3xl text-[#111111] uppercase tracking-tight">
+        <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-6 lg:space-y-7">
+          <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5 sm:pb-3">
+            <h2 className="font-display font-black text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] text-[#111111] uppercase tracking-tight">
               What we are looking for
             </h2>
             <span className="font-mono text-xs text-[#111111]/70 font-bold uppercase tracking-wider">
@@ -316,7 +316,7 @@ export default function PartnersPage() {
               {confirmedNeeds.map((need, idx) => (
                 <div
                   key={`${need.title}-${idx}`}
-                  className="p-5 sm:p-6 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-3"
+                  className="p-4 sm:p-5 lg:p-6 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-3"
                 >
                   <div className="space-y-2">
                     <h3 className="font-display font-black text-lg sm:text-xl text-[#111111]">
@@ -364,9 +364,9 @@ export default function PartnersPage() {
         </section>
 
         {/* Organised by and Supported by logos */}
-        <section className="px-4 sm:px-8 py-14 sm:py-20 max-w-6xl mx-auto border-b-2 border-[#111111] text-left space-y-8">
-          <div className="flex items-center justify-between border-b-2 border-[#111111] pb-3">
-            <h2 className="font-display font-black text-2xl sm:text-3xl text-[#111111] uppercase tracking-tight">
+        <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-6 lg:space-y-7">
+          <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5 sm:pb-3">
+            <h2 className="font-display font-black text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] text-[#111111] uppercase tracking-tight">
               Organisers &amp; Ecosystem
             </h2>
             <span className="font-mono text-xs text-[#111111]/70 font-bold uppercase tracking-wider">
@@ -374,7 +374,7 @@ export default function PartnersPage() {
             </span>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {CONFIG.organisers.some((o) => o.confirmed) && (
               <div className="space-y-3">
                 <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70">
@@ -391,7 +391,7 @@ export default function PartnersPage() {
             )}
 
             {CONFIG.supporters.some((s) => s.confirmed) && (
-              <div className="p-6 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
+              <div className="p-5 sm:p-6 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
                 <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70">
                   Supported by
                 </div>
@@ -409,9 +409,9 @@ export default function PartnersPage() {
 
         {/* Chief Guests (confirmed only with type 'chief-guest', hidden if none) */}
         {chiefGuests.length > 0 && (
-          <section className="px-4 sm:px-8 py-14 sm:py-20 max-w-6xl mx-auto border-b-2 border-[#111111] text-left space-y-8">
-            <div className="flex items-center justify-between border-b-2 border-[#111111] pb-3">
-              <h2 className="font-display font-black text-2xl sm:text-3xl text-[#111111] uppercase tracking-tight">
+          <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-6 lg:space-y-7">
+            <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5 sm:pb-3">
+              <h2 className="font-display font-black text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] text-[#111111] uppercase tracking-tight">
                 Chief guests
               </h2>
               <span className="font-mono text-xs text-[#111111]/70 font-bold uppercase tracking-wider">
@@ -419,11 +419,11 @@ export default function PartnersPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
               {chiefGuests.map((guest, idx) => (
                 <div
                   key={`${guest.name}-${idx}`}
-                  className="p-5 sm:p-6 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between gap-4 text-left min-w-0"
+                  className="p-4 sm:p-5 lg:p-6 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between gap-3 sm:gap-4 text-left min-w-0"
                 >
                   <div className="flex items-start justify-between gap-4">
                     {guest.photo ? (
@@ -458,7 +458,7 @@ export default function PartnersPage() {
                   </div>
 
                   <div className="space-y-1.5 flex-1 min-w-0">
-                    <h3 className="font-display font-black text-xl text-[#111111] leading-tight break-words">
+                    <h3 className="font-display font-black text-lg sm:text-xl text-[#111111] leading-tight break-words">
                       {guest.name}
                     </h3>
                     <p className="font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] uppercase tracking-wide break-words">
@@ -475,12 +475,12 @@ export default function PartnersPage() {
         )}
 
         {/* Partner Enquiry Form */}
-        <section id="enquire" className="px-4 sm:px-8 py-14 sm:py-20 max-w-3xl mx-auto text-left space-y-6">
-          <div className="space-y-2">
+        <section id="enquire" className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-3xl lg:max-w-4xl mx-auto text-left space-y-5 lg:space-y-6">
+          <div className="space-y-1.5 sm:space-y-2">
             <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
               Get In Touch
             </span>
-            <h2 className="font-display font-black text-2xl sm:text-4xl text-[#111111] tracking-tight">
+            <h2 className="font-display font-black text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] text-[#111111] tracking-tight">
               Partner Enquiry Form
             </h2>
             <p className="font-sans text-sm sm:text-base text-[#111111]/80 font-medium">
@@ -668,8 +668,8 @@ export default function PartnersPage() {
       </main>
 
       {/* Minimal Footer Matching Site */}
-      <footer className="border-t-2 border-[#111111] bg-[#FFF8EC] py-8 px-4 sm:px-8">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm font-mono text-[#111111]/70">
+      <footer className="border-t-2 border-[#111111] bg-[#FFF8EC] py-8 sm:py-10 px-4 md:px-6 lg:px-10">
+        <div className="max-w-6xl xl:max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm font-mono text-[#111111]/70">
           <div>
             <span>© {new Date().getFullYear()} {CONFIG.event.name.toUpperCase()} · DVSIET, Meerut</span>
           </div>

@@ -3996,7 +3996,7 @@ export const AdminPage: React.FC = () => {
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-6 right-6 z-50 max-w-md w-full bg-[#111111] text-white border-2 border-[#FFD400] shadow-[4px_4px_0px_#FFD400] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-5"
+          className="fixed bottom-6 right-4 sm:right-6 z-50 max-w-[calc(100vw-2rem)] sm:max-w-md w-full bg-[#111111] text-white border-2 border-[#FFD400] shadow-[4px_4px_0px_#FFD400] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-5"
         >
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
@@ -4039,7 +4039,7 @@ export const AdminPage: React.FC = () => {
         <div
           role="alert"
           aria-live="assertive"
-          className="fixed bottom-6 left-6 z-50 max-w-md w-full bg-[#111111] text-white border-2 border-[#FF6B1A] shadow-[4px_4px_0px_#FF6B1A] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-5"
+          className="fixed bottom-6 left-4 sm:left-6 z-50 max-w-[calc(100vw-2rem)] sm:max-w-md w-full bg-[#111111] text-white border-2 border-[#FF6B1A] shadow-[4px_4px_0px_#FF6B1A] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-5"
         >
           <div className="space-y-0.5">
             <div className="flex items-center gap-2">
@@ -4071,7 +4071,7 @@ export const AdminPage: React.FC = () => {
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-6 right-6 z-50 max-w-md w-full bg-[#111111] text-white border-2 border-[#FFD400] shadow-[4px_4px_0px_#FFD400] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-5"
+          className="fixed bottom-6 right-4 sm:right-6 z-50 max-w-[calc(100vw-2rem)] sm:max-w-md w-full bg-[#111111] text-white border-2 border-[#FFD400] shadow-[4px_4px_0px_#FFD400] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-5"
         >
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-[#FFD400] shrink-0" />

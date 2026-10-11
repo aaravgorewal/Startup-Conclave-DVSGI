@@ -33,15 +33,50 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
   background-color: #FFF8EC;
   color: #111111;
+  overflow-x: clip;
 }
 
 body {
   font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
   background-color: #FFF8EC;
   color: #111111;
-  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+/* Base element responsiveness and overflow guards */
+img, svg, video, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+table {
+  max-width: 100%;
+}
+
+/* Fluid Typography Scale */
+.text-fluid-h1 {
+  font-size: clamp(2.25rem, 3.8vw, 3.5rem);
+  line-height: 1.05;
+}
+
+.text-fluid-h2 {
+  font-size: clamp(1.75rem, 2.8vw, 2.5rem);
+  line-height: 1.15;
+}
+
+.text-fluid-h3 {
+  font-size: clamp(1.25rem, 1.8vw, 1.5rem);
+  line-height: 1.25;
+}
+
+.text-fluid-sub {
+  font-size: clamp(1rem, 1.25vw, 1.2rem);
+  line-height: 1.45;
 }
 
 /* Custom Neo-Brutalist Classes */

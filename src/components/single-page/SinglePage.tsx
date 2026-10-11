@@ -84,16 +84,16 @@ const GoogleIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' })
 // Custom Vector-Style Neo-Brutalist Illustration representing 'Building, Connecting, Pitching, and Scaling'
 const HeroVectorIllustration: React.FC = () => {
   return (
-    <div className="w-full bg-white brutal-border brutal-shadow-lg p-4 sm:p-5 relative select-none">
+    <div className="w-full bg-white brutal-border brutal-shadow-lg p-3 sm:p-4 lg:p-3 xl:p-4 relative select-none max-w-md mx-auto lg:max-w-none">
       {/* Schematic Header Bar */}
-      <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5 mb-3 font-mono text-xs">
+      <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2 mb-2 font-mono text-[11px] sm:text-xs">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 bg-[#FF6B1A] border border-[#111111] inline-block" />
           <span className="font-bold text-[#111111] tracking-wider uppercase">
             Conclave Flywheel
           </span>
         </div>
-        <span className="font-bold bg-[#FFD400] text-[#111111] px-2 py-0.5 border border-[#111111] text-[11px] uppercase tracking-wider">
+        <span className="font-bold bg-[#FFD400] text-[#111111] px-2 py-0.5 border border-[#111111] text-[10px] sm:text-[11px] uppercase tracking-wider">
           Fig. 1.0 // 4 Pillars
         </span>
       </div>
@@ -103,7 +103,7 @@ const HeroVectorIllustration: React.FC = () => {
         viewBox="0 0 460 380"
         width="460"
         height="380"
-        className="w-full h-auto"
+        className="w-full h-auto max-h-[220px] sm:max-h-[270px] lg:max-h-[260px] xl:max-h-[320px] object-contain mx-auto"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-label="Vector illustration representing Building, Connecting, Pitching, and Scaling"
@@ -1540,10 +1540,7 @@ export const SinglePage: React.FC = () => {
         />
       </div>
 
-      {/* =================================================================== */}
-      {/* 1. STICKY TOP BAR                                                   */}
-      {/* =================================================================== */}
-      <header className="sticky top-0 z-40 glass border-t-0 border-x-0 border-b-2 shadow-none px-4 sm:px-8 py-3.5 flex items-center justify-between">
+      <header className="sticky top-0 z-40 glass border-t-0 border-x-0 border-b-2 shadow-none px-4 md:px-6 lg:px-10 py-3 sm:py-3.5 flex items-center justify-between">
 
         {/* Wordmark */}
         <a
@@ -1766,7 +1763,7 @@ export const SinglePage: React.FC = () => {
         {/* =================================================================== */}
         {/* 2. HERO SECTION                                                     */}
         {/* =================================================================== */}
-        <section className="relative px-4 sm:px-8 pt-10 sm:pt-16 pb-14 sm:pb-20 max-w-6xl mx-auto text-left">
+        <section className="relative px-4 md:px-6 lg:px-10 py-6 sm:py-8 lg:py-6 xl:py-10 max-w-6xl xl:max-w-7xl mx-auto text-left">
           {/* Soft subtle colour backdrop shapes for restrained brutalist glass blur (subtle, pure CSS, no images) */}
           <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none select-none" aria-hidden="true">
             <div className="absolute -top-10 -left-10 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-[#FF6B1A]/12 blur-3xl" />
@@ -1775,30 +1772,30 @@ export const SinglePage: React.FC = () => {
           </div>
 
           {/* Floating Sticker Badge */}
-          <div className="inline-block mb-4 sm:mb-6">
-            <div className="glass text-[#111111] font-mono text-sm font-black px-3.5 py-1 -rotate-2 uppercase tracking-wide">
+          <div className="inline-block mb-3 sm:mb-4 lg:mb-3">
+            <div className="glass text-[#111111] font-mono text-xs sm:text-sm font-black px-3 py-0.5 sm:px-3.5 sm:py-1 -rotate-2 uppercase tracking-wide">
               {CONFIG.event.badgeSticker}
             </div>
           </div>
 
           {/* 2-Column Responsive Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 xl:gap-10 items-center">
 
             {/* Left Column (7 cols): Headline, Subtitle, Info Strip, Buttons */}
-            <div className="lg:col-span-7 space-y-6">
-              <h1 className="font-display font-extrabold text-4xl sm:text-6xl lg:text-7xl xl:text-8xl tracking-tight leading-[1.02] sm:leading-[0.95] text-[#111111]">
+            <div className="lg:col-span-7 space-y-4 sm:space-y-5 lg:space-y-4 xl:space-y-5">
+              <h1 className="font-display font-extrabold text-3xl sm:text-5xl lg:text-[clamp(2.25rem,3.2vw,3.25rem)] xl:text-[clamp(2.75rem,3.8vw,3.875rem)] tracking-tight leading-[1.04] sm:leading-[0.98] text-[#111111]">
                 Where Ideas Meet{' '}
                 <span className="highlight-yellow font-black whitespace-nowrap">
                   {CONFIG.event.taglineHighlightedWord}
                 </span>
               </h1>
 
-              <p className="text-lg sm:text-xl lg:text-2xl text-[#111111] font-sans font-medium max-w-2xl leading-snug">
+              <p className="text-base sm:text-lg lg:text-[clamp(1rem,1.2vw,1.15rem)] xl:text-xl text-[#111111] font-sans font-medium max-w-2xl leading-snug">
                 {CONFIG.event.subline}
               </p>
 
               {/* Quick Info Strip */}
-              <div className="p-2.5 sm:p-3.5 lg:px-3 lg:py-2.5 xl:p-3.5 glass flex flex-wrap md:flex-nowrap items-center gap-x-2 sm:gap-x-3 lg:gap-x-2 xl:gap-x-3 gap-y-2 font-mono text-xs sm:text-[13px] xl:text-sm font-bold text-[#111111] w-full max-w-full">
+              <div className="p-2 sm:p-2.5 lg:px-3 lg:py-2 xl:p-3 glass flex flex-wrap md:flex-nowrap items-center gap-x-2 sm:gap-x-3 lg:gap-x-2 xl:gap-x-3 gap-y-1.5 font-mono text-xs sm:text-[13px] xl:text-sm font-bold text-[#111111] w-full max-w-full">
                 <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                   <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
                   <span>Date: {CONFIG.event.date}</span>
@@ -1820,10 +1817,10 @@ export const SinglePage: React.FC = () => {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+              <div className="pt-1 sm:pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                 <button
                   onClick={() => handleNavClick('register')}
-                  className="brutal-btn bg-[#FF6B1A] text-[#111111] px-8 py-4 font-display font-bold text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
+                  className="brutal-btn bg-[#FF6B1A] text-[#111111] px-6 sm:px-8 py-3 sm:py-3.5 font-display font-bold text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 cursor-pointer min-h-[46px]"
                 >
                   <span>Register Now</span>
                   <ArrowRight className="w-5 h-5" />
@@ -1834,7 +1831,7 @@ export const SinglePage: React.FC = () => {
                     setWantsToPitch(true);
                     handleNavClick('register');
                   }}
-                  className="brutal-btn bg-[#FFD400] text-[#111111] px-8 py-4 font-display font-bold text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
+                  className="brutal-btn bg-[#FFD400] text-[#111111] px-6 sm:px-8 py-3 sm:py-3.5 font-display font-bold text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 cursor-pointer min-h-[46px]"
                 >
                   <span>Apply to Pitch</span>
                   <Rocket className="w-5 h-5 text-[#111111]" />
@@ -1852,7 +1849,7 @@ export const SinglePage: React.FC = () => {
 
         {/* ORGANISED BY strip: college units only (confirmed) */}
         {CONFIG.organisers.some((o) => o.confirmed) && (
-          <section aria-label="Organised by" className="px-4 sm:px-8 pb-10 max-w-6xl mx-auto">
+          <section aria-label="Organised by" className="px-4 md:px-6 lg:px-10 pb-8 sm:pb-10 max-w-6xl xl:max-w-7xl mx-auto">
             <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70 mb-3">
               Organised by
             </div>
@@ -1868,7 +1865,7 @@ export const SinglePage: React.FC = () => {
 
         {/* SUPPORTED BY strip: only if CONFIG.supporters has an entry with confirmed: true */}
         {CONFIG.supporters.some((s) => s.confirmed) && (
-          <section aria-label="Supported by" className="px-4 sm:px-8 pb-10 max-w-6xl mx-auto">
+          <section aria-label="Supported by" className="px-4 md:px-6 lg:px-10 pb-8 sm:pb-10 max-w-6xl xl:max-w-7xl mx-auto">
             <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70 mb-3">
               Supported by
             </div>
@@ -1882,7 +1879,7 @@ export const SinglePage: React.FC = () => {
           </section>
         )}
         {/* Marquee Ticker Strip directly under hero */}
-        <div className="w-full bg-[#111111] text-[#FFD400] border-y-2 border-[#111111] py-3.5 overflow-hidden font-display font-black text-sm sm:text-base tracking-widest uppercase select-none">
+        <div className="w-full max-w-full bg-[#111111] text-[#FFD400] border-y-2 border-[#111111] py-3 sm:py-3.5 overflow-hidden font-display font-black text-sm sm:text-base tracking-widest uppercase select-none">
           <div className="animate-marquee whitespace-nowrap">
             <span>{CONFIG.event.marqueeText.repeat(10)}</span>
           </div>
@@ -1890,9 +1887,9 @@ export const SinglePage: React.FC = () => {
 
         {/* Targets Strip — only renders if CONFIG.stats has values */}
         {Boolean(CONFIG.stats && CONFIG.stats.length > 0) && (
-          <section className="bg-[#FFF8EC] border-b-2 border-[#111111] px-4 sm:px-8 py-10">
-            <div className="max-w-6xl mx-auto">
-              <div className="flex items-center gap-3 mb-6">
+          <section className="bg-[#FFF8EC] border-b-2 border-[#111111] px-4 md:px-6 lg:px-10 py-8 md:py-10">
+            <div className="max-w-6xl xl:max-w-7xl mx-auto">
+              <div className="flex items-center gap-3 mb-4 sm:mb-5">
                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
                   Targets
                 </span>
@@ -1900,10 +1897,10 @@ export const SinglePage: React.FC = () => {
                   Event goals &amp; benchmarks
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 {CONFIG.stats.map((st, sIdx) => (
-                  <div key={sIdx} className="p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111]">
-                    <div className="font-display font-black text-2xl sm:text-4xl text-[#FF6B1A]">
+                  <div key={sIdx} className="p-3.5 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111]">
+                    <div className="font-display font-black text-2xl sm:text-3xl lg:text-4xl text-[#FF6B1A]">
                       {st.value}
                     </div>
                     <div className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] mt-1">
@@ -1924,10 +1921,10 @@ export const SinglePage: React.FC = () => {
         {/* =================================================================== */}
         {/* 3. ABOUT (01) — 1-LINE INTRO                                        */}
         {/* =================================================================== */}
-        <section id="about" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
+        <section id="about" className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto text-left border-b-2 border-[#111111]">
 
           {/* Section Header */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-4 sm:mb-5 lg:mb-5">
             <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
               {CONFIG.about.sectionNum}
             </span>
@@ -1936,17 +1933,17 @@ export const SinglePage: React.FC = () => {
             </span>
           </div>
 
-          <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.05] text-[#111111] max-w-4xl">
+          <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-[clamp(2rem,2.8vw,3rem)] tracking-tight leading-[1.08] text-[#111111] max-w-4xl">
             {CONFIG.about.headline}
           </h2>
 
           {/* 1-Line Intro */}
-          <p className="mt-4 text-base sm:text-lg text-[#111111]/85 font-sans font-medium max-w-3xl">
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-[#111111]/85 font-sans font-medium max-w-3xl">
             {CONFIG.about.introText}
           </p>
 
-          {/* Four Pillars as 1 Line Each */}
-          <div className="mt-8 space-y-3 font-sans">
+          {/* Four Pillars: 2 columns from md/lg */}
+          <div className="mt-6 lg:mt-7 grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 font-sans">
             {CONFIG.about.pillars.map((pillar) => (
               <div
                 key={pillar.tag}
@@ -1966,10 +1963,10 @@ export const SinglePage: React.FC = () => {
         {/* =================================================================== */}
         {/* 4. WHAT'S INSIDE (02) — 3-4 WORDS PER ITEM                         */}
         {/* =================================================================== */}
-        <section id="inside" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
+        <section id="inside" className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto text-left border-b-2 border-[#111111]">
 
           {/* Section Header */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-4 sm:mb-5 lg:mb-5">
             <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
               {CONFIG.whatsInside.sectionNum}
             </span>
@@ -1978,7 +1975,7 @@ export const SinglePage: React.FC = () => {
             </span>
           </div>
 
-          <h2 className="font-display font-black text-2xl sm:text-4xl lg:text-5xl tracking-tight text-[#111111]">
+          <h2 className="font-display font-black text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] tracking-tight text-[#111111]">
             {CONFIG.whatsInside.headline}
           </h2>
 
@@ -1987,21 +1984,21 @@ export const SinglePage: React.FC = () => {
             {CONFIG.whatsInside.introText}
           </p>
 
-          {/* Compact Grid of Formats (3-4 words each) */}
-          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 font-sans">
+          {/* Grid of Formats: 2 col mobile/tablet, 3 col lg, 4 col xl */}
+          <div className="mt-6 lg:mt-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-3.5 font-sans">
             {CONFIG.whatsInside.items.map((item, idx) => (
               <div
                 key={item.title}
-                className="p-4 bg-white brutal-border brutal-shadow-sm flex items-start gap-3.5 hover:translate-x-0.5 transition-transform"
+                className="p-3.5 sm:p-4 bg-white brutal-border brutal-shadow-sm flex items-start gap-3 hover:translate-x-0.5 transition-transform"
               >
                 <span className="font-mono text-sm font-black text-[#FF6B1A] shrink-0 mt-0.5">
                   {(idx + 1).toString().padStart(2, '0')}
                 </span>
                 <div>
-                  <h3 className="font-display font-bold text-base sm:text-lg text-[#111111]">
+                  <h3 className="font-display font-bold text-sm sm:text-base text-[#111111]">
                     {item.title}
                   </h3>
-                  <p className="text-sm text-[#111111]/85 mt-0.5 font-medium">
+                  <p className="text-xs sm:text-sm text-[#111111]/85 mt-0.5 font-medium">
                     {item.note}
                   </p>
                 </div>
@@ -2013,10 +2010,10 @@ export const SinglePage: React.FC = () => {
         {/* =================================================================== */}
         {/* 5. SCHEDULE (03) — ONLY SESSION TITLES, NO TIMES, NO DESCRIPTIONS   */}
         {/* =================================================================== */}
-        <section id="schedule" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
+        <section id="schedule" className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto text-left border-b-2 border-[#111111]">
 
           {/* Section Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-5 lg:mb-5">
             <div className="flex items-center gap-3">
               <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
                 {CONFIG.schedule.sectionNum}
@@ -2049,34 +2046,34 @@ export const SinglePage: React.FC = () => {
             </div>
           </div>
 
-          <h2 className="font-display font-extrabold text-2xl sm:text-4xl lg:text-5xl tracking-tight text-[#111111]">
+          <h2 className="font-display font-extrabold text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] tracking-tight text-[#111111]">
             {CONFIG.schedule.headline}
           </h2>
 
           {/* 1-Line Intro Note */}
-          <p className="mt-2 text-sm font-mono text-[#FF6B1A] font-bold">
+          <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-mono text-[#FF6B1A] font-bold">
             {CONFIG.schedule.note}
           </p>
 
           {/* Schedule Display: ONLY TITLES */}
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="mt-6 lg:mt-7 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
 
             {/* Day 1 Column */}
             <div
-              className={`p-6 sm:p-8 bg-white brutal-border brutal-shadow space-y-4 ${activeDay === 1 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
+              className={`p-5 sm:p-6 lg:p-6 xl:p-7 bg-white brutal-border brutal-shadow space-y-3 sm:space-y-4 ${activeDay === 1 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
                 }`}
             >
-              <div className="border-b-2 border-[#111111] pb-3">
+              <div className="border-b-2 border-[#111111] pb-2.5">
                 <span className="font-mono text-xs font-black text-[#FF6B1A] uppercase tracking-wider block">
                   DAY ONE
                 </span>
-                <h3 className="font-display font-extrabold text-xl sm:text-2xl text-[#111111]">
+                <h3 className="font-display font-extrabold text-lg sm:text-xl xl:text-2xl text-[#111111]">
                   {CONFIG.schedule.day1.title}
                 </h3>
               </div>
 
               {/* ONLY SESSION TITLES */}
-              <ul className="space-y-3.5 font-sans text-sm sm:text-base">
+              <ul className="space-y-2.5 sm:space-y-3 font-sans text-sm sm:text-base">
                 {CONFIG.schedule.day1.bullets.map((bullet, idx) => (
                   <li key={idx} className="flex items-center gap-3">
                     <span className="w-2.5 h-2.5 bg-[#FF6B1A] border-2 border-[#111111] shrink-0" />
@@ -2088,20 +2085,20 @@ export const SinglePage: React.FC = () => {
 
             {/* Day 2 Column */}
             <div
-              className={`p-6 sm:p-8 bg-white brutal-border brutal-shadow space-y-4 ${activeDay === 2 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
+              className={`p-5 sm:p-6 lg:p-6 xl:p-7 bg-white brutal-border brutal-shadow space-y-3 sm:space-y-4 ${activeDay === 2 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
                 }`}
             >
-              <div className="border-b-2 border-[#111111] pb-3">
+              <div className="border-b-2 border-[#111111] pb-2.5">
                 <span className="font-mono text-xs font-black text-[#FF6B1A] uppercase tracking-wider block">
                   DAY TWO
                 </span>
-                <h3 className="font-display font-extrabold text-xl sm:text-2xl text-[#111111]">
+                <h3 className="font-display font-extrabold text-lg sm:text-xl xl:text-2xl text-[#111111]">
                   {CONFIG.schedule.day2.title}
                 </h3>
               </div>
 
               {/* ONLY SESSION TITLES */}
-              <ul className="space-y-3.5 font-sans text-sm sm:text-base">
+              <ul className="space-y-2.5 sm:space-y-3 font-sans text-sm sm:text-base">
                 {CONFIG.schedule.day2.bullets.map((bullet, idx) => (
                   <li key={idx} className="flex items-center gap-3">
                     <span className="w-2.5 h-2.5 bg-[#FFD400] border-2 border-[#111111] shrink-0" />
@@ -2117,8 +2114,8 @@ export const SinglePage: React.FC = () => {
         {/* =================================================================== */}
         {/* 6. PITCH ARENA (04) — 1-LINE INTRO                                  */}
         {/* =================================================================== */}
-        <section id="pitch" className="bg-[#FF6B1A] text-[#111111] border-b-2 border-[#111111] py-16 sm:py-24 px-4 sm:px-8">
-          <div className="max-w-6xl mx-auto text-left space-y-7">
+        <section id="pitch" className="bg-[#FF6B1A] text-[#111111] border-b-2 border-[#111111] py-12 md:py-14 lg:py-16 px-4 md:px-6 lg:px-10">
+          <div className="max-w-6xl xl:max-w-7xl mx-auto text-left space-y-5 lg:space-y-6">
 
             {/* Header */}
             <div className="flex items-center gap-3">
@@ -2131,31 +2128,31 @@ export const SinglePage: React.FC = () => {
             </div>
 
             <div className="space-y-2 max-w-3xl">
-              <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
+              <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-[clamp(2rem,2.8vw,3rem)] tracking-tight text-[#111111]">
                 {CONFIG.pitchArena.headline}
               </h2>
-              <p className="font-display text-xl sm:text-2xl text-[#111111] font-extrabold">
+              <p className="font-display text-lg sm:text-xl lg:text-2xl text-[#111111] font-extrabold">
                 {CONFIG.pitchArena.tagline}
               </p>
               {/* 1-Line Intro */}
-              <p className="text-base font-sans text-[#111111] font-medium leading-relaxed">
+              <p className="text-sm sm:text-base font-sans text-[#111111] font-medium leading-relaxed">
                 {CONFIG.pitchArena.description}
               </p>
             </div>
 
             {/* Process in One Row */}
-            <div className="p-4 sm:p-6 bg-white brutal-border brutal-shadow">
-              <span className="text-xs font-mono font-black uppercase text-[#111111] tracking-wider block mb-3">
+            <div className="p-4 sm:p-5 lg:p-6 bg-white brutal-border brutal-shadow">
+              <span className="text-xs font-mono font-black uppercase text-[#111111] tracking-wider block mb-2.5 sm:mb-3">
                 Competition Flow
               </span>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 font-sans">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 font-sans">
                 {CONFIG.pitchArena.process.map((p, idx) => (
-                  <div key={p.step} className="p-3 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
+                  <div key={p.step} className="p-2.5 sm:p-3 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-xs font-black text-[#FF6B1A]">{p.step}</span>
                       {idx < 4 && <span className="font-mono text-xs text-[#111111]/70 hidden sm:inline">→</span>}
                     </div>
-                    <div className="font-display font-black text-base text-[#111111]">{p.label}</div>
+                    <div className="font-display font-black text-sm sm:text-base text-[#111111]">{p.label}</div>
                     <div className="text-xs text-[#111111]/70">{p.desc}</div>
                   </div>
                 ))}
@@ -2163,7 +2160,7 @@ export const SinglePage: React.FC = () => {
             </div>
 
             {/* What Startups Get */}
-            <div className="p-4 sm:p-6 bg-white brutal-border brutal-shadow space-y-3">
+            <div className="p-4 sm:p-5 lg:p-6 bg-white brutal-border brutal-shadow space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-black uppercase text-[#111111] tracking-wider block">
                   What Startups Get
@@ -2243,11 +2240,11 @@ export const SinglePage: React.FC = () => {
         {/* =================================================================== */}
         {/* 7. GUESTS (05)                                                      */}
         {/* =================================================================== */}
-        <section id="guests" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-10">
+        <section id="guests" className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto text-left border-b-2 border-[#111111] space-y-8 lg:space-y-8">
 
           {/* Section Header */}
           <div>
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-4 sm:mb-5 lg:mb-5">
               <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
                 05
               </span>
@@ -2256,8 +2253,8 @@ export const SinglePage: React.FC = () => {
               </span>
             </div>
 
-            <div className="space-y-3">
-              <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-tight tracking-tight">
+            <div className="space-y-2">
+              <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-[clamp(2rem,2.8vw,3rem)] text-[#111111] leading-tight tracking-tight">
                 Who you'll hear from
               </h2>
             </div>
@@ -2291,14 +2288,14 @@ export const SinglePage: React.FC = () => {
             };
 
             return (
-              <div className="space-y-12">
+              <div className="space-y-8 lg:space-y-9">
                 {guestTypeGroups.map((group) => {
                   const groupGuests = confirmedGuests.filter((g) => g.type === group.type);
                   if (groupGuests.length === 0) return null;
 
                   return (
-                    <div key={group.type} className="space-y-6">
-                      <div className="flex items-center gap-3 border-b-2 border-[#111111] pb-3">
+                    <div key={group.type} className="space-y-4 sm:space-y-5">
+                      <div className="flex items-center gap-3 border-b-2 border-[#111111] pb-2.5">
                         <span className="w-3 h-3 bg-[#FF6B1A] border border-[#111111] inline-block" />
                         <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-wide">
                           {group.label}
@@ -2308,11 +2305,11 @@ export const SinglePage: React.FC = () => {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                         {groupGuests.map((guest, idx) => (
                           <div
                             key={`${guest.name}-${idx}`}
-                            className="p-5 sm:p-6 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
+                            className="p-4 sm:p-5 lg:p-5 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-3 sm:gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
                           >
                             <div className="flex items-start justify-between gap-4">
                               {guest.photo ? (
@@ -2460,13 +2457,13 @@ export const SinglePage: React.FC = () => {
           return (
             <section
               id="team"
-              className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-12 scroll-mt-16"
+              className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto text-left border-b-2 border-[#111111] space-y-8 lg:space-y-9 scroll-mt-16"
             >
               <span id="behind" className="sr-only" aria-hidden="true" />
 
               {/* Header & Sub-note */}
               <div>
-                <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center gap-3 mb-4 sm:mb-5 lg:mb-5">
                   <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
                     Organising Body
                   </span>
@@ -2475,19 +2472,19 @@ export const SinglePage: React.FC = () => {
                   </span>
                 </div>
 
-                <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
+                <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-[clamp(2rem,2.8vw,3rem)] tracking-tight text-[#111111]">
                   Behind the event
                 </h2>
 
                 {showPlaceholdersNote && (
-                  <p className="font-mono text-sm sm:text-base font-bold text-[#111111]/80 mt-3">
+                  <p className="font-mono text-sm sm:text-base font-bold text-[#111111]/80 mt-2 sm:mt-3">
                     Faculty and student leadership will be announced soon.
                   </p>
                 )}
               </div>
 
               {/* 1. STUDENT LEADERSHIP */}
-              <div className="space-y-6 sm:space-y-8">
+              <div className="space-y-5 sm:space-y-6">
                 <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
                   <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
                     Student Leadership
@@ -2498,7 +2495,7 @@ export const SinglePage: React.FC = () => {
                 </div>
 
                 {/* CORE TEAM: large cards (1 col at 360px, 2 col >= 400px, 4 col desktop) */}
-                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-4">
                   {coreStudents.map((member, idx) => {
                     const photoUrl = getTeamMemberPhoto(member.name, member.photo);
                     const cleanLinkedIn = getCleanLinkedInUrl(member.linkedin);
@@ -2506,7 +2503,7 @@ export const SinglePage: React.FC = () => {
                     return (
                       <div
                         key={`core-${member.name}-${idx}`}
-                        className="p-5 sm:p-6 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
+                        className="p-4 sm:p-5 lg:p-4 xl:p-5 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-3 sm:gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
                       >
                         <div className="space-y-4">
                           {photoUrl ? (
@@ -2565,7 +2562,7 @@ export const SinglePage: React.FC = () => {
 
                 {/* DEPARTMENT LEADS: smaller cards (2 col mobile, 4 col desktop) */}
                 {leadStudents.length > 0 && (
-                  <div className="pt-6 sm:pt-8 space-y-4">
+                  <div className="pt-5 sm:pt-6 space-y-3.5">
                     <div className="flex items-center gap-3 border-b-2 border-[#111111] pb-2">
                       <span className="w-2.5 h-2.5 bg-[#FF6B1A] border border-[#111111] inline-block" />
                       <h4 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-wide">
@@ -2576,7 +2573,7 @@ export const SinglePage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                       {leadStudents.map((member, idx) => {
                         const photoUrl = getTeamMemberPhoto(member.name, member.photo);
                         const cleanLinkedIn = getCleanLinkedInUrl(member.linkedin);
@@ -2584,7 +2581,7 @@ export const SinglePage: React.FC = () => {
                         return (
                           <div
                             key={`lead-${member.name}-${idx}`}
-                            className="p-3.5 sm:p-5 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-3 text-left transition-transform hover:-translate-y-0.5 min-w-0"
+                            className="p-3 sm:p-4 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-2.5 sm:gap-3 text-left transition-transform hover:-translate-y-0.5 min-w-0"
                           >
                             <div className="space-y-3">
                               <div className="flex items-start justify-between gap-2">
@@ -2669,14 +2666,15 @@ export const SinglePage: React.FC = () => {
         {/* =================================================================== */}
         {/* 9. REGISTRATION (07) — MAIN FORM SECTION (id="register")            */}
         {/* =================================================================== */}
-        <section id="register" className="px-4 sm:px-8 py-16 sm:py-24 max-w-4xl mx-auto text-left border-b-2 border-[#111111] scroll-mt-16">
+        <section id="register" className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto text-left border-b-2 border-[#111111] scroll-mt-16">
+          <div className="max-w-4xl mx-auto">
 
-          {/* Section Header with live counter if enabled */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-                07
-              </span>
+            {/* Section Header with live counter if enabled */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-5 lg:mb-5">
+              <div className="flex items-center gap-3">
+                <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+                  07
+                </span>
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
                 Registration
               </span>
@@ -4147,25 +4145,25 @@ export const SinglePage: React.FC = () => {
 
             </div>
           )}
-
+          </div>
         </section>
 
         {/* =================================================================== */}
         {/* 10. FAQ ACCORDION (6 Questions)                                     */}
         {/* =================================================================== */}
-        <section id="faq" className="px-4 sm:px-8 py-16 sm:py-24 max-w-4xl mx-auto text-left border-b-2 border-[#111111]">
+        <section id="faq" className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto text-left border-b-2 border-[#111111]">
 
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-4 sm:mb-5 lg:mb-5">
             <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
               Clear Answers
             </span>
           </div>
 
-          <h2 className="font-display font-extrabold text-2xl sm:text-4xl text-[#111111] mb-8">
+          <h2 className="font-display font-extrabold text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] text-[#111111] mb-6 lg:mb-7">
             Frequently Asked Questions
           </h2>
 
-          <div className="space-y-3.5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-4 items-start">
             {CONFIG.faq.map((item, idx) => {
               const isOpen = openFaqIndex === idx;
               return (
@@ -4176,7 +4174,7 @@ export const SinglePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                    className="w-full p-4 sm:p-5 text-left font-display font-bold text-base sm:text-lg flex items-center justify-between gap-4 cursor-pointer min-h-[50px]"
+                    className="w-full p-3.5 sm:p-4 text-left font-display font-bold text-base sm:text-lg flex items-center justify-between gap-3 cursor-pointer min-h-[48px]"
                   >
                     <span>{item.q}</span>
                     <ChevronDown
@@ -4186,7 +4184,7 @@ export const SinglePage: React.FC = () => {
                   </button>
 
                   {isOpen && (
-                    <div className="px-4 sm:px-5 pb-5 pt-1 text-sm sm:text-base font-sans text-[#111111]/85 border-t border-[#111111]/15 leading-relaxed font-medium">
+                    <div className="px-3.5 sm:px-4 pb-4 pt-1 text-sm sm:text-base font-sans text-[#111111]/85 border-t border-[#111111]/15 leading-relaxed font-medium">
                       {item.a}
                     </div>
                   )}
@@ -4200,7 +4198,7 @@ export const SinglePage: React.FC = () => {
       {/* =================================================================== */}
       {/* 11. FOOTER                                                          */}
       {/* =================================================================== */}
-      <footer className="px-4 sm:px-8 py-12 sm:py-16 max-w-6xl mx-auto text-left font-sans text-sm">
+      <footer className="px-4 md:px-6 lg:px-10 py-10 sm:py-12 lg:py-14 max-w-6xl xl:max-w-7xl mx-auto text-left font-sans text-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-10 border-b-2 border-[#111111]">
 
           <div className="space-y-2">
