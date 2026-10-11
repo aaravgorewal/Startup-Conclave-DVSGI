@@ -3172,7 +3172,7 @@ export const SinglePage: React.FC = () => {
                   })}
                 </div>
 
-                {/* DEPARTMENT LEADS: smaller cards (2 col mobile, 4 col desktop) */}
+                {/* DEPARTMENT LEADS: balanced horizontal cards (1 col mobile, 2 col tablet, 3 col desktop) */}
                 {leadStudents.length > 0 && (
                   <div className="pt-5 sm:pt-6 space-y-3.5">
                     <div className="flex items-center gap-3 border-b-2 border-[#111111] pb-2">
@@ -3185,69 +3185,68 @@ export const SinglePage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
                       {leadStudents.map((member, idx) => {
                         const photoUrl = getTeamMemberPhoto(member.name, member.photo);
                         const cleanLinkedIn = getCleanLinkedInUrl(member.linkedin);
+                        const fallbackLinkedIn = `https://www.linkedin.com/search/results/all/?keywords=${encodeURIComponent(member.name + ' Dewan VS Group')}`;
 
                         return (
                           <div
                             key={`lead-${member.name}-${idx}`}
-                            className="p-3 sm:p-4 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-2.5 sm:gap-3 text-left transition-transform hover:-translate-y-0.5 min-w-0 h-full"
+                            className="p-3.5 sm:p-4 bg-white brutal-border brutal-shadow flex items-start gap-3 sm:gap-3.5 text-left transition-transform hover:-translate-y-0.5 min-w-0 h-full"
                           >
-                            <div className="space-y-3">
-                              <div className="flex items-start justify-between gap-2">
-                                {photoUrl ? (
-                                  <img
-                                    src={photoUrl}
-                                    loading="lazy"
-                                    width={160}
-                                    height={160}
-                                    alt={`${member.name}, ${member.roles.join(', ')}`}
-                                    className="w-16 h-16 sm:w-20 sm:h-20 aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
-                                  />
-                                ) : (
-                                  <div
-                                    className="w-16 h-16 sm:w-20 sm:h-20 aspect-square bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center shrink-0 select-none"
-                                    aria-label={member.name}
-                                  >
-                                    <UserIcon className="w-6 h-6 sm:w-7 sm:h-7 text-[#111111]/40 stroke-[1.5]" />
-                                    <span className="font-mono text-[10px] font-bold text-[#111111]/75 mt-0.5">
-                                      {getMemberInitials(member.name)}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {cleanLinkedIn && (
-                                  <a
-                                    href={cleanLinkedIn}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    aria-label={`${member.name} on LinkedIn`}
-                                    className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0"
-                                  >
-                                    <Linkedin className="w-3.5 h-3.5 text-[#111111]" />
-                                  </a>
-                                )}
+                            {/* Photo / Initials */}
+                            {photoUrl ? (
+                              <img
+                                src={photoUrl}
+                                loading="lazy"
+                                width={160}
+                                height={160}
+                                alt={`${member.name}, ${member.roles.join(', ')}`}
+                                className="w-16 h-16 sm:w-20 sm:h-20 aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
+                              />
+                            ) : (
+                              <div
+                                className="w-16 h-16 sm:w-20 sm:h-20 aspect-square bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center shrink-0 select-none"
+                                aria-label={member.name}
+                              >
+                                <UserIcon className="w-6 h-6 sm:w-7 sm:h-7 text-[#111111]/40 stroke-[1.5]" />
+                                <span className="font-mono text-[10px] font-bold text-[#111111]/75 mt-0.5">
+                                  {getMemberInitials(member.name)}
+                                </span>
                               </div>
+                            )}
 
-                              <div>
+                            {/* Member Details beside photo */}
+                            <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch gap-2">
+                              <div className="flex items-start justify-between gap-1.5">
                                 <h5 className="font-display font-black text-base sm:text-lg text-[#111111] leading-tight break-words">
                                   {member.name}
                                 </h5>
-                              </div>
-                            </div>
-
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {member.roles.map((r, roleIdx) => (
-                                <span
-                                  key={roleIdx}
-                                  className="inline-block px-1.5 py-0.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[10px] sm:text-[11px] font-bold text-[#111111] shadow-[1px_1px_0px_#111111] uppercase tracking-wider break-words"
-                                  style={{ fontVariant: 'all-small-caps' }}
+                                <a
+                                  href={cleanLinkedIn || fallbackLinkedIn}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`${member.name} on LinkedIn`}
+                                  title={`${member.name} on LinkedIn`}
+                                  className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-all cursor-pointer shrink-0 min-h-[28px] min-w-[28px]"
                                 >
-                                  {r}
-                                </span>
-                              ))}
+                                  <Linkedin className="w-3.5 h-3.5 text-[#111111]" />
+                                </a>
+                              </div>
+
+                              <div className="flex flex-wrap gap-1.5">
+                                {member.roles.map((r, roleIdx) => (
+                                  <span
+                                    key={roleIdx}
+                                    className="inline-block px-1.5 py-0.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[10px] sm:text-[11px] font-bold text-[#111111] shadow-[1px_1px_0px_#111111] uppercase tracking-wider break-words"
+                                    style={{ fontVariant: 'all-small-caps' }}
+                                  >
+                                    {r}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         );
