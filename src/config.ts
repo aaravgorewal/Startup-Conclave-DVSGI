@@ -304,7 +304,32 @@ export const CONFIG = {
     speakers: [] as SpeakerItem[],
   },
 
-  guests: [] as Guest[],
+  guests: [
+    // type is a placeholder: change to 'chief-guest' | 'jury' | 'investor' | 'mentor' if needed
+    {
+      name: "Mr. Mahip Singh",
+      designation: "CEO",
+      organisation: "Innovation Hub, AKTU",
+      type: "chief-guest",
+      confirmed: true,
+    },
+    // type is a placeholder: change to 'chief-guest' | 'jury' | 'investor' | 'mentor' if needed
+    {
+      name: "Sumit Rajesh Mahajan, IAS",
+      designation: "CEO",
+      organisation: "Uttar Pradesh Startup Mission",
+      type: "chief-guest",
+      confirmed: true,
+    },
+    // type is a placeholder: change to 'chief-guest' | 'jury' | 'investor' | 'mentor' if needed
+    {
+      name: "Mr. Vivek Kumar",
+      designation: "Operations Head",
+      organisation: "Country Delight",
+      type: "chief-guest",
+      confirmed: true,
+    },
+  ] as Guest[],
 
   partners: {
     sectionNum: "06",

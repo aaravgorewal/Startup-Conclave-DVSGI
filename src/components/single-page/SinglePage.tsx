@@ -1678,6 +1678,12 @@ export const SinglePage: React.FC = () => {
             Pitch
           </button>
           <button
+            onClick={() => handleNavClick('guests')}
+            className="hover:text-[#FF6B1A] transition-colors cursor-pointer"
+          >
+            Guests
+          </button>
+          <button
             onClick={() => handleNavClick('partners')}
             className="hover:text-[#FF6B1A] transition-colors cursor-pointer"
           >
@@ -2340,48 +2346,12 @@ export const SinglePage: React.FC = () => {
             <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-tight tracking-tight">
               Who you'll hear from
             </h2>
-            {(() => {
-              const confirmedGuests = (CONFIG.guests || []).filter((g) => g.confirmed);
-              if (confirmedGuests.length === 0) {
-                return (
-                  <p className="text-base sm:text-lg font-sans text-[#111111]/85 max-w-2xl font-medium leading-relaxed">
-                    Guest announcements coming soon.
-                  </p>
-                );
-              }
-              return null;
-            })()}
           </div>
         </div>
 
         {(() => {
           const confirmedGuests = (CONFIG.guests || []).filter((g) => g.confirmed);
-
-          // If there are no confirmed guests, show 3 placeholder cards
-          if (confirmedGuests.length === 0) {
-            return (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map((placeholderIndex) => (
-                  <div
-                    key={`guest-placeholder-${placeholderIndex}`}
-                    className="p-6 bg-white/60 border-2 border-dashed border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-4 text-left"
-                  >
-                    <div
-                      aria-hidden="true"
-                      className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFF8EC] border-2 border-dashed border-[#111111] flex items-center justify-center font-display font-black text-2xl text-[#111111]/40 shrink-0 select-none"
-                    >
-                      ?
-                    </div>
-                    <div>
-                      <p className="font-display font-black text-base sm:text-lg text-[#111111]/70">
-                        To be announced
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          }
+          if (confirmedGuests.length === 0) return null;
 
           // Order of guest types: chief-guest, speaker, jury, investor, mentor
           const guestTypeGroups: { type: Guest['type']; label: string }[] = [
@@ -2393,7 +2363,14 @@ export const SinglePage: React.FC = () => {
           ];
 
           const getInitials = (name: string): string => {
-            const parts = name.trim().split(/\s+/).filter(Boolean);
+            if (!name || !name.trim()) return '?';
+            // Strip suffixes after comma (e.g. ", IAS")
+            const withoutSuffix = name.split(',')[0].trim();
+            // Ignore honorifics (Mr., Mrs., Ms., Dr., Prof., Sh.)
+            const withoutHonorific = withoutSuffix
+              .replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Sh\.|Mr|Mrs|Ms|Dr|Prof|Sh)\s+/i, '')
+              .trim();
+            const parts = withoutHonorific.split(/\s+/).filter(Boolean);
             if (parts.length === 0) return '?';
             if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
             return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -2421,7 +2398,7 @@ export const SinglePage: React.FC = () => {
                       {groupGuests.map((guest, idx) => (
                         <div
                           key={`${guest.name}-${idx}`}
-                          className="p-5 sm:p-6 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-4 text-left transition-transform hover:-translate-y-0.5"
+                          className="p-5 sm:p-6 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
                         >
                           <div className="flex items-start justify-between gap-4">
                             {guest.photo ? (
@@ -2435,7 +2412,7 @@ export const SinglePage: React.FC = () => {
                               />
                             ) : (
                               <div
-                                className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center font-display font-black text-xl sm:text-2xl text-[#111111] shrink-0"
+                                className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center font-display font-black text-xl sm:text-2xl text-[#111111] shrink-0 select-none"
                                 aria-label={guest.name}
                               >
                                 {getInitials(guest.name)}
@@ -2455,18 +2432,18 @@ export const SinglePage: React.FC = () => {
                             )}
                           </div>
 
-                          <div className="space-y-1.5 flex-1">
-                            <h4 className="font-display font-black text-xl sm:text-2xl text-[#111111] leading-tight">
+                          <div className="space-y-1.5 flex-1 min-w-0">
+                            <h4 className="font-display font-black text-xl sm:text-2xl text-[#111111] leading-tight break-words">
                               {guest.name}
                             </h4>
-                            <p className="font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] uppercase tracking-wide">
+                            <p className="font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] uppercase tracking-wide break-words">
                               {guest.designation}
                             </p>
-                            <p className="font-sans text-sm text-[#111111]/90 font-bold">
+                            <p className="font-sans text-sm text-[#111111]/90 font-bold break-words">
                               {guest.organisation}
                             </p>
                             {guest.topic && (
-                              <p className="text-xs sm:text-sm font-sans text-[#111111]/85 italic pt-2 border-t border-[#111111]/15 mt-2">
+                              <p className="text-xs sm:text-sm font-sans text-[#111111]/85 italic pt-2 border-t border-[#111111]/15 mt-2 break-words">
                                 <span className="font-bold not-italic font-mono text-[11px] uppercase tracking-wider text-[#111111] block mb-0.5">
                                   Topic
                                 </span>
@@ -2480,6 +2457,10 @@ export const SinglePage: React.FC = () => {
                   </div>
                 );
               })}
+
+              <p className="font-mono text-xs sm:text-sm font-bold text-[#111111]/75">
+                More guests will be announced soon.
+              </p>
             </div>
           );
         })()}
