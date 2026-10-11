@@ -44,6 +44,8 @@ export interface TeamMember {
   photoUrl?: string;
   initials?: string;
   confirmed: boolean;
+  group?: 'faculty' | 'student-lead' | 'head';
+  order?: number;
 }
 
 export interface TicketConfig {
@@ -348,11 +350,13 @@ export const CONFIG = {
   // Behind the event: Faculty and Student leadership
   faculty: [] as TeamMember[],
   students: [] as TeamMember[],
+  volunteerFormUrl: '',
   team: {
     headline: "Behind the event",
     note: "Faculty and student leadership will be announced soon.",
     faculty: [] as TeamMember[],
     students: [] as TeamMember[],
+    volunteerFormUrl: '',
   },
 
   registration: {

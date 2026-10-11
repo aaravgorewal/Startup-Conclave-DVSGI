@@ -2677,7 +2677,29 @@ export const SinglePage: React.FC = () => {
             : CONFIG.students || [];
 
         const confirmedFaculty = facultyList.filter((m) => m.confirmed);
-        const confirmedStudents = studentsList.filter((m) => m.confirmed);
+
+        // Student leadership sorting: student-lead first, then heads sorted by order (then name)
+        const sortStudentMembers = (a: TeamMember, b: TeamMember) => {
+          const isHeadA = a.group === 'head';
+          const isHeadB = b.group === 'head';
+
+          if (isHeadA !== isHeadB) {
+            return isHeadA ? 1 : -1;
+          }
+
+          const orderA = typeof a.order === 'number' ? a.order : Infinity;
+          const orderB = typeof b.order === 'number' ? b.order : Infinity;
+
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+
+          return a.name.localeCompare(b.name);
+        };
+
+        const confirmedStudents = studentsList
+          .filter((m) => m.confirmed)
+          .sort(sortStudentMembers);
 
         const hasFacultyConfirmed = confirmedFaculty.length > 0;
         const hasStudentsConfirmed = confirmedStudents.length > 0;
@@ -2695,6 +2717,8 @@ export const SinglePage: React.FC = () => {
             .slice(0, 2)
             .toUpperCase();
         };
+
+        const volunteerUrl = (CONFIG.volunteerFormUrl || (CONFIG.team as any)?.volunteerFormUrl || '').trim();
 
         return (
           <section
@@ -2872,6 +2896,21 @@ export const SinglePage: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* "Join the team" note only if CONFIG.volunteerFormUrl is non-empty */}
+            {Boolean(volunteerUrl) && (
+              <div className="pt-2 border-t-2 border-[#111111]">
+                <a
+                  href={volunteerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
+                >
+                  <span>Join the team</span>
+                  <span aria-hidden="true">→</span>
+                </a>
+              </div>
+            )}
 
           </section>
         );
