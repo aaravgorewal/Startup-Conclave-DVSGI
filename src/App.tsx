@@ -8,6 +8,7 @@ import { SinglePage } from './components/single-page/SinglePage.tsx';
 
 const AdminPage = lazy(() => import('./pages/AdminPage.tsx'));
 const ScanPage = lazy(() => import('./pages/ScanPage.tsx'));
+const PartnersPage = lazy(() => import('./pages/PartnersPage.tsx'));
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -50,6 +51,23 @@ export default function App() {
         }
       >
         <ScanPage />
+      </Suspense>
+    );
+  }
+
+  // Partners route (/partners)
+  if (currentPath === '/partners' || currentPath.startsWith('/partners/')) {
+    return (
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-[#FFF8EC] flex items-center justify-center p-4">
+            <div className="p-4 bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] font-mono text-xs font-bold text-[#111111]">
+              Loading Partners Page...
+            </div>
+          </div>
+        }
+      >
+        <PartnersPage />
       </Suspense>
     );
   }

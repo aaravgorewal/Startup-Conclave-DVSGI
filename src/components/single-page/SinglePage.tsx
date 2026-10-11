@@ -42,7 +42,6 @@ import { CONFIG, type LogoItem, type TeamMember, type Guest, type SponsorNeed } 
 import { getTeamMemberPhoto } from '../teamPhotos.ts';
 import {
   createRegistration,
-  createPartnerEnquiry,
   isEmailRegistered,
   isPhoneRegistered,
   isValidEmail,
@@ -336,7 +335,7 @@ const HeroVectorIllustration: React.FC = () => {
 };
 
 // Logo tile: equal-height white box with 2px #111111 border and hard offset shadow
-const LogoTile: React.FC<{
+export const LogoTile: React.FC<{
   item: LogoItem;
   heightClass?: string;
   tileClass?: string;
@@ -594,11 +593,6 @@ export const SinglePage: React.FC = () => {
   const mobileMenuToggleRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
-  // Partner Modal State & keyboard refs
-  const [partnerModalOpen, setPartnerModalOpen] = useState(false);
-  const partnerTriggerRef = useRef<HTMLElement | null>(null);
-  const partnerModalRef = useRef<HTMLDivElement>(null);
-
   // Privacy Notice Modal State (/privacy or #privacy) & keyboard refs
   const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
   const privacyTriggerRef = useRef<HTMLElement | null>(null);
@@ -609,12 +603,6 @@ export const SinglePage: React.FC = () => {
     mobileMenuToggleRef.current?.focus();
   };
 
-  const handleOpenPartnerModal = (e?: React.MouseEvent) => {
-    if (e?.currentTarget) {
-      partnerTriggerRef.current = e.currentTarget as HTMLElement;
-    }
-    setPartnerModalOpen(true);
-  };
 
   const handleOpenPrivacyModal = (e?: React.MouseEvent) => {
     if (e?.currentTarget) {
@@ -644,16 +632,6 @@ export const SinglePage: React.FC = () => {
     containerRef: mobileMenuRef,
     onClose: handleCloseMobileMenu,
     triggerRef: mobileMenuToggleRef,
-  });
-
-  useFocusTrap({
-    isOpen: partnerModalOpen,
-    containerRef: partnerModalRef,
-    onClose: () => {
-      setPartnerModalOpen(false);
-      partnerTriggerRef.current?.focus();
-    },
-    triggerRef: partnerTriggerRef,
   });
 
   useFocusTrap({
@@ -694,18 +672,6 @@ export const SinglePage: React.FC = () => {
       window.removeEventListener('popstate', handleLocation);
     };
   }, []);
-  const [partnerData, setPartnerData] = useState({
-    company: '',
-    contactName: '',
-    email: '',
-    phone: '',
-    partnershipType: 'Cash',
-    contributionRange: '',
-    message: '',
-  });
-  const [partnerSuccess, setPartnerSuccess] = useState(false);
-  const [partnerSubmitting, setPartnerSubmitting] = useState(false);
-  const [partnerError, setPartnerError] = useState('');
 
   // Registration Form State (id="register")
   const [authUser, setAuthUser] = useState<User | null>(null);
@@ -1054,72 +1020,7 @@ export const SinglePage: React.FC = () => {
 
   // Anti-Bot Protection & Honeypot states
   const [regFormStartTime, setRegFormStartTime] = useState<number>(() => Date.now());
-  const [partnerFormStartTime, setPartnerFormStartTime] = useState<number>(() => Date.now());
-  const [partnerHoneypot, setPartnerHoneypot] = useState('');
   const [isNetworkError, setIsNetworkError] = useState(false);
-  const [partnerNetworkError, setPartnerNetworkError] = useState(false);
-
-  // Partner Form Submit Handler
-  const handlePartnerSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (partnerSubmitting) return;
-
-    // 1. Honeypot Check (Silently reject bot submissions)
-    if (partnerHoneypot.trim() !== '') {
-      return;
-    }
-
-    // 2. Minimum 3-second form-fill time check
-    const timeCheck = checkFormFillTime(partnerFormStartTime);
-    if (!timeCheck.valid) {
-      setPartnerError(timeCheck.error || 'Form submitted too quickly. Please take a moment to review your details.');
-      return;
-    }
-
-    // 3. Browser rate limit check (3 submissions per hour)
-    const rateCheck = checkBrowserRateLimit('partner');
-    if (!rateCheck.allowed) {
-      setPartnerError(rateCheck.error || 'Submission limit reached. Please try again later.');
-      return;
-    }
-
-    if (!partnerData.company.trim() || !partnerData.contactName.trim() || !partnerData.email.trim()) {
-      setPartnerError('Please provide company name, contact person, and email.');
-      return;
-    }
-
-    setPartnerSubmitting(true);
-    setPartnerError('');
-    setPartnerNetworkError(false);
-
-    const res = await createPartnerEnquiry(partnerData);
-    setPartnerSubmitting(false);
-
-    if (res.success) {
-      setPartnerNetworkError(false);
-      setPartnerError('');
-      // Record rate limit timestamp
-      recordBrowserSubmission('partner');
-      setPartnerSuccess(true);
-      setTimeout(() => {
-        setPartnerModalOpen(false);
-        setPartnerSuccess(false);
-        setPartnerData({
-          company: '',
-          contactName: '',
-          email: '',
-          phone: '',
-          partnershipType: 'Cash',
-          contributionRange: '',
-          message: '',
-        });
-        setPartnerHoneypot('');
-      }, 2000);
-    } else {
-      setPartnerNetworkError(Boolean(res.isNetworkError));
-      setPartnerError(res.error || 'Could not submit. Check your internet and try again.');
-    }
-  };
 
   // Registration Form Submit Handler
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -1684,12 +1585,12 @@ export const SinglePage: React.FC = () => {
           >
             Guests
           </button>
-          <button
-            onClick={() => handleNavClick('partners')}
+          <a
+            href="/partners"
             className="hover:text-[#FF6B1A] transition-colors cursor-pointer"
           >
-            Partners
-          </button>
+            Partner with us
+          </a>
           <button
             onClick={() => handleNavClick('team')}
             className="hover:text-[#FF6B1A] transition-colors cursor-pointer"
@@ -1808,14 +1709,13 @@ export const SinglePage: React.FC = () => {
               <span>05 • Guests</span>
               <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">→</span>
             </button>
-            <button
-              type="button"
-              onClick={() => handleNavClick('partners')}
+            <a
+              href="/partners"
               className="w-full text-left py-2 px-2 hover:bg-white/40 min-h-[44px] flex items-center justify-between group transition-colors cursor-pointer"
             >
-              <span>06 • Partners</span>
+              <span>Partner with us</span>
               <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-            </button>
+            </a>
             <button
               type="button"
               onClick={() => handleNavClick('team')}
@@ -1960,6 +1860,22 @@ export const SinglePage: React.FC = () => {
                 .filter((o) => o.confirmed)
                 .map((o) => (
                   <LogoTile key={o.name} item={o} />
+                ))}
+            </div>
+          </section>
+        )}
+
+        {/* SUPPORTED BY strip: only if CONFIG.supporters has an entry with confirmed: true */}
+        {CONFIG.supporters.some((s) => s.confirmed) && (
+          <section aria-label="Supported by" className="px-4 sm:px-8 pb-10 max-w-6xl mx-auto">
+            <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70 mb-3">
+              Supported by
+            </div>
+            <div className="flex flex-wrap items-stretch gap-3 sm:gap-4">
+              {CONFIG.supporters
+                .filter((s) => s.confirmed)
+                .map((s) => (
+                  <LogoTile key={s.name} item={s} />
                 ))}
             </div>
           </section>
@@ -2475,286 +2391,6 @@ export const SinglePage: React.FC = () => {
           )}
         </section>
 
-        {/* =================================================================== */}
-        {/* 8. PARTNERS (06) — 1-LINE INTRO                                     */}
-        {/* =================================================================== */}
-        {/* =================================================================== */}
-        {/* 8. FOR PARTNERS (06)                                                */}
-        {/* =================================================================== */}
-        <section id="partners" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-12">
-
-          {/* Header & Intro */}
-          <div>
-            <div className="flex items-center gap-3 mb-6">
-              <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-                {CONFIG.partners.sectionNum}
-              </span>
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-                Partnerships
-              </span>
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
-                {CONFIG.partners.badge}
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-              <div className="max-w-3xl space-y-3">
-                <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
-                  {CONFIG.partners.headline}
-                </h2>
-                <p className="font-display text-lg sm:text-xl text-[#FF6B1A] font-extrabold">
-                  {CONFIG.partners.tagline}
-                </p>
-                <p className="text-base font-sans text-[#111111]/85 font-medium leading-relaxed">
-                  {CONFIG.partners.subline}
-                </p>
-              </div>
-
-              <button
-                onClick={(e) => {
-                  setPartnerFormStartTime(Date.now());
-                  setPartnerHoneypot('');
-                  setPartnerError('');
-                  handleOpenPartnerModal(e);
-                }}
-                className="brutal-btn bg-[#FFD400] text-[#111111] px-6 py-3.5 font-display font-extrabold text-base uppercase tracking-wider rounded-[2px] cursor-pointer shrink-0 min-h-[46px] self-start sm:self-auto"
-              >
-                Become a Partner →
-              </button>
-            </div>
-          </div>
-
-          {/* 1. WHY PARTNER WITH US: 6 benefit cards (one line each, benefit-only wording) */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
-              <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
-                Why Partner With Us
-              </h3>
-              <span className="font-mono text-xs text-[#111111]/70 font-bold">
-                6 Core Advantages
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {CONFIG.partners.whyPartner.map((benefit) => (
-                <div
-                  key={benefit.title}
-                  className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-2 flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="font-mono text-[11px] font-bold text-[#FF6B1A] uppercase tracking-wider mb-1">
-                      Partner Advantage
-                    </div>
-                    <h4 className="font-display font-black text-lg text-[#111111]">
-                      {benefit.title}
-                    </h4>
-                    <p className="text-sm font-sans text-[#111111]/80 leading-relaxed font-medium mt-1">
-                      {benefit.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 2. WHAT WE ARE LOOKING FOR: Sponsorship block */}
-          {(() => {
-            const confirmedNeeds = (CONFIG.sponsorNeeds || []).filter((n) => n.confirmed);
-            const sponsorContactEmail = (CONFIG.sponsorContactEmail || '').trim();
-            const hasSponsorDeck = Boolean(
-              CONFIG.sponsorDeckUrl && CONFIG.sponsorDeckUrl.startsWith('https://')
-            );
-
-            return (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
-                  <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
-                    What we are looking for
-                  </h3>
-                  <span className="font-mono text-xs text-[#111111]/70 font-bold">
-                    Sponsorship Needs
-                  </span>
-                </div>
-
-                {confirmedNeeds.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {confirmedNeeds.map((need, idx) => (
-                      <div
-                        key={`${need.title}-${idx}`}
-                        className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-3"
-                      >
-                        <div className="space-y-2">
-                          <h4 className="font-display font-black text-lg text-[#111111]">
-                            {need.title}
-                          </h4>
-                          <p className="text-sm font-sans text-[#111111]/85 leading-relaxed font-medium">
-                            {need.description}
-                          </p>
-                        </div>
-                        {Boolean(need.amount && need.amount.trim()) && (
-                          <div className="pt-2 border-t border-[#111111]/20">
-                            <span className="font-mono text-xs sm:text-sm font-black text-[#FF6B1A]">
-                              {need.amount?.trim()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <p className="font-mono text-xs uppercase tracking-wider text-[#111111]/70 font-bold">
-                      Ways to partner
-                    </p>
-                    <div className="flex flex-wrap gap-2 sm:gap-3">
-                      {[
-                        'Cash sponsorship',
-                        'Technology credits',
-                        'Food & beverage',
-                        'Merchandise',
-                        'Media partnership',
-                        'Travel & hospitality',
-                        'Other',
-                      ].map((chip) => (
-                        <span
-                          key={chip}
-                          className="px-3.5 py-2 bg-white brutal-border shadow-[2px_2px_0px_#111111] font-mono text-xs sm:text-sm font-bold text-[#111111]"
-                        >
-                          {chip}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Action Buttons & Contact */}
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-2">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      const formEl = document.getElementById('partner-form');
-                      if (formEl) {
-                        formEl.scrollIntoView({ behavior: 'smooth' });
-                      }
-                      setPartnerFormStartTime(Date.now());
-                      setPartnerHoneypot('');
-                      setPartnerError('');
-                      handleOpenPartnerModal(e);
-                    }}
-                    className="brutal-btn bg-[#FFD400] text-[#111111] px-5 py-2.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px]"
-                  >
-                    Become a partner
-                  </button>
-
-                  {hasSponsorDeck && (
-                    <a
-                      href={CONFIG.sponsorDeckUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-5 py-2.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px] inline-flex items-center gap-1.5"
-                    >
-                      <span>Download sponsorship deck</span>
-                      <span aria-hidden="true">↓</span>
-                    </a>
-                  )}
-
-                  {Boolean(sponsorContactEmail) && (
-                    <a
-                      href={`mailto:${sponsorContactEmail}?subject=Sponsorship%20Inquiry%20-%20Startup%20Conclave%201.0`}
-                      className="inline-flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline transition-colors min-h-[44px] px-2"
-                    >
-                      <span>{sponsorContactEmail}</span>
-                      <span aria-hidden="true">↗</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* 2. PARTNERSHIP OPTIONS: Title / Innovation / Gold / Supporting (hidden if empty) */}
-          {Boolean(CONFIG.partnerTiers && CONFIG.partnerTiers.length > 0) && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
-                <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
-                  Partnership Options
-                </h3>
-                <span className="font-mono text-xs text-[#111111]/70 font-bold">
-                  Tailored Engagement Tiers
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {CONFIG.partnerTiers.map((tier) => (
-                  <div
-                    key={tier.id}
-                    className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-4"
-                  >
-                    <div className="space-y-3">
-                      <div className="inline-block bg-[#FFD400] text-[#111111] font-mono font-bold text-xs px-2.5 py-0.5 border border-[#111111] uppercase tracking-wider">
-                        {tier.name}
-                      </div>
-
-                      <div className="p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-mono">
-                        <span className="text-[#111111]/80 block text-[10px] uppercase font-bold tracking-wider">
-                          Commitment
-                        </span>
-                        <span className="text-xs sm:text-sm font-black text-[#111111]">
-                          {tier.price && tier.price.trim() ? tier.price.trim() : 'Contact us for details'}
-                        </span>
-                      </div>
-
-                      <ul className="space-y-2 text-xs font-sans text-[#111111]/85 pt-2 border-t border-[#111111]/20">
-                        {tier.benefits.map((b, bIdx) => (
-                          <li key={bIdx} className="flex items-start gap-1.5 font-medium leading-relaxed">
-                            <span className="text-[#FF6B1A] font-bold shrink-0">■</span>
-                            <span>{b}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="pt-3 border-t-2 border-[#111111]">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          setPartnerData((prev) => ({
-                            ...prev,
-                            message: prev.message || `Inquiring about ${tier.name} tier.`,
-                          }));
-                          setPartnerFormStartTime(Date.now());
-                          setPartnerHoneypot('');
-                          setPartnerError('');
-                          handleOpenPartnerModal(e);
-                        }}
-                        className="w-full brutal-btn bg-[#111111] hover:bg-[#FF6B1A] text-white hover:text-[#111111] py-2 px-3 font-display font-bold text-xs uppercase tracking-wider text-center cursor-pointer min-h-[40px]"
-                      >
-                        Enquire for {tier.name.split(' ')[0]} →
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* SUPPORTED BY: renders only for supporters with written confirmation */}
-          {CONFIG.supporters.some((s) => s.confirmed) && (
-            <div className="p-6 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
-              <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70">
-                Supported by
-              </div>
-              <div className="flex flex-wrap items-stretch gap-3 sm:gap-4">
-                {CONFIG.supporters
-                  .filter((s) => s.confirmed)
-                  .map((s) => (
-                    <LogoTile key={s.name} item={s} />
-                  ))}
-              </div>
-            </div>
-          )}
-
-        </section>
 
         {/* =================================================================== */}
         {/* 8. BEHIND THE EVENT (LEADERSHIP & SECRETARIAT) (id="team")          */}
@@ -4712,209 +4348,6 @@ export const SinglePage: React.FC = () => {
         </button>
       </div>
 
-      {/* =================================================================== */}
-      {/* PARTNER MODAL FORM                                                  */}
-      {/* =================================================================== */}
-      {partnerModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="partner-modal-title"
-          className="fixed inset-0 z-50 bg-[#111111]/75 backdrop-blur-[12px] flex items-center justify-center p-4 animate-in fade-in"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPartnerModalOpen(false);
-          }}
-        >
-          <div
-            ref={partnerModalRef}
-            tabIndex={-1}
-            className="bg-[#FFF8EC] brutal-border brutal-shadow-lg p-6 sm:p-8 max-w-lg w-full text-left space-y-4 max-h-[90vh] overflow-y-auto"
-          >
-
-            <div className="flex items-center justify-between border-b-2 border-[#111111] pb-3">
-              <h2 id="partner-modal-title" className="font-display font-black text-xl text-[#111111]">
-                Partner With Startup Conclave 1.0
-              </h2>
-              <button
-                type="button"
-                onClick={() => setPartnerModalOpen(false)}
-                className="p-1 brutal-border bg-white hover:bg-[#FFD400] min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer"
-                aria-label="Close Partner Inquiry dialog"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {partnerSuccess ? (
-              <div className="p-6 bg-[#FFD400] border-2 border-[#111111] text-center space-y-2">
-                <Check className="w-8 h-8 text-[#111111] mx-auto stroke-[3]" />
-                <h4 className="font-display font-bold text-lg">Thank You!</h4>
-                <p className="text-sm font-sans">
-                  Your inquiry has been stored. Our team will contact you shortly.
-                </p>
-              </div>
-            ) : (
-              <form id="partner-form" onSubmit={handlePartnerSubmit} className="space-y-3 font-sans text-sm">
-                {/* Anti-Bot Honeypot Field */}
-                <div className="hidden" aria-hidden="true">
-                  <label htmlFor="partner_nickname">Do not fill this</label>
-                  <input
-                    id="partner_nickname"
-                    type="text"
-                    value={partnerHoneypot}
-                    onChange={(e) => setPartnerHoneypot(e.target.value)}
-                    tabIndex={-1}
-                    autoComplete="off"
-                  />
-                </div>
-
-                {partnerError && (
-                  <div className="p-3 bg-red-100 border border-red-500 text-red-700 text-xs font-bold flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                      <span>{partnerError}</span>
-                    </div>
-                    {partnerNetworkError && (
-                      <button
-                        type="button"
-                        disabled={partnerSubmitting}
-                        onClick={(e) => handlePartnerSubmit(e)}
-                        className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-mono text-[11px] font-bold uppercase border border-[#111111] shrink-0 flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                      >
-                        <RotateCw className={`w-3 h-3 ${partnerSubmitting ? 'animate-spin' : ''}`} />
-                        <span>Retry</span>
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                <div>
-                  <label className="font-bold text-[#111111] block mb-1">Company / Organisation *</label>
-                  <input
-                    type="text"
-                    required
-                    value={partnerData.company}
-                    onChange={(e) => setPartnerData({ ...partnerData, company: e.target.value })}
-                    placeholder="Organisation or Company name"
-                    className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-bold text-[#111111] block mb-1">Contact Name *</label>
-                    <input
-                      type="text"
-                      required
-                      value={partnerData.contactName}
-                      onChange={(e) => setPartnerData({ ...partnerData, contactName: e.target.value })}
-                      placeholder="Enter contact person name"
-                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-[#111111] block mb-1">Phone Number</label>
-                    <input
-                      type="tel"
-                      value={partnerData.phone}
-                      onChange={(e) => setPartnerData({ ...partnerData, phone: e.target.value })}
-                      placeholder="Enter 10-digit number"
-                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-bold text-[#111111] block mb-1">Business Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={partnerData.email}
-                    onChange={(e) => setPartnerData({ ...partnerData, email: e.target.value })}
-                    placeholder="contact@company.com"
-                    className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
-                  />
-                </div>
-
-                {/* Partnership Type & Contribution Range */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="font-bold text-[#111111] block mb-1">Partnership Type *</label>
-                    <select
-                      value={partnerData.partnershipType}
-                      onChange={(e) => setPartnerData({ ...partnerData, partnershipType: e.target.value })}
-                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
-                    >
-                      <option value="Cash">Cash Sponsorship</option>
-                      <option value="Technology credits">Technology credits</option>
-                      <option value="Food & beverage">Food &amp; beverage</option>
-                      <option value="Merchandise">Merchandise</option>
-                      <option value="Media">Media</option>
-                      <option value="Travel/hospitality">Travel/hospitality</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  {Boolean(CONFIG.partnerRanges && CONFIG.partnerRanges.length > 0) && (
-                    <div>
-                      <label className="font-bold text-[#111111] block mb-1">Contribution Range</label>
-                      <select
-                        value={partnerData.contributionRange}
-                        onChange={(e) => setPartnerData({ ...partnerData, contributionRange: e.target.value })}
-                        className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
-                      >
-                        <option value="">Select range (optional)</option>
-                        {CONFIG.partnerRanges.map((range) => (
-                          <option key={range} value={range}>
-                            {range}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="font-bold text-[#111111] block mb-1">Partnership Interest / Message</label>
-                  <textarea
-                    rows={3}
-                    value={partnerData.message}
-                    onChange={(e) => setPartnerData({ ...partnerData, message: e.target.value })}
-                    placeholder="Tell us what track or format you'd like to support..."
-                    className="w-full p-2.5 bg-white border-2 border-[#111111] text-base"
-                  />
-                </div>
-
-                <div className="pt-2 flex justify-end gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setPartnerModalOpen(false)}
-                    className="px-4 py-2 border-2 border-[#111111] font-bold text-xs min-h-[44px]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={partnerSubmitting}
-                    className={`brutal-btn bg-[#FF6B1A] text-[#111111] px-5 py-2 font-display font-bold text-xs uppercase min-h-[44px] ${partnerSubmitting ? 'opacity-60 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
-                      }`}
-                  >
-                    {partnerSubmitting ? (
-                      <span className="flex items-center gap-1.5">
-                        <RotateCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>Submitting...</span>
-                      </span>
-                    ) : (
-                      'Submit Inquiry'
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-
-          </div>
-        </div>
-      )}
 
       {/* Anchored Section Target for /privacy or #privacy navigation */}
       <div id="privacy" className="sr-only" aria-hidden="true" />
