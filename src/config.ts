@@ -163,10 +163,10 @@ export const CONFIG = {
       name: 'Title Partner',
       price: '', // Empty shows "Contact us for details"
       benefits: [
-        'Top-billing naming rights across all event marketing and stages',
-        'Exclusive keynote address and panel participation',
+        'Top-billing naming rights across event branding and stages',
+        'Main-stage panel discussions and speaking opportunities',
         'Prime on-ground experiential pavilion and demo space',
-        'Prominent logo placement on all conclave collateral and kits',
+        'Brand visibility at the venue, on the website and on social media',
       ],
     },
     {
@@ -175,7 +175,7 @@ export const CONFIG = {
       price: '',
       benefits: [
         'Co-branding of the Startup Pitch Arena and innovation tracks',
-        'Main-stage panel slot and workshop hosting opportunities',
+        'Main-stage panel discussions and workshop opportunities',
         'Dedicated demo kiosk in the startup exhibition zone',
         'Featured logo presence across event communications',
       ],
@@ -187,8 +187,8 @@ export const CONFIG = {
       benefits: [
         'Prominent brand presence across on-ground event signage',
         'Dedicated exhibition booth for product and developer outreach',
-        'Branded merchandise inclusion in attendee welcome kits',
-        'Social media and digital acknowledgment',
+        'Brand visibility at the venue, on the website and on social media',
+        'Social media and digital acknowledgement',
       ],
     },
     {
@@ -198,14 +198,14 @@ export const CONFIG = {
       benefits: [
         'Official partner logo placement on website and event deck',
         'Exhibition table in the networking mixer arena',
-        'Direct engagement with student innovators and faculties',
+        'Opportunities to meet student talent, founders and mentors',
         'Recognition during conclave closing ceremony',
       ],
     },
   ] as PartnerTier[],
   // Organisers: the college's own units.
   organisers: [
-    { name: 'Dewan VS Group of Institutions', logo: dewanVsLogo, confirmed: true, width: 241, height: 303 },
+    { name: 'Dewan VS Group of Institutions, Meerut', logo: dewanVsLogo, confirmed: true, width: 241, height: 303 },
     { name: 'Dewan Innovation & Incubation Forum', logo: diifLogo, confirmed: true, width: 200, height: 200 },
     { name: "Institution's Innovation Council", logo: iicLogo, confirmed: true, width: 400, height: 173 },
   ] as LogoItem[],
@@ -237,9 +237,9 @@ export const CONFIG = {
       "A 2-day startup and entrepreneurship event at Dewan VS Group of Institutions, Meerut.",
     venue: "Dewan VS Group of Institutions, Meerut",
     venueFull:
-      "Dewan VS Group of Institutions (DVSGI), NH-58, By-Pass Road, Partapur, Meerut, Uttar Pradesh 250103",
+      "Dewan VS Group of Institutions, Meerut, NH-58, By-Pass Road, Partapur, Meerut, Uttar Pradesh 250103",
     locationCity: "Meerut, Uttar Pradesh, India",
-    date: "30–31 October 2026",
+    date: "30-31 October 2026",
     dateConfirmed: true,
     startDate: "2026-10-30",
     endDate: "2026-10-31",
@@ -296,7 +296,7 @@ export const CONFIG = {
     sectionNum: "03",
     headline: "Schedule overview.",
     introText: "Two focused days of learning, building, and pitching.",
-    note: "30 & 31 October 2026. All sessions in-person at Dewan VS Group of Institutions, Meerut.",
+    note: "30-31 October 2026. All sessions in-person at Dewan VS Group of Institutions, Meerut.",
     day1: {
       title: 'Day 1: "Build & Connect"',
       bullets: [
@@ -405,7 +405,7 @@ export const CONFIG = {
     whyPartner: [
       {
         title: "Brand visibility",
-        desc: "Prominent brand exposure across conclave stages, banners, digital media, and delegate kits.",
+        desc: "Brand visibility at the venue, on the website and on social media.",
       },
       {
         title: "Talent access",
@@ -417,7 +417,7 @@ export const CONFIG = {
       },
       {
         title: "Thought leadership",
-        desc: "Keynote addresses, panel debates, and technical workshop hosting opportunities on the main stage.",
+        desc: "Main-stage panel discussions and workshop hosting opportunities.",
       },
       {
         title: "On-ground activation",
@@ -425,7 +425,7 @@ export const CONFIG = {
       },
       {
         title: "Recruitment",
-        desc: "Curated pipeline for student hiring, resume reviews, fast-track internships, and project demos.",
+        desc: "Opportunities to meet student talent, review projects and explore hiring.",
       },
     ],
   },
@@ -435,7 +435,7 @@ export const CONFIG = {
   students: [
     {
       name: "Aarav Saini",
-      roles: ["Students Convenor", "Head of Sponsorship"],
+      roles: ["Student Convenor", "Head of Sponsorship"],
       linkedin: "https://www.linkedin.com/in/aaravgorewal/",
       confirmed: true,
       tier: "core",
@@ -658,30 +658,30 @@ export const CONFIG = {
     },
     {
       q: "Is there a registration fee to attend?",
-      a: "To be announced.",
+      a: "General attendee passes are free. Startup pitch and exhibition stalls have designated registration fees as listed on the registration form.",
     },
     {
       q: "Can I attend for only one day?",
-      a: "The event is planned for two full days (30 and 31 October 2026). Single-day pass availability is to be announced.",
+      a: "The event is planned for two days (30-31 October 2026). Single-day pass availability is to be announced.",
     },
     {
       q: "How do I pitch my startup?",
-      a: "Apply via the registration form below by ticking 'I also want to pitch my startup'.",
+      a: "Apply via the registration form below by selecting the Hall Pitch track.",
     },
     {
       q: "Where is the venue located and how do I get there?",
-      a: "At Dewan VS Group of Institutions (DVSGI), NH-58, Partapur, Meerut.",
+      a: "At Dewan VS Group of Institutions, Meerut, NH-58, Partapur, Meerut.",
     },
     {
       q: "What happens after I register?",
-      a: "Your registration is saved immediately. Event date is 30–31 October 2026 at Dewan VS Group of Institutions, Meerut. Entry details will be shared on your email/WhatsApp.",
+      a: "Your registration is saved immediately. Event date is 30-31 October 2026 at Dewan VS Group of Institutions, Meerut. Entry details will be shared on your email and WhatsApp.",
     },
   ],
 
   contact: {
     email: 'event@dewaninstitutes.org',
     phone: '',
-    campus: "Dewan VS Group of Institutions (DVSGI)",
+    campus: "Dewan VS Group of Institutions, Meerut",
     city: "Meerut, Uttar Pradesh, India",
     socials: {
       linkedin: "",

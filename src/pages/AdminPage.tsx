@@ -1815,8 +1815,8 @@ export const AdminPage: React.FC = () => {
             </div>
           </form>
 
-          <div className="pt-3 border-t-2 border-[#111111] text-[11px] font-mono text-[#111111]/60 text-center">
-            Startup Conclave 1.0 · DVSGI Meerut
+          <div className="pt-3 border-t-2 border-[#111111] text-[11px] font-mono text-[#111111]/75 text-center">
+            Startup Conclave 1.0 · Dewan VS Group of Institutions, Meerut
           </div>
         </div>
       </div>
@@ -2667,7 +2667,7 @@ export const AdminPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
                     <span className="font-mono text-xs font-black uppercase text-[#111111] tracking-wider">
-                      Gate Check-in Desk · DVSGI Meerut
+                      Gate Check-in Desk · Dewan VS Group of Institutions, Meerut
                     </span>
                   </div>
                   <h2 className="font-display font-black text-2xl sm:text-3xl text-[#111111] leading-tight">
@@ -3488,7 +3488,7 @@ export const AdminPage: React.FC = () => {
                   Corporate & Ecosystem Enquiries ({partnerEnquiries.length})
                 </h3>
                 <p className="text-xs text-[#111111]/70 font-sans">
-                  Organizations requesting sponsor decks or exhibition booths.
+                  Organisations requesting sponsor decks or exhibition booths.
                 </p>
               </div>
 

@@ -551,8 +551,8 @@ export default function ScanPage() {
           </form>
 
           {/* Footer Notice */}
-          <div className="pt-2 border-t border-[#111111]/20 text-[11px] font-mono text-[#111111]/60 text-center">
-            Startup Conclave 1.0 · Gate Operations · DVSGI Meerut
+          <div className="pt-2 border-t border-[#111111]/20 text-[11px] font-mono text-[#111111]/75 text-center">
+            Startup Conclave 1.0 · Gate Operations · Dewan VS Group of Institutions, Meerut
           </div>
         </div>
       </div>
@@ -954,7 +954,7 @@ export default function ScanPage() {
       </main>
 
       {/* Terminal Footer info */}
-      <footer className="p-2.5 text-center font-mono text-[10px] text-[#111111]/60 border-t border-[#111111]/15 bg-white">
+      <footer className="p-2.5 text-center font-mono text-[10px] text-[#111111]/75 border-t border-[#111111]/15 bg-white">
         Startup Conclave 1.0 · Volunteer Gate Terminal · Auto-signout after 30 min idle
       </footer>
     </div>

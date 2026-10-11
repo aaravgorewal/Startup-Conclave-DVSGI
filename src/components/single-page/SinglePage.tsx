@@ -354,6 +354,55 @@ export const LogoTile: React.FC<{
     );
   };
 
+export const TeamAvatar: React.FC<{
+  src?: string | null;
+  name: string;
+  roleOrOrg?: string;
+  className: string;
+  width?: number;
+  height?: number;
+}> = ({ src, name, roleOrOrg, className, width = 80, height = 80 }) => {
+  const [failed, setFailed] = useState(false);
+
+  const initials = useMemo(() => {
+    if (!name || !name.trim()) return '?';
+    const withoutSuffix = name.split(',')[0].trim();
+    const withoutHonorific = withoutSuffix
+      .replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Sh\.|Mr|Mrs|Ms|Dr|Prof|Sh)\s+/i, '')
+      .trim();
+    const parts = withoutHonorific.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }, [name]);
+
+  if (!src || failed) {
+    return (
+      <div
+        className={`${className} bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center shrink-0 select-none`}
+        aria-label={name}
+      >
+        <UserCheck className="w-6 h-6 sm:w-7 sm:h-7 text-[#111111]/45 stroke-[1.5]" />
+        <span className="font-mono text-[10px] sm:text-xs font-bold text-[#111111]/75 mt-0.5">
+          {initials}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      loading="lazy"
+      width={width}
+      height={height}
+      alt={roleOrOrg ? `${name}, ${roleOrOrg}` : name}
+      onError={() => setFailed(true)}
+      className={`${className} object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 bg-[#FFF8EC]`}
+    />
+  );
+};
+
 // Accessible Focus Trap & Escape Handler Hook for Modals and Drawers
 const useFocusTrap = ({
   isOpen,
@@ -461,7 +510,7 @@ export const SinglePage: React.FC = () => {
       eventStatus: 'https://schema.org/EventScheduled',
       location: {
         '@type': 'Place',
-        name: 'Dewan VS Group of Institutions (DVSGI)',
+        name: 'Dewan VS Group of Institutions, Meerut',
         address: {
           '@type': 'PostalAddress',
           streetAddress: 'NH-58, By-Pass Road, Partapur',
@@ -473,7 +522,7 @@ export const SinglePage: React.FC = () => {
       },
       organizer: {
         '@type': 'Organization',
-        name: 'Dewan VS Group of Institutions (DVSGI)',
+        name: 'Dewan VS Group of Institutions, Meerut',
         url: canonicalUrl,
       },
     };
@@ -2816,26 +2865,14 @@ export const SinglePage: React.FC = () => {
                             className="p-4 sm:p-5 lg:p-5 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-3 sm:gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
                           >
                             <div className="flex items-start justify-between gap-4">
-                              {guest.photo ? (
-                                <img
-                                  src={guest.photo}
-                                  loading="lazy"
-                                  width={80}
-                                  height={80}
-                                  alt={`${guest.name}, ${guest.organisation}`}
-                                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 bg-[#FFF8EC]"
-                                />
-                              ) : (
-                                <div
-                                  className="w-16 h-16 sm:w-20 sm:h-20 bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center shrink-0 select-none"
-                                  aria-label={guest.name}
-                                >
-                                  <UserCheck className="w-6 h-6 sm:w-7 sm:h-7 text-[#111111]/45 stroke-[1.5]" />
-                                  <span className="font-mono text-[10px] sm:text-xs font-bold text-[#111111]/75 mt-0.5">
-                                    {getInitials(guest.name)}
-                                  </span>
-                                </div>
-                              )}
+                              <TeamAvatar
+                                src={guest.photo}
+                                name={guest.name}
+                                roleOrOrg={guest.organisation}
+                                className="w-16 h-16 sm:w-20 sm:h-20"
+                                width={80}
+                                height={80}
+                              />
 
                               {guest.linkedin && guest.linkedin.startsWith('https://') && (
                                 <a
@@ -3012,26 +3049,14 @@ export const SinglePage: React.FC = () => {
                         key={`core-${member.name}-${idx}`}
                         className="p-4 sm:p-5 lg:p-4 xl:p-5 bg-white brutal-border brutal-shadow flex flex-col gap-3 sm:gap-3.5 text-left transition-transform hover:-translate-y-0.5 min-w-0"
                       >
-                        {photoUrl ? (
-                          <img
-                            src={photoUrl}
-                            loading="lazy"
-                            width={320}
-                            height={320}
-                            alt={`${member.name}, ${member.roles.join(', ')}`}
-                            className="w-full aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
-                          />
-                        ) : (
-                          <div
-                            className="w-full aspect-square bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center gap-2 shrink-0 select-none"
-                            aria-label={member.name}
-                          >
-                            <UserIcon className="w-12 h-12 text-[#111111]/35 stroke-[1.5]" />
-                            <span className="font-mono text-xs font-bold text-[#111111]/75 bg-white px-2 py-0.5 border border-[#111111]/30 tracking-wider">
-                              {getMemberInitials(member.name)}
-                            </span>
-                          </div>
-                        )}
+                        <TeamAvatar
+                          src={photoUrl}
+                          name={member.name}
+                          roleOrOrg={member.roles.join(', ')}
+                          className="w-full aspect-square object-top"
+                          width={320}
+                          height={320}
+                        />
 
                         <div className="space-y-2">
                           <div className="flex items-center justify-between gap-2">
@@ -3097,26 +3122,14 @@ export const SinglePage: React.FC = () => {
                             className="p-3 sm:p-3.5 bg-white brutal-border brutal-shadow flex items-center gap-3 sm:gap-3.5 text-left transition-transform hover:-translate-y-0.5 min-w-0"
                           >
                             {/* Photo / Initials */}
-                            {photoUrl ? (
-                              <img
-                                src={photoUrl}
-                                loading="lazy"
-                                width={160}
-                                height={160}
-                                alt={`${member.name}, ${member.roles.join(', ')}`}
-                                className="w-16 h-16 sm:w-20 sm:h-20 aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
-                              />
-                            ) : (
-                              <div
-                                className="w-16 h-16 sm:w-20 sm:h-20 aspect-square bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center shrink-0 select-none"
-                                aria-label={member.name}
-                              >
-                                <UserIcon className="w-6 h-6 sm:w-7 sm:h-7 text-[#111111]/40 stroke-[1.5]" />
-                                <span className="font-mono text-[10px] font-bold text-[#111111]/75 mt-0.5">
-                                  {getMemberInitials(member.name)}
-                                </span>
-                              </div>
-                            )}
+                            <TeamAvatar
+                              src={photoUrl}
+                              name={member.name}
+                              roleOrOrg={member.roles.join(', ')}
+                              className="w-16 h-16 sm:w-20 sm:h-20 aspect-square object-top"
+                              width={160}
+                              height={160}
+                            />
 
                             {/* Member Details: tight spacing, no awkward gap */}
                             <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
@@ -3372,7 +3385,7 @@ export const SinglePage: React.FC = () => {
                     )}
                   </div>
                   <div className="font-display font-black text-base sm:text-lg text-[#111111]">
-                    Scan at DVSGI Gate Check-in
+                    Scan at Dewan VS Group of Institutions, Meerut Gate Check-in
                   </div>
                   <p className="text-xs font-sans text-[#111111]/80 leading-relaxed">
                     Present this QR code or your Registration ID (<span className="font-mono font-bold">{submittedRecord.id}</span>) on your screen at the registration desk for instant venue admission.
@@ -5070,7 +5083,7 @@ export const SinglePage: React.FC = () => {
                 </div>
 
                 <div className="text-center font-mono text-xs text-[#111111]/70">
-                  DVSGI Meerut · No third-party forms
+                  Dewan VS Group of Institutions, Meerut · No third-party forms
                 </div>
               </form>
 
@@ -5273,7 +5286,7 @@ export const SinglePage: React.FC = () => {
             STARTUP CONCLAVE 1.0
           </div>
           <div className="font-mono text-xs text-[#FF6B1A] font-bold">
-            DVSGI Meerut · 2 Days
+            Dewan VS Group of Institutions, Meerut · 2 Days
           </div>
         </div>
 

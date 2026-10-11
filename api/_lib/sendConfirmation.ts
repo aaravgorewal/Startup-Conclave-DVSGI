@@ -167,7 +167,7 @@ export async function sendConfirmationEmailForDoc(
   let contactSectionHtml = '';
   if (contactEmail || contactPhone) {
     contactSectionHtml += `<div style="margin-top: 24px; padding-top: 16px; border-top: 2px dashed #111111; font-size: 13px; color: #333333;">
-      <p style="margin: 0 0 6px 0; font-weight: bold; color: #111111;">Questions? Contact the organizers:</p>`;
+      <p style="margin: 0 0 6px 0; font-weight: bold; color: #111111;">Questions? Contact the organisers:</p>`;
     if (contactEmail) {
       contactSectionHtml += `<p style="margin: 2px 0;">Email: <a href="mailto:${escapeHtml(contactEmail)}" style="color: #FF6B1A; font-weight: bold; text-decoration: underline;">${escapeHtml(contactEmail)}</a></p>`;
     }

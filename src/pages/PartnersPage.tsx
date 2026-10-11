@@ -101,6 +101,13 @@ export default function PartnersPage() {
     message: '',
   });
 
+  const [fieldErrors, setFieldErrors] = useState<{
+    company?: string;
+    contactName?: string;
+    email?: string;
+    phone?: string;
+  }>({});
+
   const [formStartTime] = useState<number>(() => Date.now());
   const [honeypot, setHoneypot] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -131,16 +138,48 @@ export default function PartnersPage() {
       return;
     }
 
-    if (!formData.company.trim() || !formData.contactName.trim() || !formData.email.trim()) {
-      setError('Please provide company name, contact person, and email.');
+    const companyTrimmed = formData.company.trim();
+    const contactNameTrimmed = formData.contactName.trim();
+    const emailTrimmed = formData.email.trim();
+    const phoneTrimmed = (formData.phone || '').trim();
+
+    const errs: typeof fieldErrors = {};
+    if (!companyTrimmed) {
+      errs.company = 'Please enter your company or organisation name.';
+    }
+    if (!contactNameTrimmed) {
+      errs.contactName = 'Please enter the contact person name.';
+    }
+    if (!emailTrimmed) {
+      errs.email = 'Please enter your business email.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      errs.email = 'Please enter a valid email address.';
+    }
+    if (phoneTrimmed && !/^\d{10}$/.test(phoneTrimmed)) {
+      errs.phone = 'Please enter a valid 10-digit Indian phone number.';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      setError('Please resolve the highlighted fields below.');
       return;
     }
 
+    setFieldErrors({});
     setSubmitting(true);
     setError('');
     setIsNetworkError(false);
 
-    const res = await createPartnerEnquiry(formData);
+    const submissionPayload: PartnerEnquiryInput = {
+      ...formData,
+      company: companyTrimmed,
+      contactName: contactNameTrimmed,
+      email: emailTrimmed,
+      phone: phoneTrimmed,
+      message: (formData.message || '').trim(),
+    };
+
+    const res = await createPartnerEnquiry(submissionPayload);
     setSubmitting(false);
 
     if (res.success) {
@@ -160,7 +199,7 @@ export default function PartnersPage() {
       setHoneypot('');
     } else {
       setIsNetworkError(Boolean(res.isNetworkError));
-      setError(res.error || 'Could not submit. Check your internet and try again.');
+      setError(res.error || 'Could not submit enquiry. Check your connection and try again.');
     }
   };
 
@@ -179,6 +218,41 @@ export default function PartnersPage() {
     if (parts.length === 0) return '?';
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  // Helper avatar with error fallback to initials for guests
+  const GuestAvatar: React.FC<{
+    photo?: string;
+    name: string;
+    organisation: string;
+  }> = ({ photo, name, organisation }) => {
+    const [imgFailed, setImgFailed] = useState(false);
+    const initials = getGuestInitials(name);
+
+    if (!photo || imgFailed) {
+      return (
+        <div
+          className="w-16 h-16 sm:w-20 sm:h-20 bg-[#F5EFE3] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col items-center justify-center shrink-0 select-none"
+          aria-label={name}
+        >
+          <span className="font-mono text-sm sm:text-base font-black text-[#111111]">
+            {initials}
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <img
+        src={photo}
+        loading="lazy"
+        width={80}
+        height={80}
+        alt={`${name}, ${organisation}`}
+        onError={() => setImgFailed(true)}
+        className="w-16 h-16 sm:w-20 sm:h-20 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 bg-[#FFF8EC]"
+      />
+    );
   };
 
   const confirmedNeeds = (CONFIG.sponsorNeeds || []).filter((n) => n.confirmed);
@@ -207,66 +281,111 @@ export default function PartnersPage() {
       </header>
 
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-5 lg:space-y-6">
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
-              PARTNERSHIPS OPEN
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-              DEWAN VS GROUP OF INSTITUTIONS, MEERUT
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-white px-2.5 py-1 border border-[#111111]">
-              {CONFIG.event.date}
-            </span>
-          </div>
+        {/* Hero Section with Left Content & Right Facts Card */}
+        <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-7 space-y-5 lg:space-y-6">
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
+                  PARTNERSHIPS OPEN
+                </span>
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+                  DEWAN VS GROUP OF INSTITUTIONS, MEERUT
+                </span>
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-white px-2.5 py-1 border border-[#111111]">
+                  {CONFIG.event.date}
+                </span>
+              </div>
 
-          <div className="space-y-3 sm:space-y-4 max-w-3xl">
-            <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-[clamp(2.25rem,3.2vw,3.25rem)] text-[#111111] tracking-tight leading-[1.08]">
-              Partner with Startup Conclave 1.0
-            </h1>
-            <p className="font-sans text-base sm:text-lg lg:text-xl text-[#111111]/85 font-medium leading-relaxed">
-              A 2-day startup, entrepreneurship and innovation conclave at Dewan VS Group of Institutions, Meerut on {CONFIG.event.date}.
-            </p>
-          </div>
+              <div className="space-y-3 sm:space-y-4">
+                <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-[clamp(2.25rem,3.2vw,3.25rem)] text-[#111111] tracking-tight leading-[1.08]">
+                  Partner with Startup Conclave 1.0
+                </h1>
+                <p className="font-sans text-base sm:text-lg lg:text-xl text-[#111111]/85 font-medium leading-relaxed">
+                  A 2-day startup, entrepreneurship and innovation conclave at Dewan VS Group of Institutions, Meerut on {CONFIG.event.date}.
+                </p>
+              </div>
 
-          {/* Action CTAs */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-1 sm:pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                const target = document.getElementById('enquire');
-                if (target) {
-                  target.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
-              className="brutal-btn bg-[#FF6B1A] text-[#111111] px-6 py-3.5 font-display font-extrabold text-sm sm:text-base uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[46px] inline-flex items-center gap-2"
-            >
-              <span>Partner with us</span>
-              <span aria-hidden="true">↓</span>
-            </button>
+              {/* Action CTAs */}
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-1 sm:pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = document.getElementById('enquire');
+                    if (target) {
+                      target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="brutal-btn bg-[#FF6B1A] text-[#111111] px-6 py-3.5 font-display font-extrabold text-sm sm:text-base uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[46px] inline-flex items-center gap-2"
+                >
+                  <span>Partner with us</span>
+                  <span aria-hidden="true">↓</span>
+                </button>
 
-            {hasSponsorDeck && (
-              <a
-                href={CONFIG.sponsorDeckUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-5 py-3.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[46px] inline-flex items-center gap-1.5"
-              >
-                <span>Download sponsorship deck</span>
-                <span aria-hidden="true">↓</span>
-              </a>
-            )}
+                {hasSponsorDeck && (
+                  <a
+                    href={CONFIG.sponsorDeckUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-5 py-3.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[46px] inline-flex items-center gap-1.5"
+                  >
+                    <span>Download sponsorship deck</span>
+                    <span aria-hidden="true">↓</span>
+                  </a>
+                )}
 
-            {Boolean(sponsorContactEmail) && (
-              <a
-                href={`mailto:${sponsorContactEmail}?subject=Sponsorship%20Inquiry%20-%20Startup%20Conclave%201.0`}
-                className="inline-flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline transition-colors min-h-[44px] px-2"
-              >
-                <span>{sponsorContactEmail}</span>
-                <span aria-hidden="true">↗</span>
-              </a>
-            )}
+                {Boolean(sponsorContactEmail) && (
+                  <a
+                    href={`mailto:${sponsorContactEmail}?subject=Sponsorship%20Inquiry%20-%20Startup%20Conclave%201.0`}
+                    className="inline-flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline transition-colors min-h-[44px] px-2"
+                  >
+                    <span>{sponsorContactEmail}</span>
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Right Side: Facts Card */}
+            <div className="lg:col-span-5 bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] p-5 sm:p-6 space-y-4">
+              <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
+                <h3 className="font-display font-black text-lg text-[#111111] uppercase tracking-wide">
+                  Conclave Facts
+                </h3>
+                <span className="font-mono text-[11px] font-bold bg-[#FFD400] text-[#111111] px-2 py-0.5 border border-[#111111]">
+                  QUICK SUMMARY
+                </span>
+              </div>
+              <div className="space-y-3 font-mono text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-[#111111]/15 gap-1">
+                  <span className="text-[#111111]/70 uppercase font-bold">Date</span>
+                  <span className="text-[#111111] font-bold">{CONFIG.event.date}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-[#111111]/15 gap-1">
+                  <span className="text-[#111111]/70 uppercase font-bold">Venue</span>
+                  <span className="text-[#111111] font-bold sm:text-right">Dewan VS Group of Institutions, Meerut</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-[#111111]/15 gap-1">
+                  <span className="text-[#111111]/70 uppercase font-bold">Expected participants</span>
+                  <span className="text-[#FF6B1A] font-black text-sm">500+</span>
+                </div>
+                {(CONFIG.contactEmail || CONFIG.contact.email || CONFIG.contactPhone || CONFIG.contact.phone) && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-1 gap-1">
+                    <span className="text-[#111111]/70 uppercase font-bold">Contact</span>
+                    <div className="text-[#111111] font-bold sm:text-right">
+                      {CONFIG.contactEmail || CONFIG.contact.email ? (
+                        <a href={`mailto:${CONFIG.contactEmail || CONFIG.contact.email}`} className="text-[#FF6B1A] underline block">
+                          {CONFIG.contactEmail || CONFIG.contact.email}
+                        </a>
+                      ) : null}
+                      {CONFIG.contactPhone || CONFIG.contact.phone ? (
+                        <span className="block">{CONFIG.contactPhone || CONFIG.contact.phone}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -366,15 +485,12 @@ export default function PartnersPage() {
           )}
         </section>
 
-        {/* Organised by and Supported by logos */}
+        {/* Organised by and Supported by logos (Confirmed units label removed) */}
         <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-6 lg:space-y-7">
           <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5 sm:pb-3">
             <h2 className="font-display font-black text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] text-[#111111] uppercase tracking-tight">
               Organisers &amp; Ecosystem
             </h2>
-            <span className="font-mono text-xs text-[#111111]/70 font-bold uppercase tracking-wider">
-              Confirmed Units
-            </span>
           </div>
 
           <div className="space-y-6 sm:space-y-8">
@@ -410,7 +526,7 @@ export default function PartnersPage() {
           </div>
         </section>
 
-        {/* Chief Guests (confirmed only with type 'chief-guest', hidden if none) */}
+        {/* Chief Guests with fallback to styled initials avatar */}
         {chiefGuests.length > 0 && (
           <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-6 lg:space-y-7">
             <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5 sm:pb-3">
@@ -429,23 +545,7 @@ export default function PartnersPage() {
                   className="p-4 sm:p-5 lg:p-6 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between gap-3 sm:gap-4 text-left min-w-0"
                 >
                   <div className="flex items-start justify-between gap-4">
-                    {guest.photo ? (
-                      <img
-                        src={guest.photo}
-                        loading="lazy"
-                        width={80}
-                        height={80}
-                        alt={`${guest.name}, ${guest.organisation}`}
-                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 bg-[#FFF8EC]"
-                      />
-                    ) : (
-                      <div
-                        className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center font-display font-black text-xl sm:text-2xl text-[#111111] shrink-0 select-none"
-                        aria-label={guest.name}
-                      >
-                        {getGuestInitials(guest.name)}
-                      </div>
-                    )}
+                    <GuestAvatar photo={guest.photo} name={guest.name} organisation={guest.organisation} />
 
                     {guest.linkedin && guest.linkedin.startsWith('https://') && (
                       <a
@@ -477,8 +577,8 @@ export default function PartnersPage() {
           </section>
         )}
 
-        {/* Partner Enquiry Form */}
-        <section id="enquire" className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-3xl lg:max-w-4xl mx-auto text-left space-y-5 lg:space-y-6">
+        {/* Partner Enquiry Form: Aligned with max-w-6xl xl:max-w-7xl and full width on mobile */}
+        <section id="enquire" className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto text-left space-y-5 lg:space-y-6">
           <div className="space-y-1.5 sm:space-y-2">
             <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
               Get In Touch
@@ -497,18 +597,18 @@ export default function PartnersPage() {
                 <Check className="w-10 h-10 text-[#111111] mx-auto stroke-[3]" />
                 <h3 className="font-display font-bold text-xl text-[#111111]">Thank You!</h3>
                 <p className="text-sm sm:text-base font-sans text-[#111111] font-medium">
-                  Your inquiry has been stored. Our team will contact you shortly.
+                  Your enquiry has been received. Our partnership secretariat will contact you shortly.
                 </p>
                 <button
                   type="button"
                   onClick={() => setSuccess(false)}
                   className="mt-4 px-4 py-2 border-2 border-[#111111] bg-white font-mono text-xs font-bold uppercase hover:bg-[#FFF8EC] cursor-pointer min-h-[44px]"
                 >
-                  Submit Another Inquiry
+                  Submit Another Enquiry
                 </button>
               </div>
             ) : (
-              <form id="partner-form" onSubmit={handleSubmit} className="space-y-4 font-sans text-sm">
+              <form id="partner-form" onSubmit={handleSubmit} noValidate className="space-y-4 font-sans text-sm">
                 {/* Honeypot Field */}
                 <div className="hidden" aria-hidden="true">
                   <label htmlFor="partner_nickname">Do not fill this</label>
@@ -543,66 +643,119 @@ export default function PartnersPage() {
                 )}
 
                 <div>
-                  <label htmlFor="partner_company" className="font-bold text-[#111111] block mb-1">Company / Organisation *</label>
+                  <label htmlFor="partner_company" className="font-bold text-[#111111] block mb-1">
+                    Company / Organisation *
+                  </label>
                   <input
                     id="partner_company"
                     type="text"
                     required
+                    autoComplete="organization"
+                    aria-invalid={Boolean(fieldErrors.company)}
                     value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, company: e.target.value });
+                      if (fieldErrors.company) setFieldErrors((prev) => ({ ...prev, company: undefined }));
+                    }}
                     placeholder="Organisation or Company name"
-                    className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
+                    className={`w-full p-2.5 bg-white border-2 ${
+                      fieldErrors.company ? 'border-red-600' : 'border-[#111111]'
+                    } min-h-[46px] text-base focus:outline-none`}
                   />
+                  {fieldErrors.company && (
+                    <p className="text-xs text-red-600 font-bold mt-1">{fieldErrors.company}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="partner_contact" className="font-bold text-[#111111] block mb-1">Contact Name *</label>
+                    <label htmlFor="partner_contact" className="font-bold text-[#111111] block mb-1">
+                      Contact Name *
+                    </label>
                     <input
                       id="partner_contact"
                       type="text"
                       required
+                      autoComplete="name"
+                      aria-invalid={Boolean(fieldErrors.contactName)}
                       value={formData.contactName}
-                      onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, contactName: e.target.value });
+                        if (fieldErrors.contactName) setFieldErrors((prev) => ({ ...prev, contactName: undefined }));
+                      }}
                       placeholder="Enter contact person name"
-                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
+                      className={`w-full p-2.5 bg-white border-2 ${
+                        fieldErrors.contactName ? 'border-red-600' : 'border-[#111111]'
+                      } min-h-[46px] text-base focus:outline-none`}
                     />
+                    {fieldErrors.contactName && (
+                      <p className="text-xs text-red-600 font-bold mt-1">{fieldErrors.contactName}</p>
+                    )}
                   </div>
                   <div>
-                    <label htmlFor="partner_phone" className="font-bold text-[#111111] block mb-1">Phone Number</label>
+                    <label htmlFor="partner_phone" className="font-bold text-[#111111] block mb-1">
+                      Phone Number (10 digits)
+                    </label>
                     <input
                       id="partner_phone"
                       type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      maxLength={10}
+                      aria-invalid={Boolean(fieldErrors.phone)}
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        setFormData({ ...formData, phone: val });
+                        if (fieldErrors.phone) setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                      }}
                       placeholder="Enter 10-digit number"
-                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
+                      className={`w-full p-2.5 bg-white border-2 ${
+                        fieldErrors.phone ? 'border-red-600' : 'border-[#111111]'
+                      } min-h-[46px] text-base font-mono focus:outline-none`}
                     />
+                    {fieldErrors.phone && (
+                      <p className="text-xs text-red-600 font-bold mt-1">{fieldErrors.phone}</p>
+                    )}
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="partner_email" className="font-bold text-[#111111] block mb-1">Business Email *</label>
+                  <label htmlFor="partner_email" className="font-bold text-[#111111] block mb-1">
+                    Business Email *
+                  </label>
                   <input
                     id="partner_email"
                     type="email"
                     required
+                    autoComplete="email"
+                    aria-invalid={Boolean(fieldErrors.email)}
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                    }}
                     placeholder="contact@company.com"
-                    className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
+                    className={`w-full p-2.5 bg-white border-2 ${
+                      fieldErrors.email ? 'border-red-600' : 'border-[#111111]'
+                    } min-h-[46px] text-base focus:outline-none`}
                   />
+                  {fieldErrors.email && (
+                    <p className="text-xs text-red-600 font-bold mt-1">{fieldErrors.email}</p>
+                  )}
                 </div>
 
                 {/* Partnership Type & Contribution Range */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="partner_type" className="font-bold text-[#111111] block mb-1">Partnership Type *</label>
+                    <label htmlFor="partner_type" className="font-bold text-[#111111] block mb-1">
+                      Partnership Type *
+                    </label>
                     <select
                       id="partner_type"
                       value={formData.partnershipType}
                       onChange={(e) => setFormData({ ...formData, partnershipType: e.target.value })}
-                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
+                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base focus:outline-none"
                     >
                       <option value="Cash">Cash Sponsorship</option>
                       <option value="Technology credits">Technology credits</option>
@@ -616,12 +769,14 @@ export default function PartnersPage() {
 
                   {Boolean(CONFIG.partnerRanges && CONFIG.partnerRanges.length > 0) && (
                     <div>
-                      <label htmlFor="partner_range" className="font-bold text-[#111111] block mb-1">Contribution Range</label>
+                      <label htmlFor="partner_range" className="font-bold text-[#111111] block mb-1">
+                        Contribution Range
+                      </label>
                       <select
                         id="partner_range"
                         value={formData.contributionRange}
                         onChange={(e) => setFormData({ ...formData, contributionRange: e.target.value })}
-                        className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base"
+                        className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base focus:outline-none"
                       >
                         <option value="">Select range (optional)</option>
                         {CONFIG.partnerRanges.map((range) => (
@@ -635,14 +790,16 @@ export default function PartnersPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="partner_message" className="font-bold text-[#111111] block mb-1">Partnership Interest / Message</label>
+                  <label htmlFor="partner_message" className="font-bold text-[#111111] block mb-1">
+                    Partnership Interest / Message
+                  </label>
                   <textarea
                     id="partner_message"
                     rows={4}
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     placeholder="Tell us what track or format you'd like to support..."
-                    className="w-full p-2.5 bg-white border-2 border-[#111111] text-base"
+                    className="w-full p-2.5 bg-white border-2 border-[#111111] text-base focus:outline-none"
                   />
                 </div>
 
@@ -660,7 +817,7 @@ export default function PartnersPage() {
                         <span>Submitting...</span>
                       </span>
                     ) : (
-                      'Submit Partner Inquiry'
+                      'Submit Partner Enquiry'
                     )}
                   </button>
                 </div>
@@ -672,7 +829,7 @@ export default function PartnersPage() {
 
       {/* Minimal Footer Matching Site */}
       <footer className="border-t-2 border-[#111111] bg-[#FFF8EC] py-8 sm:py-10 px-4 md:px-6 lg:px-10">
-        <div className="max-w-6xl xl:max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm font-mono text-[#111111]/70">
+        <div className="max-w-6xl xl:max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm font-mono text-[#111111]/75">
           <div>
             <span>© {new Date().getFullYear()} {CONFIG.event.name.toUpperCase()} · Dewan VS Group of Institutions, Meerut</span>
           </div>
