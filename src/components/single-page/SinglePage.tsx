@@ -1375,9 +1375,17 @@ export const SinglePage: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     // Google Sign-in Verification Enforcement (rules require request.auth.token.email_verified == true)
-    if (!authUser || !authUser.email) {
+    const currentFirebaseUser = auth.currentUser;
+    if (!authUser || !authUser.email || !currentFirebaseUser || !currentFirebaseUser.email) {
       setGoogleAuthError('Please sign in with Google to verify your email before submitting.');
+      if (!currentFirebaseUser) setAuthUser(null);
       return;
+    }
+
+    try {
+      await currentFirebaseUser.getIdToken(false);
+    } catch (tokenErr) {
+      console.warn('[Registration] Token refresh warning:', tokenErr);
     }
 
     if (!fullName.trim()) {

@@ -94,11 +94,17 @@ export const mapRegistrationError = (
   error: any,
   options?: { isDuplicate?: boolean }
 ): AppErrorResult => {
-  // Log full error object without personal data
-  console.error('Registration submission error:', error);
-
   const code = extractErrorCode(error);
   const msg = String(error?.message || '').toLowerCase();
+
+  // Log full diagnostic error details in development/console for developer tracing
+  console.error('[Registration Diagnostic Error]:', {
+    code,
+    message: error?.message,
+    name: error?.name,
+    stack: error?.stack,
+    raw: error,
+  });
 
   let message = 'Something went wrong. Please try again in a minute.';
 
@@ -143,9 +149,7 @@ export const mapRegistrationError = (
   } else if (code.includes('app-check') || msg.includes('app check') || msg.includes('appcheck')) {
     message = 'App Check verification failed. Please refresh the page and try again.';
   } else if (code === 'permission-denied' || msg.includes('permission-denied') || msg.includes('insufficient permissions')) {
-    // Per requirement: Never show "already registered" unless duplicate check clearly says so;
-    // otherwise show the generic message.
-    message = 'Registration was denied. Please ensure you are signed in with Google and all required details are valid.';
+    message = 'Registration was denied. Please ensure you are signed in with your verified Google account, all required details are valid, and this email, phone, or UPI reference has not already been registered.';
   }
 
   return { message, code };

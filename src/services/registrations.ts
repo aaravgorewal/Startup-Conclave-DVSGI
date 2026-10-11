@@ -290,6 +290,13 @@ export const createRegistration = async (
         errorCode: 'auth/unauthenticated',
       };
     }
+    // Ensure active ID token is loaded without race condition
+    try {
+      await currentUser.getIdToken(false);
+    } catch (tokenErr) {
+      console.warn('[Registration Service] ID token verification notice:', tokenErr);
+    }
+
     if (currentUser.email.trim().toLowerCase() !== emailClean) {
       return {
         success: false,
@@ -576,7 +583,7 @@ export const createRegistration = async (
     const settingsRef = doc(customDb, 'settings', 'event');
 
     const result = await runTransaction(customDb, async (transaction) => {
-      // 5a. Read atomic counter
+      // 5a. Read atomic counter (counters has public read permission)
       const counterSnap = await transaction.get(counterRef);
       let nextCount = 1;
       if (counterSnap.exists()) {
@@ -586,7 +593,7 @@ export const createRegistration = async (
       }
       const idCode = `SC1-${nextCount.toString().padStart(5, '0')}`;
 
-      // 5b. Read settings/event for registration capacity cap (default 500)
+      // 5b. Read settings/event for registration capacity cap (public get permission)
       const settingsSnap = await transaction.get(settingsRef);
       let registrationCap = 500;
       if (settingsSnap.exists()) {
@@ -600,22 +607,12 @@ export const createRegistration = async (
       const assignedStatus: 'registered' | 'waitlist' =
         nextCount > registrationCap ? 'waitlist' : 'registered';
 
-      // 5d. Duplicate checks in transaction read phase so a UTR/email/phone cannot be reused
-      if (utrDocRef) {
-        const utrSnap = await transaction.get(utrDocRef);
-        if (utrSnap.exists()) {
-          throw new Error('This UPI Reference Number (UTR) has already been registered.');
-        }
-      }
-      const regSnap = await transaction.get(regDocRef);
-      if (regSnap.exists()) {
-        throw new Error('This email address is already registered.');
-      }
-      const phoneSnap = await transaction.get(phoneDocRef);
-      if (phoneSnap.exists()) {
-        throw new Error('This phone number is already registered.');
-      }
-
+      // 5d. Atomic writes phase:
+      // In Firestore, all reads must precede writes. We do NOT call transaction.get
+      // on registrations, phoneIndex, or utrIndex because per the project security model,
+      // non-admin public users are strictly disallowed from reading those collections.
+      // Deduplication is enforced by Firestore security rules: existing documents cannot
+      // be updated by attendees (allow create only), so any duplicate write will be rejected.
       transaction.set(counterRef, {
         currentCount: nextCount,
         lastEmailHash: emailHash,
