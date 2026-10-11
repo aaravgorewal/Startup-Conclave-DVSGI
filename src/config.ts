@@ -406,7 +406,7 @@ export const CONFIG = {
     },
     {
       name: "Kartik Gupta",
-      roles: ["Pitching Competition Head", "Speaker Relations"],
+      roles: ["Pitching Competition Head", "Speaker Relationship"],
       linkedin: "https://www.linkedin.com/in/kartik-gupta-553859366/",
       confirmed: true,
       tier: "core",
