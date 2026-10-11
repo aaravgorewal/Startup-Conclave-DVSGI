@@ -414,6 +414,7 @@ export const CONFIG = {
     {
       name: "Gagan Kumar",
       roles: ["Marketing"],
+      photo: "gagan-kumar.jpeg",
       confirmed: true,
       tier: "lead",
     },
@@ -505,6 +506,7 @@ export const CONFIG = {
       {
         name: "Gagan Kumar",
         roles: ["Marketing & PR"],
+        photo: "gagan-kumar.jpeg",
         confirmed: true,
         tier: "lead",
       },
