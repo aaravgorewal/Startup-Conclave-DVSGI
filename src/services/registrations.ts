@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
-import { db, auth } from './firebase.ts';
+import { db } from './firebase.ts';
 import { CONFIG, toPaise } from '../config.ts';
 import { mapRegistrationError } from './errorMapping.ts';
 
@@ -280,31 +280,6 @@ export const createRegistration = async (
   const emailClean = input.email.trim().toLowerCase();
   const phoneClean = cleanPhoneNumber(input.phone);
 
-  // In browser runtime with standard db, verify that user is signed in with Google
-  if (typeof window !== 'undefined' && customDb === db) {
-    const currentUser = auth.currentUser;
-    if (!currentUser || !currentUser.email) {
-      return {
-        success: false,
-        error: 'Please sign in with Google to verify your registration email before submitting.',
-        errorCode: 'auth/unauthenticated',
-      };
-    }
-    // Ensure active ID token is loaded without race condition
-    try {
-      await currentUser.getIdToken(false);
-    } catch (tokenErr) {
-      console.warn('[Registration Service] ID token verification notice:', tokenErr);
-    }
-
-    if (currentUser.email.trim().toLowerCase() !== emailClean) {
-      return {
-        success: false,
-        error: `Registration email (${emailClean}) must match your signed-in Google account (${currentUser.email.toLowerCase()}).`,
-        errorCode: 'auth/email-mismatch',
-      };
-    }
-  }
 
   // 1. Validation
   if (!isValidEmail(emailClean)) {

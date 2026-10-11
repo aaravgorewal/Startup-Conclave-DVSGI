@@ -3,7 +3,6 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import {
   getAuth,
-  GoogleAuthProvider,
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
@@ -29,11 +28,6 @@ export const db = firebaseConfig.firestoreDatabaseId
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
-
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: 'select_account',
-});
 
 // Initialize Firebase App Check with reCAPTCHA v3 or Enterprise if site key is configured
 export let appCheck: any = null;

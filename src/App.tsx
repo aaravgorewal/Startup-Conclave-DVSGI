@@ -11,7 +11,7 @@ const ScanPage = lazy(() => import('./pages/ScanPage.tsx'));
 const PartnersPage = lazy(() => import('./pages/PartnersPage.tsx'));
 
 export default function App() {
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -21,7 +21,7 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Hidden /admin route check (not linked anywhere on the public site, with noindex)
+  // Hidden /admin route check
   if (currentPath.startsWith('/admin')) {
     return (
       <Suspense

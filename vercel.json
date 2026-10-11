@@ -5,6 +5,10 @@
             "destination": "https://client-hunting-472203.firebaseapp.com/__/auth/:path*"
         },
         {
+            "source": "/__/firebase/:path*",
+            "destination": "https://client-hunting-472203.firebaseapp.com/__/firebase/:path*"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }

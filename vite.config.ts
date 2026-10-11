@@ -39,6 +39,11 @@ export default defineConfig(({mode}) => {
           changeOrigin: true,
           secure: true,
         },
+        '/__/firebase': {
+          target: 'https://client-hunting-472203.firebaseapp.com',
+          changeOrigin: true,
+          secure: true,
+        },
       },
     },
   };

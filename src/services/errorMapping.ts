@@ -35,7 +35,7 @@ export const extractErrorCode = (error: any): string => {
 };
 
 /**
- * Maps Google Auth errors to specific user-facing messages and codes.
+ * Maps Auth errors to specific user-facing messages and codes.
  * Logs full error object to console.error without personal data.
  */
 export const mapAuthError = (error: any): AppErrorResult => {
@@ -46,10 +46,10 @@ export const mapAuthError = (error: any): AppErrorResult => {
   const msg = String(error?.message || '').toLowerCase();
   const currentHost = typeof window !== 'undefined' && window.location ? window.location.hostname : 'this domain';
 
-  let message = 'Google sign-in is temporarily unavailable. Please try again or contact the organisers.';
+  let message = 'Authentication is temporarily unavailable. Please try again or contact the organisers.';
 
   if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized-domain') || msg.includes('unauthorized domain')) {
-    message = `Domain "${currentHost}" is not authorized for Google Sign-In. Add "${currentHost}" to Authorized Domains in Firebase Console > Authentication > Settings.`;
+    message = `Domain "${currentHost}" is not authorized. Add "${currentHost}" to Authorized Domains in Firebase Console > Authentication > Settings.`;
   } else if (
     code === 'auth/network-request-failed' ||
     code === 'network-request-failed' ||
@@ -57,21 +57,21 @@ export const mapAuthError = (error: any): AppErrorResult => {
     msg.includes('offline') ||
     (typeof navigator !== 'undefined' && navigator.onLine === false)
   ) {
-    message = 'Network error connecting to Google. Please check your internet connection and try again.';
+    message = 'Network error connecting to authentication service. Please check your internet connection and try again.';
   } else if (code === 'auth/popup-blocked') {
-    message = 'Sign-in popup was blocked by your browser. Tap "Continue with Redirect" below to proceed.';
+    message = 'Sign-in popup was blocked by your browser.';
   } else if (code === 'auth/popup-closed-by-user') {
-    message = 'Sign-in was closed before selecting an account. Please click "Continue with Google" again.';
+    message = 'Sign-in window was closed. Please try again.';
   } else if (code === 'auth/cancelled-popup-request') {
-    message = 'Sign-in request was cancelled. Please tap "Continue with Google" to try again.';
+    message = 'Sign-in request was cancelled. Please try again.';
   } else if (code === 'auth/redirect-cancelled-by-user') {
-    message = 'Redirect authentication was cancelled. Please tap "Continue with Google" to try again.';
+    message = 'Authentication was cancelled. Please try again.';
   } else if (code.includes('app-check') || msg.includes('app check') || msg.includes('appcheck')) {
     message = 'App Check verification failed. Please refresh the page and try again.';
   } else if (code === 'auth/invalid-api-key' || code === 'auth/configuration-not-found') {
     message = 'Firebase Authentication configuration error. Please notify the organisers.';
   } else if (code === 'auth/user-disabled') {
-    message = 'This Google account has been disabled. Please select a different account.';
+    message = 'This account has been disabled. Please contact the organisers.';
   } else if (code === 'permission-denied' || msg.includes('permission-denied')) {
     message = 'Authentication was denied. Please ensure you are authorized.';
   } else if (code === 'unavailable' || msg.includes('unavailable')) {
@@ -141,7 +141,7 @@ export const mapRegistrationError = (
   ) {
     message = 'Service is temporarily unavailable. Check your internet connection and try again.';
   } else if (code === 'auth/popup-blocked') {
-    message = 'Popup was blocked by your browser. Please allow popups or use redirect.';
+    message = 'Popup was blocked by your browser.';
   } else if (code === 'resource-exhausted' || msg.includes('resource-exhausted') || msg.includes('quota')) {
     message = 'System quota or rate limit exceeded. Please wait a minute and try again.';
   } else if (code === 'failed-precondition' || msg.includes('failed-precondition')) {
@@ -149,7 +149,7 @@ export const mapRegistrationError = (
   } else if (code.includes('app-check') || msg.includes('app check') || msg.includes('appcheck')) {
     message = 'App Check verification failed. Please refresh the page and try again.';
   } else if (code === 'permission-denied' || msg.includes('permission-denied') || msg.includes('insufficient permissions')) {
-    message = 'Registration was denied. Please ensure you are signed in with your verified Google account, all required details are valid, and this email, phone, or UPI reference has not already been registered.';
+    message = 'Registration was denied. Please ensure all required details are valid, and this email, phone, or UPI reference has not already been registered.';
   }
 
   return { message, code };
