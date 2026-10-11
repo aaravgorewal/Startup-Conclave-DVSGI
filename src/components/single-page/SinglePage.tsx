@@ -175,13 +175,13 @@ const HeroVectorIllustration: React.FC = () => {
           {/* Hard Offset Shadows */}
           <polygon points="58,138 108,48 158,138" fill="#111111" />
           <polygon points="54,134 104,44 154,134" fill="#FF6B1A" stroke="#111111" strokeWidth="3" />
-          
+
           {/* Inner nested inverted triangle */}
           <polygon points="79,94 129,94 104,134" fill="#FFD400" stroke="#111111" strokeWidth="2.5" />
-          
+
           {/* Triangular drafting marks */}
           <line x1="104" y1="44" x2="104" y2="94" stroke="#111111" strokeWidth="2" strokeDasharray="3 3" />
-          
+
           {/* Foundation circular anchor bearings */}
           <circle cx="70" cy="148" r="8" fill="#FFFFFF" stroke="#111111" strokeWidth="2.5" />
           <circle cx="70" cy="148" r="3" fill="#111111" />
@@ -214,7 +214,7 @@ const HeroVectorIllustration: React.FC = () => {
           {/* Satellite network nodes */}
           <line x1="330" y1="54" x2="310" y2="35" stroke="#111111" strokeWidth="2.5" />
           <circle cx="310" cy="35" r="9" fill="#FF6B1A" stroke="#111111" strokeWidth="2" />
-          
+
           <line x1="380" y1="126" x2="400" y2="145" stroke="#111111" strokeWidth="2.5" />
           <circle cx="400" cy="145" r="8" fill="#FFD400" stroke="#111111" strokeWidth="2" />
 
@@ -347,32 +347,32 @@ const LogoTile: React.FC<{
   tileClass = 'p-2.5 sm:p-3 min-h-[56px] sm:min-h-[64px]',
   loading = 'lazy',
 }) => {
-  const [failed, setFailed] = useState(false);
-  if (failed) return null; // hide tile if image fails to load
-  const img = (
-    <img
-      src={item.logo}
-      alt={item.name}
-      width={item.width || 200}
-      height={item.height || 200}
-      loading={loading}
-      decoding="async"
-      onError={() => setFailed(true)}
-      className={`${heightClass} w-auto max-w-[180px] sm:max-w-[220px] object-contain`}
-    />
-  );
-  return (
-    <div className={`bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center ${tileClass}`}>
-      {item.url ? (
-        <a href={item.url} target="_blank" rel="noopener noreferrer" aria-label={item.name}>
-          {img}
-        </a>
-      ) : (
-        img
-      )}
-    </div>
-  );
-};
+    const [failed, setFailed] = useState(false);
+    if (failed) return null; // hide tile if image fails to load
+    const img = (
+      <img
+        src={item.logo}
+        alt={item.name}
+        width={item.width || 200}
+        height={item.height || 200}
+        loading={loading}
+        decoding="async"
+        onError={() => setFailed(true)}
+        className={`${heightClass} w-auto max-w-[180px] sm:max-w-[220px] object-contain`}
+      />
+    );
+    return (
+      <div className={`bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center ${tileClass}`}>
+        {item.url ? (
+          <a href={item.url} target="_blank" rel="noopener noreferrer" aria-label={item.name}>
+            {img}
+          </a>
+        ) : (
+          img
+        )}
+      </div>
+    );
+  };
 
 // Accessible Focus Trap & Escape Handler Hook for Modals and Drawers
 const useFocusTrap = ({
@@ -669,13 +669,13 @@ export const SinglePage: React.FC = () => {
   const [registrationCount, setRegistrationCount] = useState<number>(0);
 
   useEffect(() => {
-    fetchPublicRegistrationCount().then(setRegistrationCount).catch(() => {});
+    fetchPublicRegistrationCount().then(setRegistrationCount).catch(() => { });
     getEventSettings().then((s) => {
       if (s) {
         setRegStatus(s.registrationStatus || s.status || CONFIG.registration.status);
         setShowCounter(typeof s.showCount === 'boolean' ? s.showCount : CONFIG.registration.showCount);
       }
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -1502,13 +1502,13 @@ export const SinglePage: React.FC = () => {
       const statusBadge = submittedRecord.status === 'waitlist'
         ? 'STATUS: WAITLIST'
         : isPitchPending
-        ? 'STATUS: PAYMENT PENDING'
-        : 'STATUS: CONFIRMED';
+          ? 'STATUS: PAYMENT PENDING'
+          : 'STATUS: CONFIRMED';
       ctx.fillStyle = submittedRecord.status === 'waitlist'
         ? '#78350F'
         : isPitchPending
-        ? '#92400E'
-        : '#065F46';
+          ? '#92400E'
+          : '#065F46';
       ctx.font = '800 16px monospace';
       ctx.fillText(statusBadge, width - 340, 230);
 
@@ -1614,7 +1614,7 @@ export const SinglePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FFF8EC] text-[#111111] font-sans selection:bg-[#FF6B1A] selection:text-[#111111] pb-20 md:pb-0 overflow-x-clip text-base">
-      
+
       {/* Skip to Content Link for keyboard accessibility */}
       <a
         href="#main-content"
@@ -1642,7 +1642,7 @@ export const SinglePage: React.FC = () => {
       {/* 1. STICKY TOP BAR                                                   */}
       {/* =================================================================== */}
       <header className="sticky top-0 z-40 glass border-t-0 border-x-0 border-b-2 shadow-none px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        
+
         {/* Wordmark */}
         <a
           href="#"
@@ -1746,7 +1746,7 @@ export const SinglePage: React.FC = () => {
           tabIndex={-1}
           className="md:hidden border-b-2 border-[#111111] bg-[#FFD400] p-4 sm:p-5 space-y-3 font-mono text-base font-bold uppercase tracking-wider animate-in fade-in shadow-[0_6px_0px_#111111]"
         >
-          
+
           {/* Drawer Top Header with Explicit Close Button */}
           <div className="flex items-center justify-between pb-3 border-b-2 border-[#111111]">
             <div className="flex items-center gap-2">
@@ -1862,512 +1862,941 @@ export const SinglePage: React.FC = () => {
       {/* Main Landmark for Content Accessibility */}
       <main id="main-content">
 
-      {/* =================================================================== */}
-      {/* 2. HERO SECTION                                                     */}
-      {/* =================================================================== */}
-      <section className="relative px-4 sm:px-8 pt-10 sm:pt-16 pb-14 sm:pb-20 max-w-6xl mx-auto text-left">
-        {/* Soft subtle colour backdrop shapes for restrained brutalist glass blur (subtle, pure CSS, no images) */}
-        <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none select-none" aria-hidden="true">
-          <div className="absolute -top-10 -left-10 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-[#FF6B1A]/12 blur-3xl" />
-          <div className="absolute top-20 left-1/4 w-80 h-80 sm:w-[28rem] sm:h-[28rem] rounded-full bg-[#FFD400]/18 blur-3xl" />
-          <div className="absolute top-1/3 -right-12 w-64 h-64 sm:w-88 sm:h-88 rounded-full bg-[#FF6B1A]/10 blur-3xl" />
-        </div>
-        
-        {/* Floating Sticker Badge */}
-        <div className="inline-block mb-4 sm:mb-6">
-          <div className="glass text-[#111111] font-mono text-sm font-black px-3.5 py-1 -rotate-2 uppercase tracking-wide">
-            {CONFIG.event.badgeSticker}
+        {/* =================================================================== */}
+        {/* 2. HERO SECTION                                                     */}
+        {/* =================================================================== */}
+        <section className="relative px-4 sm:px-8 pt-10 sm:pt-16 pb-14 sm:pb-20 max-w-6xl mx-auto text-left">
+          {/* Soft subtle colour backdrop shapes for restrained brutalist glass blur (subtle, pure CSS, no images) */}
+          <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none select-none" aria-hidden="true">
+            <div className="absolute -top-10 -left-10 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-[#FF6B1A]/12 blur-3xl" />
+            <div className="absolute top-20 left-1/4 w-80 h-80 sm:w-[28rem] sm:h-[28rem] rounded-full bg-[#FFD400]/18 blur-3xl" />
+            <div className="absolute top-1/3 -right-12 w-64 h-64 sm:w-88 sm:h-88 rounded-full bg-[#FF6B1A]/10 blur-3xl" />
+          </div>
+
+          {/* Floating Sticker Badge */}
+          <div className="inline-block mb-4 sm:mb-6">
+            <div className="glass text-[#111111] font-mono text-sm font-black px-3.5 py-1 -rotate-2 uppercase tracking-wide">
+              {CONFIG.event.badgeSticker}
+            </div>
+          </div>
+
+          {/* 2-Column Responsive Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+
+            {/* Left Column (7 cols): Headline, Subtitle, Info Strip, Buttons */}
+            <div className="lg:col-span-7 space-y-6">
+              <h1 className="font-display font-extrabold text-4xl sm:text-6xl lg:text-7xl xl:text-8xl tracking-tight leading-[1.02] sm:leading-[0.95] text-[#111111]">
+                Where Ideas Meet{' '}
+                <span className="highlight-yellow font-black whitespace-nowrap">
+                  {CONFIG.event.taglineHighlightedWord}
+                </span>
+              </h1>
+
+              <p className="text-lg sm:text-xl lg:text-2xl text-[#111111] font-sans font-medium max-w-2xl leading-snug">
+                {CONFIG.event.subline}
+              </p>
+
+              {/* Quick Info Strip */}
+              <div className="p-2.5 sm:p-3.5 lg:px-3 lg:py-2.5 xl:p-3.5 glass flex flex-wrap md:flex-nowrap items-center gap-x-2 sm:gap-x-3 lg:gap-x-2 xl:gap-x-3 gap-y-2 font-mono text-xs sm:text-[13px] xl:text-sm font-bold text-[#111111] w-full max-w-full">
+                <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
+                  <span>Date: {CONFIG.event.date}</span>
+                </span>
+                <span className="text-[#111111]/30 hidden md:inline shrink-0">|</span>
+                <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                  <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
+                  <span>{CONFIG.event.venue}</span>
+                </span>
+                <span className="text-[#111111]/30 hidden md:inline shrink-0">|</span>
+                <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
+                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
+                  <span>{CONFIG.event.duration}</span>
+                </span>
+                <span className="text-[#111111]/30 hidden md:inline shrink-0">|</span>
+                <span className="bg-[#FFD400] px-2 py-0.5 sm:px-2.5 sm:py-1 border border-[#111111] text-[11px] sm:text-xs uppercase font-black shrink-0 whitespace-nowrap">
+                  {CONFIG.event.mode}
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                <button
+                  onClick={() => handleNavClick('register')}
+                  className="brutal-btn bg-[#FF6B1A] text-[#111111] px-8 py-4 font-display font-bold text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
+                >
+                  <span>Register Now</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    setWantsToPitch(true);
+                    handleNavClick('register');
+                  }}
+                  className="brutal-btn bg-[#FFD400] text-[#111111] px-8 py-4 font-display font-bold text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
+                >
+                  <span>Apply to Pitch</span>
+                  <Rocket className="w-5 h-5 text-[#111111]" />
+                </button>
+              </div>
+            </div>
+
+            {/* Right Column (5 cols): Custom Vector Illustration */}
+            <div className="lg:col-span-5 w-full mt-4 lg:mt-0">
+              <HeroVectorIllustration />
+            </div>
+
+          </div>
+        </section>
+
+        {/* ORGANISED BY strip: college units only (confirmed) */}
+        {CONFIG.organisers.some((o) => o.confirmed) && (
+          <section aria-label="Organised by" className="px-4 sm:px-8 pb-10 max-w-6xl mx-auto">
+            <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70 mb-3">
+              Organised by
+            </div>
+            <div className="flex flex-wrap items-stretch gap-3 sm:gap-4">
+              {CONFIG.organisers
+                .filter((o) => o.confirmed)
+                .map((o) => (
+                  <LogoTile key={o.name} item={o} />
+                ))}
+            </div>
+          </section>
+        )}
+        {/* Marquee Ticker Strip directly under hero */}
+        <div className="w-full bg-[#111111] text-[#FFD400] border-y-2 border-[#111111] py-3.5 overflow-hidden font-display font-black text-sm sm:text-base tracking-widest uppercase select-none">
+          <div className="animate-marquee whitespace-nowrap">
+            <span>{CONFIG.event.marqueeText.repeat(10)}</span>
           </div>
         </div>
 
-        {/* 2-Column Responsive Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
-          
-          {/* Left Column (7 cols): Headline, Subtitle, Info Strip, Buttons */}
-          <div className="lg:col-span-7 space-y-6">
-            <h1 className="font-display font-extrabold text-4xl sm:text-6xl lg:text-7xl xl:text-8xl tracking-tight leading-[1.02] sm:leading-[0.95] text-[#111111]">
-              Where Ideas Meet{' '}
-              <span className="highlight-yellow font-black whitespace-nowrap">
-                {CONFIG.event.taglineHighlightedWord}
-              </span>
-            </h1>
+        {/* Targets Strip — only renders if CONFIG.stats has values */}
+        {Boolean(CONFIG.stats && CONFIG.stats.length > 0) && (
+          <section className="bg-[#FFF8EC] border-b-2 border-[#111111] px-4 sm:px-8 py-10">
+            <div className="max-w-6xl mx-auto">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+                  Targets
+                </span>
+                <span className="font-mono text-xs text-[#111111]/70">
+                  Event goals &amp; benchmarks
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {CONFIG.stats.map((st, sIdx) => (
+                  <div key={sIdx} className="p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111]">
+                    <div className="font-display font-black text-2xl sm:text-4xl text-[#FF6B1A]">
+                      {st.value}
+                    </div>
+                    <div className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] mt-1">
+                      {st.label}
+                    </div>
+                    {st.subtext && (
+                      <div className="text-xs text-[#111111]/70 font-sans mt-0.5">
+                        {st.subtext}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
-            <p className="text-lg sm:text-xl lg:text-2xl text-[#111111] font-sans font-medium max-w-2xl leading-snug">
-              {CONFIG.event.subline}
-            </p>
+        {/* =================================================================== */}
+        {/* 3. ABOUT (01) — 1-LINE INTRO                                        */}
+        {/* =================================================================== */}
+        <section id="about" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
 
-            {/* Quick Info Strip */}
-            <div className="p-2.5 sm:p-3.5 lg:px-3 lg:py-2.5 xl:p-3.5 glass flex flex-wrap md:flex-nowrap items-center gap-x-2 sm:gap-x-3 lg:gap-x-2 xl:gap-x-3 gap-y-2 font-mono text-xs sm:text-[13px] xl:text-sm font-bold text-[#111111] w-full max-w-full">
-              <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
-                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
-                <span>Date: {CONFIG.event.date}</span>
+          {/* Section Header */}
+          <div className="flex items-center gap-3 mb-6">
+            <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+              {CONFIG.about.sectionNum}
+            </span>
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+              About The Conclave
+            </span>
+          </div>
+
+          <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.05] text-[#111111] max-w-4xl">
+            {CONFIG.about.headline}
+          </h2>
+
+          {/* 1-Line Intro */}
+          <p className="mt-4 text-base sm:text-lg text-[#111111]/85 font-sans font-medium max-w-3xl">
+            {CONFIG.about.introText}
+          </p>
+
+          {/* Four Pillars as 1 Line Each */}
+          <div className="mt-8 space-y-3 font-sans">
+            {CONFIG.about.pillars.map((pillar) => (
+              <div
+                key={pillar.tag}
+                className="p-4 sm:p-5 bg-white brutal-border brutal-shadow-sm flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 hover:bg-[#FFF2D6] transition-colors"
+              >
+                <span className="font-mono font-black text-sm sm:text-base px-3.5 py-1 bg-[#111111] text-[#FFD400] border border-[#111111] shrink-0 self-start sm:self-center tracking-widest">
+                  {pillar.tag}
+                </span>
+                <p className="text-base font-semibold text-[#111111]">
+                  {pillar.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* =================================================================== */}
+        {/* 4. WHAT'S INSIDE (02) — 3-4 WORDS PER ITEM                         */}
+        {/* =================================================================== */}
+        <section id="inside" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
+
+          {/* Section Header */}
+          <div className="flex items-center gap-3 mb-6">
+            <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+              {CONFIG.whatsInside.sectionNum}
+            </span>
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+              Program Formats
+            </span>
+          </div>
+
+          <h2 className="font-display font-black text-2xl sm:text-4xl lg:text-5xl tracking-tight text-[#111111]">
+            {CONFIG.whatsInside.headline}
+          </h2>
+
+          {/* 1-Line Intro */}
+          <p className="mt-2 text-base text-[#111111]/80 font-sans font-medium">
+            {CONFIG.whatsInside.introText}
+          </p>
+
+          {/* Compact Grid of Formats (3-4 words each) */}
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 font-sans">
+            {CONFIG.whatsInside.items.map((item, idx) => (
+              <div
+                key={item.title}
+                className="p-4 bg-white brutal-border brutal-shadow-sm flex items-start gap-3.5 hover:translate-x-0.5 transition-transform"
+              >
+                <span className="font-mono text-sm font-black text-[#FF6B1A] shrink-0 mt-0.5">
+                  {(idx + 1).toString().padStart(2, '0')}
+                </span>
+                <div>
+                  <h3 className="font-display font-bold text-base sm:text-lg text-[#111111]">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-[#111111]/85 mt-0.5 font-medium">
+                    {item.note}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* =================================================================== */}
+        {/* 5. SCHEDULE (03) — ONLY SESSION TITLES, NO TIMES, NO DESCRIPTIONS   */}
+        {/* =================================================================== */}
+        <section id="schedule" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
+
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+                {CONFIG.schedule.sectionNum}
               </span>
-              <span className="text-[#111111]/30 hidden md:inline shrink-0">|</span>
-              <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
-                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
-                <span>{CONFIG.event.venue}</span>
-              </span>
-              <span className="text-[#111111]/30 hidden md:inline shrink-0">|</span>
-              <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
-                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
-                <span>{CONFIG.event.duration}</span>
-              </span>
-              <span className="text-[#111111]/30 hidden md:inline shrink-0">|</span>
-              <span className="bg-[#FFD400] px-2 py-0.5 sm:px-2.5 sm:py-1 border border-[#111111] text-[11px] sm:text-xs uppercase font-black shrink-0 whitespace-nowrap">
-                {CONFIG.event.mode}
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+                Schedule
               </span>
             </div>
 
-            {/* Action Buttons */}
-            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            {/* Day Tabs */}
+            <div className="flex items-center gap-2 font-mono text-xs font-bold">
               <button
-                onClick={() => handleNavClick('register')}
-                className="brutal-btn bg-[#FF6B1A] text-[#111111] px-8 py-4 font-display font-bold text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
+                onClick={() => setActiveDay(1)}
+                className={`px-4 py-2 brutal-border cursor-pointer transition-all min-h-[44px] flex items-center ${activeDay === 1
+                    ? 'bg-[#111111] text-[#FFD400] brutal-shadow-sm'
+                    : 'bg-white text-[#111111]'
+                  }`}
               >
-                <span>Register Now</span>
-                <ArrowRight className="w-5 h-5" />
+                DAY 01
               </button>
+              <button
+                onClick={() => setActiveDay(2)}
+                className={`px-4 py-2 brutal-border cursor-pointer transition-all min-h-[44px] flex items-center ${activeDay === 2
+                    ? 'bg-[#111111] text-[#FFD400] brutal-shadow-sm'
+                    : 'bg-white text-[#111111]'
+                  }`}
+              >
+                DAY 02
+              </button>
+            </div>
+          </div>
+
+          <h2 className="font-display font-extrabold text-2xl sm:text-4xl lg:text-5xl tracking-tight text-[#111111]">
+            {CONFIG.schedule.headline}
+          </h2>
+
+          {/* 1-Line Intro Note */}
+          <p className="mt-2 text-sm font-mono text-[#FF6B1A] font-bold">
+            {CONFIG.schedule.note}
+          </p>
+
+          {/* Schedule Display: ONLY TITLES */}
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* Day 1 Column */}
+            <div
+              className={`p-6 sm:p-8 bg-white brutal-border brutal-shadow space-y-4 ${activeDay === 1 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
+                }`}
+            >
+              <div className="border-b-2 border-[#111111] pb-3">
+                <span className="font-mono text-xs font-black text-[#FF6B1A] uppercase tracking-wider block">
+                  DAY ONE
+                </span>
+                <h3 className="font-display font-extrabold text-xl sm:text-2xl text-[#111111]">
+                  {CONFIG.schedule.day1.title}
+                </h3>
+              </div>
+
+              {/* ONLY SESSION TITLES */}
+              <ul className="space-y-3.5 font-sans text-sm sm:text-base">
+                {CONFIG.schedule.day1.bullets.map((bullet, idx) => (
+                  <li key={idx} className="flex items-center gap-3">
+                    <span className="w-2.5 h-2.5 bg-[#FF6B1A] border-2 border-[#111111] shrink-0" />
+                    <span className="font-bold text-[#111111]">{bullet}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Day 2 Column */}
+            <div
+              className={`p-6 sm:p-8 bg-white brutal-border brutal-shadow space-y-4 ${activeDay === 2 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
+                }`}
+            >
+              <div className="border-b-2 border-[#111111] pb-3">
+                <span className="font-mono text-xs font-black text-[#FF6B1A] uppercase tracking-wider block">
+                  DAY TWO
+                </span>
+                <h3 className="font-display font-extrabold text-xl sm:text-2xl text-[#111111]">
+                  {CONFIG.schedule.day2.title}
+                </h3>
+              </div>
+
+              {/* ONLY SESSION TITLES */}
+              <ul className="space-y-3.5 font-sans text-sm sm:text-base">
+                {CONFIG.schedule.day2.bullets.map((bullet, idx) => (
+                  <li key={idx} className="flex items-center gap-3">
+                    <span className="w-2.5 h-2.5 bg-[#FFD400] border-2 border-[#111111] shrink-0" />
+                    <span className="font-bold text-[#111111]">{bullet}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+          </div>
+        </section>
+
+        {/* =================================================================== */}
+        {/* 6. PITCH ARENA (04) — 1-LINE INTRO                                  */}
+        {/* =================================================================== */}
+        <section id="pitch" className="bg-[#FF6B1A] text-[#111111] border-b-2 border-[#111111] py-16 sm:py-24 px-4 sm:px-8">
+          <div className="max-w-6xl mx-auto text-left space-y-7">
+
+            {/* Header */}
+            <div className="flex items-center gap-3">
+              <span className="font-mono font-black text-2xl sm:text-3xl text-[#111111] bg-[#FFD400] px-2.5 py-0.5 border-2 border-[#111111]">
+                {CONFIG.pitchArena.sectionNum}
+              </span>
+              <span className="font-mono text-xs font-black uppercase tracking-wider bg-white text-[#111111] px-2.5 py-1 border-2 border-[#111111] -rotate-1">
+                Live Stage Pitch
+              </span>
+            </div>
+
+            <div className="space-y-2 max-w-3xl">
+              <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
+                {CONFIG.pitchArena.headline}
+              </h2>
+              <p className="font-display text-xl sm:text-2xl text-[#111111] font-extrabold">
+                {CONFIG.pitchArena.tagline}
+              </p>
+              {/* 1-Line Intro */}
+              <p className="text-base font-sans text-[#111111] font-medium leading-relaxed">
+                {CONFIG.pitchArena.description}
+              </p>
+            </div>
+
+            {/* Process in One Row */}
+            <div className="p-4 sm:p-6 bg-white brutal-border brutal-shadow">
+              <span className="text-xs font-mono font-black uppercase text-[#111111] tracking-wider block mb-3">
+                Competition Flow
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 font-sans">
+                {CONFIG.pitchArena.process.map((p, idx) => (
+                  <div key={p.step} className="p-3 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-black text-[#FF6B1A]">{p.step}</span>
+                      {idx < 4 && <span className="font-mono text-xs text-[#111111]/70 hidden sm:inline">→</span>}
+                    </div>
+                    <div className="font-display font-black text-base text-[#111111]">{p.label}</div>
+                    <div className="text-xs text-[#111111]/70">{p.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* What Startups Get */}
+            <div className="p-4 sm:p-6 bg-white brutal-border brutal-shadow space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-black uppercase text-[#111111] tracking-wider block">
+                  What Startups Get
+                </span>
+                <span className="font-mono text-[11px] font-bold text-[#FF6B1A] uppercase">
+                  Stage Privileges
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-sans">
+                {CONFIG.pitchArena.whatStartupsGet.map((perk) => (
+                  <div key={perk.title} className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
+                    <div className="font-display font-black text-base text-[#111111]">
+                      {perk.title}
+                    </div>
+                    <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
+                      {perk.desc}
+                    </div>
+                  </div>
+                ))}
+                {CONFIG.pitchArena.juryConfirmed && (
+                  <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
+                    <div className="font-display font-black text-base text-[#111111]">
+                      Jury Evaluation
+                    </div>
+                    <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
+                      Direct live scoring and review by confirmed industry jury members.
+                    </div>
+                  </div>
+                )}
+                {CONFIG.pitchArena.investorsConfirmed && (
+                  <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
+                    <div className="font-display font-black text-base text-[#111111]">
+                      Investor Access
+                    </div>
+                    <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
+                      Direct interaction opportunities with confirmed institutional investors and angels.
+                    </div>
+                  </div>
+                )}
+                {CONFIG.pitchArena.awardsConfirmed && (
+                  <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
+                    <div className="font-display font-black text-base text-[#111111]">
+                      Awards &amp; Recognition
+                    </div>
+                    <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
+                      Conclave trophies, official certificates, and stage recognition for winning teams.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Key Facts & Action */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-1">
+              <div className="flex flex-wrap items-center gap-3 font-mono text-xs sm:text-sm font-bold text-[#111111]">
+                {CONFIG.pitchArena.facts.map((fact) => (
+                  <span key={fact.label} className="bg-white px-3.5 py-1.5 border-2 border-[#111111] shadow-[2px_2px_0px_#111111]">
+                    <strong>{fact.label}:</strong> {fact.value}
+                  </span>
+                ))}
+              </div>
 
               <button
                 onClick={() => {
                   setWantsToPitch(true);
                   handleNavClick('register');
                 }}
-                className="brutal-btn bg-[#FFD400] text-[#111111] px-8 py-4 font-display font-bold text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
+                className="brutal-btn bg-[#FFD400] text-[#111111] px-6 py-3.5 font-display font-extrabold text-base uppercase tracking-wider rounded-[2px] cursor-pointer self-start sm:self-auto shrink-0 min-h-[46px]"
               >
-                <span>Apply to Pitch</span>
-                <Rocket className="w-5 h-5 text-[#111111]" />
+                Apply to Pitch →
+              </button>
+            </div>
+
+          </div>
+        </section>
+
+        {/* =================================================================== */}
+        {/* 7. GUESTS (05)                                                      */}
+        {/* =================================================================== */}
+        <section id="guests" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-10">
+
+          {/* Section Header */}
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+                05
+              </span>
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+                Guests
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-tight tracking-tight">
+                Who you'll hear from
+              </h2>
+            </div>
+          </div>
+
+          {(() => {
+            const confirmedGuests = (CONFIG.guests || []).filter((g) => g.confirmed);
+            if (confirmedGuests.length === 0) return null;
+
+            // Order of guest types: chief-guest, speaker, jury, investor, mentor
+            const guestTypeGroups: { type: Guest['type']; label: string }[] = [
+              { type: 'chief-guest', label: 'Chief guests' },
+              { type: 'speaker', label: 'Speakers' },
+              { type: 'jury', label: 'Jury' },
+              { type: 'investor', label: 'Investors' },
+              { type: 'mentor', label: 'Mentors' },
+            ];
+
+            const getInitials = (name: string): string => {
+              if (!name || !name.trim()) return '?';
+              // Strip suffixes after comma (e.g. ", IAS")
+              const withoutSuffix = name.split(',')[0].trim();
+              // Ignore honorifics (Mr., Mrs., Ms., Dr., Prof., Sh.)
+              const withoutHonorific = withoutSuffix
+                .replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Sh\.|Mr|Mrs|Ms|Dr|Prof|Sh)\s+/i, '')
+                .trim();
+              const parts = withoutHonorific.split(/\s+/).filter(Boolean);
+              if (parts.length === 0) return '?';
+              if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+              return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+            };
+
+            return (
+              <div className="space-y-12">
+                {guestTypeGroups.map((group) => {
+                  const groupGuests = confirmedGuests.filter((g) => g.type === group.type);
+                  if (groupGuests.length === 0) return null;
+
+                  return (
+                    <div key={group.type} className="space-y-6">
+                      <div className="flex items-center gap-3 border-b-2 border-[#111111] pb-3">
+                        <span className="w-3 h-3 bg-[#FF6B1A] border border-[#111111] inline-block" />
+                        <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-wide">
+                          {group.label}
+                        </h3>
+                        <span className="font-mono text-xs font-bold text-[#111111]/70">
+                          ({groupGuests.length})
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {groupGuests.map((guest, idx) => (
+                          <div
+                            key={`${guest.name}-${idx}`}
+                            className="p-5 sm:p-6 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              {guest.photo ? (
+                                <img
+                                  src={guest.photo}
+                                  loading="lazy"
+                                  width={80}
+                                  height={80}
+                                  alt={`${guest.name}, ${guest.organisation}`}
+                                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 bg-[#FFF8EC]"
+                                />
+                              ) : (
+                                <div
+                                  className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center font-display font-black text-xl sm:text-2xl text-[#111111] shrink-0 select-none"
+                                  aria-label={guest.name}
+                                >
+                                  {getInitials(guest.name)}
+                                </div>
+                              )}
+
+                              {guest.linkedin && guest.linkedin.startsWith('https://') && (
+                                <a
+                                  href={guest.linkedin}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`${guest.name} on LinkedIn`}
+                                  className="inline-flex items-center justify-center w-11 h-11 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0 min-h-[44px] min-w-[44px]"
+                                >
+                                  <Linkedin className="w-5 h-5 text-[#111111]" />
+                                </a>
+                              )}
+                            </div>
+
+                            <div className="space-y-1.5 flex-1 min-w-0">
+                              <h4 className="font-display font-black text-xl sm:text-2xl text-[#111111] leading-tight break-words">
+                                {guest.name}
+                              </h4>
+                              <p className="font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] uppercase tracking-wide break-words">
+                                {guest.designation}
+                              </p>
+                              <p className="font-sans text-sm text-[#111111]/90 font-bold break-words">
+                                {guest.organisation}
+                              </p>
+                              {guest.topic && (
+                                <p className="text-xs sm:text-sm font-sans text-[#111111]/85 italic pt-2 border-t border-[#111111]/15 mt-2 break-words">
+                                  <span className="font-bold not-italic font-mono text-[11px] uppercase tracking-wider text-[#111111] block mb-0.5">
+                                    Topic
+                                  </span>
+                                  "{guest.topic}"
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <p className="font-mono text-xs sm:text-sm font-bold text-[#111111]/75">
+                  More guests will be announced soon.
+                </p>
+              </div>
+            );
+          })()}
+
+          {Boolean((CONFIG.contactEmail || CONFIG.contact?.email)?.trim()) && (
+            <div className="pt-4 border-t-2 border-[#111111]">
+              <a
+                href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()}?subject=Speaking%20Inquiry%20-%20Startup%20Conclave%201.0`}
+                className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
+              >
+                <span>Interested in speaking? Contact us</span>
+                <span aria-hidden="true">→</span>
+              </a>
+            </div>
+          )}
+        </section>
+
+        {/* =================================================================== */}
+        {/* 8. PARTNERS (06) — 1-LINE INTRO                                     */}
+        {/* =================================================================== */}
+        {/* =================================================================== */}
+        {/* 8. FOR PARTNERS (06)                                                */}
+        {/* =================================================================== */}
+        <section id="partners" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-12">
+
+          {/* Header & Intro */}
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+                {CONFIG.partners.sectionNum}
+              </span>
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+                Partnerships
+              </span>
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
+                {CONFIG.partners.badge}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+              <div className="max-w-3xl space-y-3">
+                <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
+                  {CONFIG.partners.headline}
+                </h2>
+                <p className="font-display text-lg sm:text-xl text-[#FF6B1A] font-extrabold">
+                  {CONFIG.partners.tagline}
+                </p>
+                <p className="text-base font-sans text-[#111111]/85 font-medium leading-relaxed">
+                  {CONFIG.partners.subline}
+                </p>
+              </div>
+
+              <button
+                onClick={(e) => {
+                  setPartnerFormStartTime(Date.now());
+                  setPartnerHoneypot('');
+                  setPartnerError('');
+                  handleOpenPartnerModal(e);
+                }}
+                className="brutal-btn bg-[#FFD400] text-[#111111] px-6 py-3.5 font-display font-extrabold text-base uppercase tracking-wider rounded-[2px] cursor-pointer shrink-0 min-h-[46px] self-start sm:self-auto"
+              >
+                Become a Partner →
               </button>
             </div>
           </div>
 
-          {/* Right Column (5 cols): Custom Vector Illustration */}
-          <div className="lg:col-span-5 w-full mt-4 lg:mt-0">
-            <HeroVectorIllustration />
-          </div>
-
-        </div>
-      </section>
-
-      {/* ORGANISED BY strip: college units only (confirmed) */}
-      {CONFIG.organisers.some((o) => o.confirmed) && (
-        <section aria-label="Organised by" className="px-4 sm:px-8 pb-10 max-w-6xl mx-auto">
-          <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70 mb-3">
-            Organised by
-          </div>
-          <div className="flex flex-wrap items-stretch gap-3 sm:gap-4">
-            {CONFIG.organisers
-              .filter((o) => o.confirmed)
-              .map((o) => (
-                <LogoTile key={o.name} item={o} />
-              ))}
-          </div>
-        </section>
-      )}
-      {/* Marquee Ticker Strip directly under hero */}
-      <div className="w-full bg-[#111111] text-[#FFD400] border-y-2 border-[#111111] py-3.5 overflow-hidden font-display font-black text-sm sm:text-base tracking-widest uppercase select-none">
-        <div className="animate-marquee whitespace-nowrap">
-          <span>{CONFIG.event.marqueeText.repeat(10)}</span>
-        </div>
-      </div>
-
-      {/* Targets Strip — only renders if CONFIG.stats has values */}
-      {Boolean(CONFIG.stats && CONFIG.stats.length > 0) && (
-        <section className="bg-[#FFF8EC] border-b-2 border-[#111111] px-4 sm:px-8 py-10">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-                Targets
-              </span>
-              <span className="font-mono text-xs text-[#111111]/70">
-                Event goals &amp; benchmarks
+          {/* 1. WHY PARTNER WITH US: 6 benefit cards (one line each, benefit-only wording) */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
+              <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
+                Why Partner With Us
+              </h3>
+              <span className="font-mono text-xs text-[#111111]/70 font-bold">
+                6 Core Advantages
               </span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {CONFIG.stats.map((st, sIdx) => (
-                <div key={sIdx} className="p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111]">
-                  <div className="font-display font-black text-2xl sm:text-4xl text-[#FF6B1A]">
-                    {st.value}
-                  </div>
-                  <div className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] mt-1">
-                    {st.label}
-                  </div>
-                  {st.subtext && (
-                    <div className="text-xs text-[#111111]/70 font-sans mt-0.5">
-                      {st.subtext}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {CONFIG.partners.whyPartner.map((benefit) => (
+                <div
+                  key={benefit.title}
+                  className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-2 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="font-mono text-[11px] font-bold text-[#FF6B1A] uppercase tracking-wider mb-1">
+                      Partner Advantage
                     </div>
+                    <h4 className="font-display font-black text-lg text-[#111111]">
+                      {benefit.title}
+                    </h4>
+                    <p className="text-sm font-sans text-[#111111]/80 leading-relaxed font-medium mt-1">
+                      {benefit.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 2. WHAT WE ARE LOOKING FOR: Sponsorship block */}
+          {(() => {
+            const confirmedNeeds = (CONFIG.sponsorNeeds || []).filter((n) => n.confirmed);
+            const sponsorContactEmail = (CONFIG.sponsorContactEmail || '').trim();
+            const hasSponsorDeck = Boolean(
+              CONFIG.sponsorDeckUrl && CONFIG.sponsorDeckUrl.startsWith('https://')
+            );
+
+            return (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
+                  <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
+                    What we are looking for
+                  </h3>
+                  <span className="font-mono text-xs text-[#111111]/70 font-bold">
+                    Sponsorship Needs
+                  </span>
+                </div>
+
+                {confirmedNeeds.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {confirmedNeeds.map((need, idx) => (
+                      <div
+                        key={`${need.title}-${idx}`}
+                        className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-3"
+                      >
+                        <div className="space-y-2">
+                          <h4 className="font-display font-black text-lg text-[#111111]">
+                            {need.title}
+                          </h4>
+                          <p className="text-sm font-sans text-[#111111]/85 leading-relaxed font-medium">
+                            {need.description}
+                          </p>
+                        </div>
+                        {Boolean(need.amount && need.amount.trim()) && (
+                          <div className="pt-2 border-t border-[#111111]/20">
+                            <span className="font-mono text-xs sm:text-sm font-black text-[#FF6B1A]">
+                              {need.amount?.trim()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="font-mono text-xs uppercase tracking-wider text-[#111111]/70 font-bold">
+                      Ways to partner
+                    </p>
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
+                      {[
+                        'Cash sponsorship',
+                        'Technology credits',
+                        'Food & beverage',
+                        'Merchandise',
+                        'Media partnership',
+                        'Travel & hospitality',
+                        'Other',
+                      ].map((chip) => (
+                        <span
+                          key={chip}
+                          className="px-3.5 py-2 bg-white brutal-border shadow-[2px_2px_0px_#111111] font-mono text-xs sm:text-sm font-bold text-[#111111]"
+                        >
+                          {chip}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons & Contact */}
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const formEl = document.getElementById('partner-form');
+                      if (formEl) {
+                        formEl.scrollIntoView({ behavior: 'smooth' });
+                      }
+                      setPartnerFormStartTime(Date.now());
+                      setPartnerHoneypot('');
+                      setPartnerError('');
+                      handleOpenPartnerModal(e);
+                    }}
+                    className="brutal-btn bg-[#FFD400] text-[#111111] px-5 py-2.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px]"
+                  >
+                    Become a partner
+                  </button>
+
+                  {hasSponsorDeck && (
+                    <a
+                      href={CONFIG.sponsorDeckUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-5 py-2.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px] inline-flex items-center gap-1.5"
+                    >
+                      <span>Download sponsorship deck</span>
+                      <span aria-hidden="true">↓</span>
+                    </a>
+                  )}
+
+                  {Boolean(sponsorContactEmail) && (
+                    <a
+                      href={`mailto:${sponsorContactEmail}?subject=Sponsorship%20Inquiry%20-%20Startup%20Conclave%201.0`}
+                      className="inline-flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline transition-colors min-h-[44px] px-2"
+                    >
+                      <span>{sponsorContactEmail}</span>
+                      <span aria-hidden="true">↗</span>
+                    </a>
                   )}
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+              </div>
+            );
+          })()}
 
-      {/* =================================================================== */}
-      {/* 3. ABOUT (01) — 1-LINE INTRO                                        */}
-      {/* =================================================================== */}
-      <section id="about" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
-        
-        {/* Section Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-            {CONFIG.about.sectionNum}
-          </span>
-          <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-            About The Conclave
-          </span>
-        </div>
-
-        <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.05] text-[#111111] max-w-4xl">
-          {CONFIG.about.headline}
-        </h2>
-
-        {/* 1-Line Intro */}
-        <p className="mt-4 text-base sm:text-lg text-[#111111]/85 font-sans font-medium max-w-3xl">
-          {CONFIG.about.introText}
-        </p>
-
-        {/* Four Pillars as 1 Line Each */}
-        <div className="mt-8 space-y-3 font-sans">
-          {CONFIG.about.pillars.map((pillar) => (
-            <div
-              key={pillar.tag}
-              className="p-4 sm:p-5 bg-white brutal-border brutal-shadow-sm flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 hover:bg-[#FFF2D6] transition-colors"
-            >
-              <span className="font-mono font-black text-sm sm:text-base px-3.5 py-1 bg-[#111111] text-[#FFD400] border border-[#111111] shrink-0 self-start sm:self-center tracking-widest">
-                {pillar.tag}
-              </span>
-              <p className="text-base font-semibold text-[#111111]">
-                {pillar.desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* =================================================================== */}
-      {/* 4. WHAT'S INSIDE (02) — 3-4 WORDS PER ITEM                         */}
-      {/* =================================================================== */}
-      <section id="inside" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
-        
-        {/* Section Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-            {CONFIG.whatsInside.sectionNum}
-          </span>
-          <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-            Program Formats
-          </span>
-        </div>
-
-        <h2 className="font-display font-black text-2xl sm:text-4xl lg:text-5xl tracking-tight text-[#111111]">
-          {CONFIG.whatsInside.headline}
-        </h2>
-        
-        {/* 1-Line Intro */}
-        <p className="mt-2 text-base text-[#111111]/80 font-sans font-medium">
-          {CONFIG.whatsInside.introText}
-        </p>
-
-        {/* Compact Grid of Formats (3-4 words each) */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 font-sans">
-          {CONFIG.whatsInside.items.map((item, idx) => (
-            <div
-              key={item.title}
-              className="p-4 bg-white brutal-border brutal-shadow-sm flex items-start gap-3.5 hover:translate-x-0.5 transition-transform"
-            >
-              <span className="font-mono text-sm font-black text-[#FF6B1A] shrink-0 mt-0.5">
-                {(idx + 1).toString().padStart(2, '0')}
-              </span>
-              <div>
-                <h3 className="font-display font-bold text-base sm:text-lg text-[#111111]">
-                  {item.title}
+          {/* 2. PARTNERSHIP OPTIONS: Title / Innovation / Gold / Supporting (hidden if empty) */}
+          {Boolean(CONFIG.partnerTiers && CONFIG.partnerTiers.length > 0) && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
+                <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
+                  Partnership Options
                 </h3>
-                <p className="text-sm text-[#111111]/85 mt-0.5 font-medium">
-                  {item.note}
-                </p>
+                <span className="font-mono text-xs text-[#111111]/70 font-bold">
+                  Tailored Engagement Tiers
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {CONFIG.partnerTiers.map((tier) => (
+                  <div
+                    key={tier.id}
+                    className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-3">
+                      <div className="inline-block bg-[#FFD400] text-[#111111] font-mono font-bold text-xs px-2.5 py-0.5 border border-[#111111] uppercase tracking-wider">
+                        {tier.name}
+                      </div>
+
+                      <div className="p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-mono">
+                        <span className="text-[#111111]/80 block text-[10px] uppercase font-bold tracking-wider">
+                          Commitment
+                        </span>
+                        <span className="text-xs sm:text-sm font-black text-[#111111]">
+                          {tier.price && tier.price.trim() ? tier.price.trim() : 'Contact us for details'}
+                        </span>
+                      </div>
+
+                      <ul className="space-y-2 text-xs font-sans text-[#111111]/85 pt-2 border-t border-[#111111]/20">
+                        {tier.benefits.map((b, bIdx) => (
+                          <li key={bIdx} className="flex items-start gap-1.5 font-medium leading-relaxed">
+                            <span className="text-[#FF6B1A] font-bold shrink-0">■</span>
+                            <span>{b}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="pt-3 border-t-2 border-[#111111]">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          setPartnerData((prev) => ({
+                            ...prev,
+                            message: prev.message || `Inquiring about ${tier.name} tier.`,
+                          }));
+                          setPartnerFormStartTime(Date.now());
+                          setPartnerHoneypot('');
+                          setPartnerError('');
+                          handleOpenPartnerModal(e);
+                        }}
+                        className="w-full brutal-btn bg-[#111111] hover:bg-[#FF6B1A] text-white hover:text-[#111111] py-2 px-3 font-display font-bold text-xs uppercase tracking-wider text-center cursor-pointer min-h-[40px]"
+                      >
+                        Enquire for {tier.name.split(' ')[0]} →
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+          )}
 
-      {/* =================================================================== */}
-      {/* 5. SCHEDULE (03) — ONLY SESSION TITLES, NO TIMES, NO DESCRIPTIONS   */}
-      {/* =================================================================== */}
-      <section id="schedule" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111]">
-        
-        {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-              {CONFIG.schedule.sectionNum}
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-              Schedule
-            </span>
-          </div>
-
-          {/* Day Tabs */}
-          <div className="flex items-center gap-2 font-mono text-xs font-bold">
-            <button
-              onClick={() => setActiveDay(1)}
-              className={`px-4 py-2 brutal-border cursor-pointer transition-all min-h-[44px] flex items-center ${
-                activeDay === 1
-                  ? 'bg-[#111111] text-[#FFD400] brutal-shadow-sm'
-                  : 'bg-white text-[#111111]'
-              }`}
-            >
-              DAY 01
-            </button>
-            <button
-              onClick={() => setActiveDay(2)}
-              className={`px-4 py-2 brutal-border cursor-pointer transition-all min-h-[44px] flex items-center ${
-                activeDay === 2
-                  ? 'bg-[#111111] text-[#FFD400] brutal-shadow-sm'
-                  : 'bg-white text-[#111111]'
-              }`}
-            >
-              DAY 02
-            </button>
-          </div>
-        </div>
-
-        <h2 className="font-display font-extrabold text-2xl sm:text-4xl lg:text-5xl tracking-tight text-[#111111]">
-          {CONFIG.schedule.headline}
-        </h2>
-        
-        {/* 1-Line Intro Note */}
-        <p className="mt-2 text-sm font-mono text-[#FF6B1A] font-bold">
-          {CONFIG.schedule.note}
-        </p>
-
-        {/* Schedule Display: ONLY TITLES */}
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          {/* Day 1 Column */}
-          <div
-            className={`p-6 sm:p-8 bg-white brutal-border brutal-shadow space-y-4 ${
-              activeDay === 1 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
-            }`}
-          >
-            <div className="border-b-2 border-[#111111] pb-3">
-              <span className="font-mono text-xs font-black text-[#FF6B1A] uppercase tracking-wider block">
-                DAY ONE
-              </span>
-              <h3 className="font-display font-extrabold text-xl sm:text-2xl text-[#111111]">
-                {CONFIG.schedule.day1.title}
-              </h3>
+          {/* SUPPORTED BY: renders only for supporters with written confirmation */}
+          {CONFIG.supporters.some((s) => s.confirmed) && (
+            <div className="p-6 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
+              <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70">
+                Supported by
+              </div>
+              <div className="flex flex-wrap items-stretch gap-3 sm:gap-4">
+                {CONFIG.supporters
+                  .filter((s) => s.confirmed)
+                  .map((s) => (
+                    <LogoTile key={s.name} item={s} />
+                  ))}
+              </div>
             </div>
+          )}
 
-            {/* ONLY SESSION TITLES */}
-            <ul className="space-y-3.5 font-sans text-sm sm:text-base">
-              {CONFIG.schedule.day1.bullets.map((bullet, idx) => (
-                <li key={idx} className="flex items-center gap-3">
-                  <span className="w-2.5 h-2.5 bg-[#FF6B1A] border-2 border-[#111111] shrink-0" />
-                  <span className="font-bold text-[#111111]">{bullet}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        </section>
 
-          {/* Day 2 Column */}
-          <div
-            className={`p-6 sm:p-8 bg-white brutal-border brutal-shadow space-y-4 ${
-              activeDay === 2 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
-            }`}
-          >
-            <div className="border-b-2 border-[#111111] pb-3">
-              <span className="font-mono text-xs font-black text-[#FF6B1A] uppercase tracking-wider block">
-                DAY TWO
-              </span>
-              <h3 className="font-display font-extrabold text-xl sm:text-2xl text-[#111111]">
-                {CONFIG.schedule.day2.title}
-              </h3>
-            </div>
-
-            {/* ONLY SESSION TITLES */}
-            <ul className="space-y-3.5 font-sans text-sm sm:text-base">
-              {CONFIG.schedule.day2.bullets.map((bullet, idx) => (
-                <li key={idx} className="flex items-center gap-3">
-                  <span className="w-2.5 h-2.5 bg-[#FFD400] border-2 border-[#111111] shrink-0" />
-                  <span className="font-bold text-[#111111]">{bullet}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-        </div>
-      </section>
-
-      {/* =================================================================== */}
-      {/* 6. PITCH ARENA (04) — 1-LINE INTRO                                  */}
-      {/* =================================================================== */}
-      <section id="pitch" className="bg-[#FF6B1A] text-[#111111] border-b-2 border-[#111111] py-16 sm:py-24 px-4 sm:px-8">
-        <div className="max-w-6xl mx-auto text-left space-y-7">
-          
-          {/* Header */}
-          <div className="flex items-center gap-3">
-            <span className="font-mono font-black text-2xl sm:text-3xl text-[#111111] bg-[#FFD400] px-2.5 py-0.5 border-2 border-[#111111]">
-              {CONFIG.pitchArena.sectionNum}
-            </span>
-            <span className="font-mono text-xs font-black uppercase tracking-wider bg-white text-[#111111] px-2.5 py-1 border-2 border-[#111111] -rotate-1">
-              Live Stage Pitch
-            </span>
-          </div>
-
-          <div className="space-y-2 max-w-3xl">
-            <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
-              {CONFIG.pitchArena.headline}
-            </h2>
-            <p className="font-display text-xl sm:text-2xl text-[#111111] font-extrabold">
-              {CONFIG.pitchArena.tagline}
-            </p>
-            {/* 1-Line Intro */}
-            <p className="text-base font-sans text-[#111111] font-medium leading-relaxed">
-              {CONFIG.pitchArena.description}
-            </p>
-          </div>
-
-          {/* Process in One Row */}
-          <div className="p-4 sm:p-6 bg-white brutal-border brutal-shadow">
-            <span className="text-xs font-mono font-black uppercase text-[#111111] tracking-wider block mb-3">
-              Competition Flow
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 font-sans">
-              {CONFIG.pitchArena.process.map((p, idx) => (
-                <div key={p.step} className="p-3 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-black text-[#FF6B1A]">{p.step}</span>
-                    {idx < 4 && <span className="font-mono text-xs text-[#111111]/70 hidden sm:inline">→</span>}
-                  </div>
-                  <div className="font-display font-black text-base text-[#111111]">{p.label}</div>
-                  <div className="text-xs text-[#111111]/70">{p.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* What Startups Get */}
-          <div className="p-4 sm:p-6 bg-white brutal-border brutal-shadow space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-black uppercase text-[#111111] tracking-wider block">
-                What Startups Get
-              </span>
-              <span className="font-mono text-[11px] font-bold text-[#FF6B1A] uppercase">
-                Stage Privileges
-              </span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-sans">
-              {CONFIG.pitchArena.whatStartupsGet.map((perk) => (
-                <div key={perk.title} className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
-                  <div className="font-display font-black text-base text-[#111111]">
-                    {perk.title}
-                  </div>
-                  <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
-                    {perk.desc}
-                  </div>
-                </div>
-              ))}
-              {CONFIG.pitchArena.juryConfirmed && (
-                <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
-                  <div className="font-display font-black text-base text-[#111111]">
-                    Jury Evaluation
-                  </div>
-                  <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
-                    Direct live scoring and review by confirmed industry jury members.
-                  </div>
-                </div>
-              )}
-              {CONFIG.pitchArena.investorsConfirmed && (
-                <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
-                  <div className="font-display font-black text-base text-[#111111]">
-                    Investor Access
-                  </div>
-                  <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
-                    Direct interaction opportunities with confirmed institutional investors and angels.
-                  </div>
-                </div>
-              )}
-              {CONFIG.pitchArena.awardsConfirmed && (
-                <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
-                  <div className="font-display font-black text-base text-[#111111]">
-                    Awards &amp; Recognition
-                  </div>
-                  <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
-                    Conclave trophies, official certificates, and stage recognition for winning teams.
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Key Facts & Action */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pt-1">
-            <div className="flex flex-wrap items-center gap-3 font-mono text-xs sm:text-sm font-bold text-[#111111]">
-              {CONFIG.pitchArena.facts.map((fact) => (
-                <span key={fact.label} className="bg-white px-3.5 py-1.5 border-2 border-[#111111] shadow-[2px_2px_0px_#111111]">
-                  <strong>{fact.label}:</strong> {fact.value}
-                </span>
-              ))}
-            </div>
-
-            <button
-              onClick={() => {
-                setWantsToPitch(true);
-                handleNavClick('register');
-              }}
-              className="brutal-btn bg-[#FFD400] text-[#111111] px-6 py-3.5 font-display font-extrabold text-base uppercase tracking-wider rounded-[2px] cursor-pointer self-start sm:self-auto shrink-0 min-h-[46px]"
-            >
-              Apply to Pitch →
-            </button>
-          </div>
-
-        </div>
-      </section>
-
-      {/* =================================================================== */}
-      {/* 7. GUESTS (05)                                                      */}
-      {/* =================================================================== */}
-      <section id="guests" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-10">
-        
-        {/* Section Header */}
-        <div>
-          <div className="flex items-center gap-3 mb-6">
-            <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-              05
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-              Guests
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl text-[#111111] leading-tight tracking-tight">
-              Who you'll hear from
-            </h2>
-          </div>
-        </div>
-
+        {/* =================================================================== */}
+        {/* 8. BEHIND THE EVENT (LEADERSHIP & SECRETARIAT) (id="team")          */}
+        {/* =================================================================== */}
         {(() => {
-          const confirmedGuests = (CONFIG.guests || []).filter((g) => g.confirmed);
-          if (confirmedGuests.length === 0) return null;
+          const facultyList: TeamMember[] =
+            CONFIG.team?.faculty && CONFIG.team.faculty.length > 0
+              ? CONFIG.team.faculty
+              : CONFIG.faculty || [];
+          const studentsList: TeamMember[] =
+            CONFIG.team?.students && CONFIG.team.students.length > 0
+              ? CONFIG.team.students
+              : CONFIG.students || [];
 
-          // Order of guest types: chief-guest, speaker, jury, investor, mentor
-          const guestTypeGroups: { type: Guest['type']; label: string }[] = [
-            { type: 'chief-guest', label: 'Chief guests' },
-            { type: 'speaker', label: 'Speakers' },
-            { type: 'jury', label: 'Jury' },
-            { type: 'investor', label: 'Investors' },
-            { type: 'mentor', label: 'Mentors' },
-          ];
+          const isValidMember = (m: TeamMember): boolean => {
+            return Boolean(m && m.confirmed === true && typeof m.name === 'string' && m.name.trim() !== '');
+          };
 
-          const getInitials = (name: string): string => {
+          const cleanMemberRoles = (m: TeamMember): TeamMember => ({
+            ...m,
+            name: m.name.trim(),
+            roles: Array.isArray(m.roles)
+              ? m.roles
+                .map((r) => (typeof r === 'string' ? r.trim() : ''))
+                .filter((r) => r !== '')
+              : [],
+          });
+
+          const confirmedFaculty = facultyList.filter(isValidMember).map(cleanMemberRoles);
+          const confirmedStudents = studentsList.filter(isValidMember).map(cleanMemberRoles);
+          const coreStudents = confirmedStudents.filter((m) => m.tier === 'core');
+          const leadStudents = confirmedStudents.filter((m) => m.tier === 'lead');
+
+          const hasFacultyConfirmed = confirmedFaculty.length > 0;
+          const hasStudentsConfirmed = confirmedStudents.length > 0;
+
+          // Rendered only while at least one group is showing placeholders
+          const showPlaceholdersNote = !hasFacultyConfirmed || !hasStudentsConfirmed;
+
+          const getMemberInitials = (name: string): string => {
             if (!name || !name.trim()) return '?';
-            // Strip suffixes after comma (e.g. ", IAS")
             const withoutSuffix = name.split(',')[0].trim();
-            // Ignore honorifics (Mr., Mrs., Ms., Dr., Prof., Sh.)
             const withoutHonorific = withoutSuffix
               .replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Sh\.|Mr|Mrs|Ms|Dr|Prof|Sh)\s+/i, '')
               .trim();
@@ -2377,2259 +2806,1758 @@ export const SinglePage: React.FC = () => {
             return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
           };
 
+          const getCleanLinkedInUrl = (url?: string): string | undefined => {
+            if (!url || typeof url !== 'string') return undefined;
+            const trimmed = url.trim();
+            if (!trimmed.startsWith('https://www.linkedin.com/')) return undefined;
+            try {
+              const parsed = new URL(trimmed);
+              return `${parsed.origin}${parsed.pathname}`;
+            } catch {
+              return trimmed.split('?')[0].split('#')[0];
+            }
+          };
+
+          const volunteerUrl = (CONFIG.volunteerFormUrl || (CONFIG.team as any)?.volunteerFormUrl || '').trim();
+
           return (
-            <div className="space-y-12">
-              {guestTypeGroups.map((group) => {
-                const groupGuests = confirmedGuests.filter((g) => g.type === group.type);
-                if (groupGuests.length === 0) return null;
+            <section
+              id="team"
+              className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-12 scroll-mt-16"
+            >
+              <span id="behind" className="sr-only" aria-hidden="true" />
 
-                return (
-                  <div key={group.type} className="space-y-6">
-                    <div className="flex items-center gap-3 border-b-2 border-[#111111] pb-3">
-                      <span className="w-3 h-3 bg-[#FF6B1A] border border-[#111111] inline-block" />
-                      <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-wide">
-                        {group.label}
-                      </h3>
-                      <span className="font-mono text-xs font-bold text-[#111111]/70">
-                        ({groupGuests.length})
-                      </span>
-                    </div>
+              {/* Header & Sub-note */}
+              <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+                    Organising Body
+                  </span>
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
+                    Secretariat
+                  </span>
+                </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {groupGuests.map((guest, idx) => (
-                        <div
-                          key={`${guest.name}-${idx}`}
-                          className="p-5 sm:p-6 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            {guest.photo ? (
-                              <img
-                                src={guest.photo}
-                                loading="lazy"
-                                width={80}
-                                height={80}
-                                alt={`${guest.name}, ${guest.organisation}`}
-                                className="w-16 h-16 sm:w-20 sm:h-20 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 bg-[#FFF8EC]"
-                              />
-                            ) : (
-                              <div
-                                className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center font-display font-black text-xl sm:text-2xl text-[#111111] shrink-0 select-none"
-                                aria-label={guest.name}
-                              >
-                                {getInitials(guest.name)}
-                              </div>
-                            )}
+                <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
+                  Behind the event
+                </h2>
 
-                            {guest.linkedin && guest.linkedin.startsWith('https://') && (
+                {showPlaceholdersNote && (
+                  <p className="font-mono text-sm sm:text-base font-bold text-[#111111]/80 mt-3">
+                    Faculty and student leadership will be announced soon.
+                  </p>
+                )}
+              </div>
+
+              {/* 1. STUDENT LEADERSHIP */}
+              <div className="space-y-6 sm:space-y-8">
+                <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
+                  <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
+                    Student Leadership
+                  </h3>
+                  <span className="font-mono text-xs text-[#111111]/70 font-bold">
+                    Organising Secretariat &amp; Execution
+                  </span>
+                </div>
+
+                {/* CORE TEAM: large cards (1 col at 360px, 2 col >= 400px, 4 col desktop) */}
+                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                  {coreStudents.map((member, idx) => {
+                    const photoUrl = getTeamMemberPhoto(member.name, member.photo);
+                    const cleanLinkedIn = getCleanLinkedInUrl(member.linkedin);
+
+                    return (
+                      <div
+                        key={`core-${member.name}-${idx}`}
+                        className="p-5 sm:p-6 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
+                      >
+                        <div className="space-y-4">
+                          {photoUrl ? (
+                            <img
+                              src={photoUrl}
+                              loading="lazy"
+                              width={320}
+                              height={320}
+                              alt={`${member.name}, ${member.roles.join(', ')}`}
+                              className="w-full aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
+                            />
+                          ) : (
+                            <div
+                              className="w-full aspect-square bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0 select-none"
+                              aria-label={member.name}
+                            >
+                              <span className="font-display font-black text-3xl sm:text-4xl text-[#111111]">
+                                {getMemberInitials(member.name)}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="font-display font-black text-lg sm:text-xl text-[#111111] leading-tight break-words">
+                              {member.name}
+                            </h4>
+                            {cleanLinkedIn && (
                               <a
-                                href={guest.linkedin}
+                                href={cleanLinkedIn}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                aria-label={`${guest.name} on LinkedIn`}
-                                className="inline-flex items-center justify-center w-11 h-11 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0 min-h-[44px] min-w-[44px]"
+                                aria-label={`${member.name} on LinkedIn`}
+                                className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0"
                               >
-                                <Linkedin className="w-5 h-5 text-[#111111]" />
+                                <Linkedin className="w-4 h-4 text-[#111111]" />
                               </a>
                             )}
                           </div>
-
-                          <div className="space-y-1.5 flex-1 min-w-0">
-                            <h4 className="font-display font-black text-xl sm:text-2xl text-[#111111] leading-tight break-words">
-                              {guest.name}
-                            </h4>
-                            <p className="font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] uppercase tracking-wide break-words">
-                              {guest.designation}
-                            </p>
-                            <p className="font-sans text-sm text-[#111111]/90 font-bold break-words">
-                              {guest.organisation}
-                            </p>
-                            {guest.topic && (
-                              <p className="text-xs sm:text-sm font-sans text-[#111111]/85 italic pt-2 border-t border-[#111111]/15 mt-2 break-words">
-                                <span className="font-bold not-italic font-mono text-[11px] uppercase tracking-wider text-[#111111] block mb-0.5">
-                                  Topic
-                                </span>
-                                "{guest.topic}"
-                              </p>
-                            )}
-                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
 
-              <p className="font-mono text-xs sm:text-sm font-bold text-[#111111]/75">
-                More guests will be announced soon.
-              </p>
-            </div>
-          );
-        })()}
-
-        {Boolean((CONFIG.contactEmail || CONFIG.contact?.email)?.trim()) && (
-          <div className="pt-4 border-t-2 border-[#111111]">
-            <a
-              href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()}?subject=Speaking%20Inquiry%20-%20Startup%20Conclave%201.0`}
-              className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
-            >
-              <span>Interested in speaking? Contact us</span>
-              <span aria-hidden="true">→</span>
-            </a>
-          </div>
-        )}
-      </section>
-
-      {/* =================================================================== */}
-      {/* 8. PARTNERS (06) — 1-LINE INTRO                                     */}
-      {/* =================================================================== */}
-      {/* =================================================================== */}
-      {/* 8. FOR PARTNERS (06)                                                */}
-      {/* =================================================================== */}
-      <section id="partners" className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-12">
-        
-        {/* Header & Intro */}
-        <div>
-          <div className="flex items-center gap-3 mb-6">
-            <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-              {CONFIG.partners.sectionNum}
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-              Partnerships
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
-              {CONFIG.partners.badge}
-            </span>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-            <div className="max-w-3xl space-y-3">
-              <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
-                {CONFIG.partners.headline}
-              </h2>
-              <p className="font-display text-lg sm:text-xl text-[#FF6B1A] font-extrabold">
-                {CONFIG.partners.tagline}
-              </p>
-              <p className="text-base font-sans text-[#111111]/85 font-medium leading-relaxed">
-                {CONFIG.partners.subline}
-              </p>
-            </div>
-
-            <button
-              onClick={(e) => {
-                setPartnerFormStartTime(Date.now());
-                setPartnerHoneypot('');
-                setPartnerError('');
-                handleOpenPartnerModal(e);
-              }}
-              className="brutal-btn bg-[#FFD400] text-[#111111] px-6 py-3.5 font-display font-extrabold text-base uppercase tracking-wider rounded-[2px] cursor-pointer shrink-0 min-h-[46px] self-start sm:self-auto"
-            >
-              Become a Partner →
-            </button>
-          </div>
-        </div>
-
-        {/* 1. WHY PARTNER WITH US: 6 benefit cards (one line each, benefit-only wording) */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
-            <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
-              Why Partner With Us
-            </h3>
-            <span className="font-mono text-xs text-[#111111]/70 font-bold">
-              6 Core Advantages
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {CONFIG.partners.whyPartner.map((benefit) => (
-              <div
-                key={benefit.title}
-                className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-2 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="font-mono text-[11px] font-bold text-[#FF6B1A] uppercase tracking-wider mb-1">
-                    Partner Advantage
-                  </div>
-                  <h4 className="font-display font-black text-lg text-[#111111]">
-                    {benefit.title}
-                  </h4>
-                  <p className="text-sm font-sans text-[#111111]/80 leading-relaxed font-medium mt-1">
-                    {benefit.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 2. WHAT WE ARE LOOKING FOR: Sponsorship block */}
-        {(() => {
-          const confirmedNeeds = (CONFIG.sponsorNeeds || []).filter((n) => n.confirmed);
-          const sponsorContactEmail = (CONFIG.sponsorContactEmail || '').trim();
-          const hasSponsorDeck = Boolean(
-            CONFIG.sponsorDeckUrl && CONFIG.sponsorDeckUrl.startsWith('https://')
-          );
-
-          return (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
-                <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
-                  What we are looking for
-                </h3>
-                <span className="font-mono text-xs text-[#111111]/70 font-bold">
-                  Sponsorship Needs
-                </span>
-              </div>
-
-              {confirmedNeeds.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {confirmedNeeds.map((need, idx) => (
-                    <div
-                      key={`${need.title}-${idx}`}
-                      className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-3"
-                    >
-                      <div className="space-y-2">
-                        <h4 className="font-display font-black text-lg text-[#111111]">
-                          {need.title}
-                        </h4>
-                        <p className="text-sm font-sans text-[#111111]/85 leading-relaxed font-medium">
-                          {need.description}
-                        </p>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {member.roles.map((r, roleIdx) => (
+                            <span
+                              key={roleIdx}
+                              className="inline-block px-2 py-0.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px] sm:text-xs font-bold text-[#111111] shadow-[1px_1px_0px_#111111] uppercase tracking-wider"
+                              style={{ fontVariant: 'all-small-caps' }}
+                            >
+                              {r}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      {Boolean(need.amount && need.amount.trim()) && (
-                        <div className="pt-2 border-t border-[#111111]/20">
-                          <span className="font-mono text-xs sm:text-sm font-black text-[#FF6B1A]">
-                            {need.amount?.trim()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="font-mono text-xs uppercase tracking-wider text-[#111111]/70 font-bold">
-                    Ways to partner
-                  </p>
-                  <div className="flex flex-wrap gap-2 sm:gap-3">
-                    {[
-                      'Cash sponsorship',
-                      'Technology credits',
-                      'Food & beverage',
-                      'Merchandise',
-                      'Media partnership',
-                      'Travel & hospitality',
-                      'Other',
-                    ].map((chip) => (
-                      <span
-                        key={chip}
-                        className="px-3.5 py-2 bg-white brutal-border shadow-[2px_2px_0px_#111111] font-mono text-xs sm:text-sm font-bold text-[#111111]"
-                      >
-                        {chip}
+
+                {/* DEPARTMENT LEADS: smaller cards (2 col mobile, 4 col desktop) */}
+                {leadStudents.length > 0 && (
+                  <div className="pt-6 sm:pt-8 space-y-4">
+                    <div className="flex items-center gap-3 border-b-2 border-[#111111] pb-2">
+                      <span className="w-2.5 h-2.5 bg-[#FF6B1A] border border-[#111111] inline-block" />
+                      <h4 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-wide">
+                        Department leads
+                      </h4>
+                      <span className="font-mono text-xs font-bold text-[#111111]/70">
+                        ({leadStudents.length})
                       </span>
-                    ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+                      {leadStudents.map((member, idx) => {
+                        const photoUrl = getTeamMemberPhoto(member.name, member.photo);
+                        const cleanLinkedIn = getCleanLinkedInUrl(member.linkedin);
+
+                        return (
+                          <div
+                            key={`lead-${member.name}-${idx}`}
+                            className="p-3.5 sm:p-5 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-3 text-left transition-transform hover:-translate-y-0.5 min-w-0"
+                          >
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between gap-2">
+                                {photoUrl ? (
+                                  <img
+                                    src={photoUrl}
+                                    loading="lazy"
+                                    width={160}
+                                    height={160}
+                                    alt={`${member.name}, ${member.roles.join(', ')}`}
+                                    className="w-16 h-16 sm:w-20 sm:h-20 aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
+                                  />
+                                ) : (
+                                  <div
+                                    className="w-16 h-16 sm:w-20 sm:h-20 aspect-square bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0 select-none"
+                                    aria-label={member.name}
+                                  >
+                                    <span className="font-display font-black text-xl sm:text-2xl text-[#111111]">
+                                      {getMemberInitials(member.name)}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {cleanLinkedIn && (
+                                  <a
+                                    href={cleanLinkedIn}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label={`${member.name} on LinkedIn`}
+                                    className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0"
+                                  >
+                                    <Linkedin className="w-3.5 h-3.5 text-[#111111]" />
+                                  </a>
+                                )}
+                              </div>
+
+                              <div>
+                                <h5 className="font-display font-black text-base sm:text-lg text-[#111111] leading-tight break-words">
+                                  {member.name}
+                                </h5>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {member.roles.map((r, roleIdx) => (
+                                <span
+                                  key={roleIdx}
+                                  className="inline-block px-1.5 py-0.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[10px] sm:text-[11px] font-bold text-[#111111] shadow-[1px_1px_0px_#111111] uppercase tracking-wider break-words"
+                                  style={{ fontVariant: 'all-small-caps' }}
+                                >
+                                  {r}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              {/* Action Buttons & Contact */}
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    const formEl = document.getElementById('partner-form');
-                    if (formEl) {
-                      formEl.scrollIntoView({ behavior: 'smooth' });
-                    }
-                    setPartnerFormStartTime(Date.now());
-                    setPartnerHoneypot('');
-                    setPartnerError('');
-                    handleOpenPartnerModal(e);
-                  }}
-                  className="brutal-btn bg-[#FFD400] text-[#111111] px-5 py-2.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px]"
-                >
-                  Become a partner
-                </button>
-
-                {hasSponsorDeck && (
+              {/* "Join the team" note only if CONFIG.volunteerFormUrl is non-empty */}
+              {Boolean(volunteerUrl) && (
+                <div className="pt-2 border-t-2 border-[#111111]">
                   <a
-                    href={CONFIG.sponsorDeckUrl}
+                    href={volunteerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-5 py-2.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px] inline-flex items-center gap-1.5"
+                    className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
                   >
-                    <span>Download sponsorship deck</span>
-                    <span aria-hidden="true">↓</span>
+                    <span>Join the team</span>
+                    <span aria-hidden="true">→</span>
                   </a>
-                )}
+                </div>
+              )}
 
-                {Boolean(sponsorContactEmail) && (
-                  <a
-                    href={`mailto:${sponsorContactEmail}?subject=Sponsorship%20Inquiry%20-%20Startup%20Conclave%201.0`}
-                    className="inline-flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline transition-colors min-h-[44px] px-2"
-                  >
-                    <span>{sponsorContactEmail}</span>
-                    <span aria-hidden="true">↗</span>
-                  </a>
-                )}
-              </div>
-            </div>
+            </section>
           );
         })()}
 
-        {/* 2. PARTNERSHIP OPTIONS: Title / Innovation / Gold / Supporting (hidden if empty) */}
-        {Boolean(CONFIG.partnerTiers && CONFIG.partnerTiers.length > 0) && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
-              <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
-                Partnership Options
-              </h3>
-              <span className="font-mono text-xs text-[#111111]/70 font-bold">
-                Tailored Engagement Tiers
+        {/* =================================================================== */}
+        {/* 9. REGISTRATION (07) — MAIN FORM SECTION (id="register")            */}
+        {/* =================================================================== */}
+        <section id="register" className="px-4 sm:px-8 py-16 sm:py-24 max-w-4xl mx-auto text-left border-b-2 border-[#111111] scroll-mt-16">
+
+          {/* Section Header with live counter if enabled */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
+                07
+              </span>
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+                Registration
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {CONFIG.partnerTiers.map((tier) => (
-                <div
-                  key={tier.id}
-                  className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-3">
-                    <div className="inline-block bg-[#FFD400] text-[#111111] font-mono font-bold text-xs px-2.5 py-0.5 border border-[#111111] uppercase tracking-wider">
-                      {tier.name}
-                    </div>
+            {/* Visible counter if showCount is true */}
+            {showCounter && (
+              <div className="inline-flex items-center gap-2 bg-[#FFD400] border-2 border-[#111111] px-3 py-1 font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111]">
+                <Users className="w-4 h-4 text-[#FF6B1A]" />
+                <span>{registrationCount} students registered</span>
+              </div>
+            )}
+          </div>
 
-                    <div className="p-2.5 bg-[#FFF8EC] border-2 border-[#111111] font-mono">
-                      <span className="text-[#111111]/80 block text-[10px] uppercase font-bold tracking-wider">
-                        Commitment
-                      </span>
-                      <span className="text-xs sm:text-sm font-black text-[#111111]">
-                        {tier.price && tier.price.trim() ? tier.price.trim() : 'Contact us for details'}
-                      </span>
-                    </div>
+          {/* ================================================================= */}
+          {/* CASE A: REGISTRATIONS CLOSED VARIANT                              */}
+          {/* ================================================================= */}
+          {regStatus === 'closed' ? (
+            <div className="p-8 sm:p-14 bg-white brutal-border brutal-shadow-lg text-center space-y-4">
+              <div className="w-12 h-12 bg-[#FFF2D6] border-2 border-[#111111] flex items-center justify-center mx-auto text-[#111111]">
+                <Lock className="w-6 h-6 text-[#FF6B1A]" />
+              </div>
+              <h2 className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+                Registrations Closed
+              </h2>
+              <p className="text-base font-sans text-[#111111]/80 max-w-md mx-auto">
+                Delegate registrations for Startup Conclave 1.0 are currently closed. For inquiries, please reach out to the secretariat.
+              </p>
+              {Boolean((CONFIG.contactEmail || CONFIG.contact?.email)?.trim()) && (
+                <div className="pt-2">
+                  <a
+                    href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()}`}
+                    className="brutal-btn bg-[#FFD400] text-[#111111] px-5 py-3 font-mono text-sm font-bold uppercase inline-block min-h-[46px] flex items-center justify-center mx-auto"
+                  >
+                    Contact Secretariat ({(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()})
+                  </a>
+                </div>
+              )}
+            </div>
+          ) : submittedRecord ? (
+            /* =============================================================== */
+            /* CASE B: SUCCESS CONFIRMATION SCREEN                             */
+            /* =============================================================== */
+            <div className="p-6 sm:p-10 glass space-y-6 text-left animate-brutal-pop">
 
-                    <ul className="space-y-2 text-xs font-sans text-[#111111]/85 pt-2 border-t border-[#111111]/20">
-                      {tier.benefits.map((b, bIdx) => (
-                        <li key={bIdx} className="flex items-start gap-1.5 font-medium leading-relaxed">
-                          <span className="text-[#FF6B1A] font-bold shrink-0">■</span>
-                          <span>{b}</span>
-                        </li>
-                      ))}
-                    </ul>
+              {/* Top Confirmed Header with Checkmark Micro-Interaction */}
+              <div className="p-5 bg-[#FFD400] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex items-start sm:items-center gap-4 relative overflow-hidden">
+
+                {/* Animated Neo-Brutalist Checkmark Box */}
+                <div className="w-12 h-12 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0 relative transition-transform duration-300">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-7 h-7 text-[#111111]"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M 4.5 12.5 L 9.5 17.5 L 19.5 6.5"
+                      stroke="#111111"
+                      strokeWidth="3.5"
+                      strokeLinecap="square"
+                      strokeLinejoin="miter"
+                      className="animate-check-draw"
+                    />
+                  </svg>
+                </div>
+
+                {/* Status and ID */}
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`font-mono text-xs font-black uppercase tracking-wider px-2 py-0.5 border border-[#111111] ${submittedRecord.status === 'waitlist'
+                        ? 'bg-amber-300 text-amber-950'
+                        : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                          ? 'bg-[#FFD400] text-[#111111]'
+                          : 'bg-white text-[#FF6B1A]'
+                      }`}>
+                      {submittedRecord.status === 'waitlist'
+                        ? 'WAITLIST ENTRY'
+                        : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                          ? 'PAYMENT VERIFICATION PENDING'
+                          : 'REGISTRATION CONFIRMED'}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-[#111111] bg-[#FFF2D6] px-2 py-0.5 border border-[#111111]">
+                      <span className="w-2 h-2 rounded-full bg-emerald-600 animate-sync-glow shrink-0" />
+                      <span>Saved to Firebase</span>
+                    </span>
                   </div>
 
-                  <div className="pt-3 border-t-2 border-[#111111]">
+                  <h2 className="font-display font-extrabold text-2xl text-[#111111] leading-tight">
+                    {submittedRecord.status === 'waitlist'
+                      ? 'You are on the waitlist.'
+                      : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                        ? 'Registration received. Payment verification pending'
+                        : "You're registered for the conclave."}
+                  </h2>
+
+                  <p className="text-sm font-mono font-bold text-[#111111]">
+                    Registration ID: <span className="text-[#FF6B1A] text-base">{submittedRecord.id}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Email Confirmation Status Banner & Controls */}
+              {emailStatus === 'sending' && (
+                <div className="p-3 bg-[#FFF8EC] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2.5 text-xs font-mono text-left">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#FF6B1A] animate-ping shrink-0" />
+                  <span className="text-[#111111]">
+                    Sending confirmation email to <strong className="font-bold">{submittedRecord.email}</strong>...
+                  </span>
+                </div>
+              )}
+
+              {emailStatus === 'sent' && (
+                <div className="p-4 bg-[#E6F4EA] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-1 text-left">
+                  <div className="flex items-center gap-2 text-emerald-950 font-bold text-sm">
+                    <Check className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0" />
+                    <span>Confirmation email sent to <strong className="font-bold">{submittedRecord.email}</strong></span>
+                  </div>
+                  <p className="text-xs text-[#111111]/80 font-medium">
+                    Check Spam/Promotions if you do not see it.
+                  </p>
+                </div>
+              )}
+
+              {emailStatus === 'failed' && (
+                <div className="p-4 bg-[#FEE2E2] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2 text-left">
+                  <div className="flex items-start gap-2 text-red-950 font-bold text-sm">
+                    <AlertCircle className="w-4 h-4 text-red-700 stroke-[2.5] shrink-0 mt-0.5" />
+                    <span>We could not send the email yet. Your pass is below, download it now.</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 pt-0.5">
                     <button
                       type="button"
-                      onClick={(e) => {
-                        setPartnerData((prev) => ({
-                          ...prev,
-                          message: prev.message || `Inquiring about ${tier.name} tier.`,
-                        }));
-                        setPartnerFormStartTime(Date.now());
-                        setPartnerHoneypot('');
-                        setPartnerError('');
-                        handleOpenPartnerModal(e);
-                      }}
-                      className="w-full brutal-btn bg-[#111111] hover:bg-[#FF6B1A] text-white hover:text-[#111111] py-2 px-3 font-display font-bold text-xs uppercase tracking-wider text-center cursor-pointer min-h-[40px]"
+                      onClick={handleResendEmail}
+                      disabled={resendCooldown > 0 || resendClicks >= 3}
+                      className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-3.5 py-2 font-mono text-xs font-bold border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                     >
-                      Enquire for {tier.name.split(' ')[0]} →
+                      <Mail className="w-3.5 h-3.5 text-[#FF6B1A]" />
+                      <span>
+                        {resendCooldown > 0
+                          ? `Resend email (${resendCooldown}s)`
+                          : resendClicks >= 3
+                            ? 'Resend limit reached (3/3)'
+                            : `Resend email${resendClicks > 0 ? ` (${3 - resendClicks} left)` : ''}`}
+                      </span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-[#111111]/75 font-medium">
+                    Check Spam/Promotions if you do not see it.
+                  </p>
+                </div>
+              )}
+
+              {emailStatus === 'idle' && (
+                <div className="p-3 bg-[#FFF8EC] border-2 border-[#111111] text-xs font-mono text-left text-[#111111]/80">
+                  Check Spam/Promotions if you do not see it.
+                </div>
+              )}
+
+              {/* Ticket QR Code Gate Pass Preview (Locally Generated, Zero Third-Party Requests) */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 p-4 glass text-left">
+                <div className="p-1.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0">
+                  <QRCodeCanvas
+                    id="pass-qr-canvas"
+                    value={JSON.stringify(
+                      submittedRecord.ticketCode
+                        ? { id: submittedRecord.id, t: submittedRecord.ticketCode }
+                        : { id: submittedRecord.id }
+                    )}
+                    size={160}
+                    level="M"
+                    className="w-24 h-24 object-contain"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase text-[#FF6B1A]">
+                    <QrCode className="w-3.5 h-3.5" />
+                    <span>Official Entry Pass QR</span>
+                    {submittedRecord.ticketCode && (
+                      <span className="font-mono text-[10px] text-[#111111]/70 bg-[#FFF8EC] px-1.5 py-0.5 border border-[#111111] ml-auto">
+                        SECURE PASS
+                      </span>
+                    )}
+                  </div>
+                  <div className="font-display font-black text-base sm:text-lg text-[#111111]">
+                    Scan at DVSIET Gate Check-in
+                  </div>
+                  <p className="text-xs font-sans text-[#111111]/80 leading-relaxed">
+                    Present this QR code or your Registration ID (<span className="font-mono font-bold">{submittedRecord.id}</span>) on your screen at the registration desk for instant venue admission.
+                  </p>
+                  {submittedRecord.ticketCode && (
+                    <div className="font-mono text-[11px] text-[#111111]/80 pt-1">
+                      Pass Security Code: <span className="font-bold text-[#FF6B1A]">{submittedRecord.ticketCode}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Prominent On-Screen Instruction & Action Row */}
+              <div className="p-5 bg-[#FFD400] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3 text-left">
+                <div className="flex items-center gap-2.5">
+                  <Camera className="w-5 h-5 text-[#111111] shrink-0" />
+                  <h3 className="font-display font-black text-base sm:text-lg text-[#111111] uppercase tracking-wide">
+                    Take a screenshot of your Registration ID
+                  </h3>
+                </div>
+                <p className="font-sans text-xs sm:text-sm text-[#111111] font-semibold leading-relaxed">
+                  Save your Registration ID (<span className="font-mono font-bold text-base">{submittedRecord.id}</span>) now. You must present it along with your college or government ID at the registration desk for venue access.
+                </p>
+
+                {/* Action Buttons: Copy ID & Download Confirmation */}
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  {/* Copy ID Button */}
+                  <button
+                    type="button"
+                    onClick={handleCopyId}
+                    className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-4 py-2.5 font-mono text-xs sm:text-sm font-bold border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2 cursor-pointer transition-all min-h-[44px]"
+                  >
+                    {copiedId ? (
+                      <>
+                        <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
+                        <span className="text-emerald-800 font-black">Copied ({submittedRecord.id})</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 text-[#FF6B1A]" />
+                        <span>Copy ID</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Download confirmation (PDF or image) Button */}
+                  <button
+                    type="button"
+                    onClick={handleDownloadConfirmation}
+                    disabled={isDownloadingPass}
+                    className="brutal-btn bg-[#111111] hover:bg-[#222222] text-[#FFD400] px-4 py-2.5 font-display font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2 cursor-pointer transition-all min-h-[44px] disabled:opacity-60"
+                  >
+                    <Download className="w-4 h-4 text-[#FFD400]" />
+                    <span>{isDownloadingPass ? 'Generating...' : 'Download confirmation (PDF or image)'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Mandatory Venue and Entry Notice Line */}
+              <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2.5 text-left font-sans">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#111111]/20 pb-2">
+                  <div className="flex items-center gap-2 font-display font-black text-sm sm:text-base text-[#111111]">
+                    <MapPin className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                    <span>Venue: DVSIET, Meerut</span>
+                  </div>
+                  <span className="font-mono text-xs font-bold text-[#111111]/70 bg-white px-2 py-0.5 border border-[#111111]">
+                    Startup Conclave 1.0
+                  </span>
+                </div>
+
+                <div className="font-sans font-bold text-sm sm:text-base text-[#111111] flex items-center gap-2.5">
+                  <Calendar className="w-5 h-5 text-[#FF6B1A] shrink-0" />
+                  <span>Date and entry details will be shared by email and WhatsApp.</span>
+                </div>
+
+                <div className="font-mono text-xs text-[#111111]/85 pt-1.5 border-t border-[#111111]/20 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  {(() => {
+                    const e = (CONFIG.contactEmail || CONFIG.contact?.email || '').trim();
+                    const ph = (CONFIG.contactPhone || CONFIG.contact?.phone || '').trim();
+                    return (
+                      <>
+                        {(e || ph) && <span className="font-black text-[#111111]">Organiser Contact:</span>}
+                        {e && (
+                          <a href={`mailto:${e}`} className="underline font-bold text-[#FF6B1A] hover:text-[#111111]">
+                            {e}
+                          </a>
+                        )}
+                        {e && ph && <span>•</span>}
+                        {ph && (
+                          <a href={`tel:${ph}`} className="underline font-bold text-[#111111] hover:text-[#FF6B1A]">
+                            {ph}
+                          </a>
+                        )}
+                        {(e || ph) && <span>•</span>}
+                        <span className="text-[#111111]/70">Dewan V.S. Institute of Engineering & Technology, Meerut</span>
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Summary of what they entered */}
+              <div className="p-5 bg-[#FFF8EC] border-2 border-[#111111] space-y-3 font-sans text-sm">
+                <span className="font-mono font-black text-xs uppercase tracking-wider text-[#111111] block border-b border-[#111111]/20 pb-2">
+                  Registration Summary
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[#111111]/70 text-xs block">Full Name:</span>
+                    <span className="font-bold text-[#111111]">{submittedRecord.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#111111]/70 text-xs block">Ticket / Pass:</span>
+                    <span className="font-bold text-[#111111]">
+                      {submittedRecord.ticket === 'pitch' ? CONFIG.tickets.pitch.label : CONFIG.tickets.participant.label}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#111111]/70 text-xs block">Email Address:</span>
+                    <span className="font-bold text-[#111111]">{submittedRecord.email}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#111111]/70 text-xs block">WhatsApp Phone:</span>
+                    <span className="font-bold text-[#111111]">{submittedRecord.phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#111111]/70 text-xs block">College / Organisation:</span>
+                    <span className="font-bold text-[#111111]">
+                      {typeof submittedRecord.college === 'object' && submittedRecord.college
+                        ? (submittedRecord.college as any).name
+                        : submittedRecord.college}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#111111]/70 text-xs block">Category:</span>
+                    <span className="font-bold text-[#111111]">{submittedRecord.role} · {submittedRecord.city}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#111111]/70 text-xs block">Status:</span>
+                    <span className={`font-bold ${submittedRecord.status === 'waitlist'
+                        ? 'text-amber-800'
+                        : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                          ? 'text-amber-800'
+                          : 'text-emerald-800'
+                      }`}>
+                      {submittedRecord.status === 'waitlist'
+                        ? 'Waitlist (Capacity reached)'
+                        : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
+                          ? 'Payment Verification Pending'
+                          : 'Registered'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#111111]/70 text-xs block">Payment Status:</span>
+                    <span className={`font-bold font-mono text-xs ${submittedRecord.paymentStatus === 'not_required'
+                        ? 'text-stone-700'
+                        : submittedRecord.paymentStatus === 'verified'
+                          ? 'text-emerald-700'
+                          : submittedRecord.paymentStatus === 'rejected'
+                            ? 'text-red-700'
+                            : 'text-amber-800'
+                      }`}>
+                      {submittedRecord.paymentStatus === 'not_required'
+                        ? 'Not Required (Free)'
+                        : submittedRecord.paymentStatus === 'verified'
+                          ? 'Verified'
+                          : submittedRecord.paymentStatus === 'rejected'
+                            ? 'Rejected'
+                            : `Pending Verification ${submittedRecord.paymentUtr ? `(UTR: ${submittedRecord.paymentUtr})` : ''}`}
+                    </span>
+                  </div>
+                </div>
+
+                {submittedRecord.wantsToPitch && (
+                  <div className="pt-3 border-t border-[#111111]/20 space-y-2 text-left">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF6B1A]">
+                        🎤 Pitch Arena Application
+                      </span>
+                      {submittedRecord.stage && (
+                        <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-[#FFF8EC] border border-[#111111]">
+                          {submittedRecord.stage} Stage
+                        </span>
+                      )}
+                    </div>
+
+                    {submittedRecord.startupName && (
+                      <div>
+                        <span className="text-[#111111]/70 text-xs block">Startup Name:</span>
+                        <span className="font-bold text-base text-[#111111]">{submittedRecord.startupName}</span>
+                      </div>
+                    )}
+
+                    {submittedRecord.startupPitch && (
+                      <div>
+                        <span className="text-[#111111]/70 text-xs block">Pitch Summary:</span>
+                        <p className="text-sm text-[#111111]/80 italic">"{submittedRecord.startupPitch}"</p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 font-mono text-xs">
+                      {submittedRecord.sector && (
+                        <div className="p-2 bg-[#FFF8EC] border border-[#111111]">
+                          <span className="text-[#111111]/80 block text-[10px]">SECTOR</span>
+                          <strong className="text-[#111111]">{submittedRecord.sector}</strong>
+                        </div>
+                      )}
+                      {submittedRecord.teamSize && (
+                        <div className="p-2 bg-[#FFF8EC] border border-[#111111]">
+                          <span className="text-[#111111]/80 block text-[10px]">TEAM SIZE</span>
+                          <strong className="text-[#111111]">{submittedRecord.teamSize} {submittedRecord.teamSize === '1' ? 'Founder' : 'Members'}</strong>
+                        </div>
+                      )}
+                      {submittedRecord.pitchDeckLink && (
+                        <div className="p-2 bg-[#FFF8EC] border border-[#111111] col-span-2 sm:col-span-1">
+                          <span className="text-[#111111]/80 block text-[10px]">PITCH DECK</span>
+                          <a
+                            href={submittedRecord.pitchDeckLink.startsWith('http') ? submittedRecord.pitchDeckLink : `https://${submittedRecord.pitchDeckLink}`}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="font-bold text-[#FF6B1A] underline hover:text-[#111111] inline-flex items-center gap-1"
+                          >
+                            <span>Open Deck</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2 flex items-center justify-between border-t-2 border-[#111111]">
+                <span className="text-xs font-mono text-[#111111]/70">
+                  Logged to Central Conclave Database
+                </span>
+                <button
+                  type="button"
+                  onClick={handleResetRegistration}
+                  className="text-xs font-mono font-bold text-[#FF6B1A] underline hover:text-[#111111] min-h-[44px] flex items-center cursor-pointer"
+                >
+                  Register another person →
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* =============================================================== */
+            /* CASE C: ACTIVE REGISTRATION FORM (Stored in Firestore & Cache)   */
+            /* =============================================================== */
+            <div className="p-6 sm:p-10 bg-white brutal-border brutal-shadow-lg space-y-6">
+
+              <div className="border-b-2 border-[#111111] pb-4 space-y-1">
+                <h2 className="font-display font-black text-2xl sm:text-4xl text-[#111111]">
+                  Register for Startup Conclave 1.0
+                </h2>
+                {/* 1-Line Intro */}
+                <p className="text-sm sm:text-base font-sans text-[#111111]/80 font-medium">
+                  Registration happens on this site. Date and entry details will be shared on email and WhatsApp.
+                </p>
+              </div>
+
+              {errors.form && (
+                <div className="p-3.5 sm:p-4 bg-red-100 border-2 border-red-500 text-red-800 text-sm font-bold flex flex-col gap-2 animate-in fade-in">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
+                      <span>{errors.form}</span>
+                    </div>
+                    {isNetworkError && (
+                      <button
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={(e) => handleRegisterSubmit(e)}
+                        className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-mono font-bold text-xs uppercase tracking-wider border border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 self-start sm:self-auto cursor-pointer flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <RotateCw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
+                        <span>Retry</span>
+                      </button>
+                    )}
+                  </div>
+                  {errors.formCode && (
+                    <div className="text-[11px] text-gray-500 font-mono font-normal">
+                      Error code: {errors.formCode}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <form onSubmit={handleRegisterSubmit} noValidate className="space-y-4 font-sans text-sm">
+
+                {/* Anti-Bot Honeypot Field (Hidden from humans) */}
+                <div className="hidden" aria-hidden="true">
+                  <label htmlFor="user_nickname">Do not fill this</label>
+                  <input
+                    id="user_nickname"
+                    type="text"
+                    value={honeypot}
+                    onChange={(e) => setHoneypot(e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
+
+                {/* Ticket Type Selection */}
+                <div className="space-y-2">
+                  <label className="font-bold text-[#111111] block">Select Ticket / Pass *</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTicket('participant');
+                        setWantsToPitch(false);
+                      }}
+                      className={`p-3.5 border-2 border-[#111111] text-left transition-all cursor-pointer ${ticket === 'participant'
+                          ? 'bg-[#FFD400] shadow-[3px_3px_0px_#111111]'
+                          : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111]'
+                        }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm sm:text-base text-[#111111]">
+                          {CONFIG.tickets.participant.label}
+                        </span>
+                        <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-white">
+                          {CONFIG.tickets.participant.fee === 0 ? 'FREE' : `₹${CONFIG.tickets.participant.fee}`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#111111]/70 mt-1">
+                        Full 2-day attendee delegate pass
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isPitchOpen) {
+                          setErrors((prev) => ({ ...prev, form: 'Pitch registrations open soon.' }));
+                          return;
+                        }
+                        setErrors((prev) => {
+                          const next = { ...prev };
+                          delete next.form;
+                          return next;
+                        });
+                        setTicket('pitch');
+                        setWantsToPitch(true);
+                      }}
+                      className={`p-3.5 border-2 border-[#111111] text-left transition-all ${!isPitchOpen
+                          ? 'opacity-80 bg-[#F4EFE6] cursor-not-allowed shadow-[1px_1px_0px_#111111]'
+                          : ticket === 'pitch'
+                            ? 'bg-[#FF6B1A] text-[#111111] shadow-[3px_3px_0px_#111111] cursor-pointer'
+                            : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111] cursor-pointer'
+                        }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm sm:text-base text-[#111111]">
+                          {CONFIG.tickets.pitch.label}
+                        </span>
+                        <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FFD400] text-[#111111]">
+                          {!isPitchOpen ? 'OPENS SOON' : `₹${CONFIG.tickets.pitch.fee}`}
+                        </span>
+                      </div>
+                      <p className={`text-xs mt-1 ${ticket === 'pitch' && isPitchOpen ? 'text-[#111111]/85 font-medium' : 'text-[#111111]/70'}`}>
+                        {!isPitchOpen
+                          ? 'Pitch registrations open soon'
+                          : 'Pitch your startup to jury & investors + delegate entry'}
+                      </p>
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
 
-        {/* SUPPORTED BY: renders only for supporters with written confirmation */}
-        {CONFIG.supporters.some((s) => s.confirmed) && (
-          <div className="p-6 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
-            <div className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70">
-              Supported by
-            </div>
-            <div className="flex flex-wrap items-stretch gap-3 sm:gap-4">
-              {CONFIG.supporters
-                .filter((s) => s.confirmed)
-                .map((s) => (
-                  <LogoTile key={s.name} item={s} />
-                ))}
-            </div>
-          </div>
-        )}
-
-      </section>
-
-      {/* =================================================================== */}
-      {/* 8. BEHIND THE EVENT (LEADERSHIP & SECRETARIAT) (id="team")          */}
-      {/* =================================================================== */}
-      {(() => {
-        const facultyList: TeamMember[] =
-          CONFIG.team?.faculty && CONFIG.team.faculty.length > 0
-            ? CONFIG.team.faculty
-            : CONFIG.faculty || [];
-        const studentsList: TeamMember[] =
-          CONFIG.team?.students && CONFIG.team.students.length > 0
-            ? CONFIG.team.students
-            : CONFIG.students || [];
-
-        const confirmedFaculty = facultyList.filter((m) => m.confirmed);
-        const confirmedStudents = studentsList.filter((m) => m.confirmed);
-        const coreStudents = confirmedStudents.filter((m) => m.tier === 'core');
-        const leadStudents = confirmedStudents.filter((m) => m.tier === 'lead');
-
-        const hasFacultyConfirmed = confirmedFaculty.length > 0;
-        const hasStudentsConfirmed = confirmedStudents.length > 0;
-
-        // Rendered only while at least one group is showing placeholders
-        const showPlaceholdersNote = !hasFacultyConfirmed || !hasStudentsConfirmed;
-
-        const getMemberInitials = (name: string): string => {
-          if (!name || !name.trim()) return '?';
-          const withoutSuffix = name.split(',')[0].trim();
-          const withoutHonorific = withoutSuffix
-            .replace(/^(Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.|Sh\.|Mr|Mrs|Ms|Dr|Prof|Sh)\s+/i, '')
-            .trim();
-          const parts = withoutHonorific.split(/\s+/).filter(Boolean);
-          if (parts.length === 0) return '?';
-          if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-          return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-        };
-
-        const getCleanLinkedInUrl = (url?: string): string | undefined => {
-          if (!url || !url.startsWith('https://www.linkedin.com/')) return undefined;
-          try {
-            const parsed = new URL(url);
-            return `${parsed.origin}${parsed.pathname}`;
-          } catch {
-            return url.split('?')[0].split('#')[0];
-          }
-        };
-
-        const volunteerUrl = (CONFIG.volunteerFormUrl || (CONFIG.team as any)?.volunteerFormUrl || '').trim();
-
-        return (
-          <section
-            id="team"
-            className="px-4 sm:px-8 py-16 sm:py-24 max-w-6xl mx-auto text-left border-b-2 border-[#111111] space-y-12 scroll-mt-16"
-          >
-            <span id="behind" className="sr-only" aria-hidden="true" />
-
-            {/* Header & Sub-note */}
-            <div>
-              <div className="flex items-center gap-3 mb-6">
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-                  Organising Body
-                </span>
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
-                  Secretariat
-                </span>
-              </div>
-
-              <h2 className="font-display font-black text-3xl sm:text-5xl lg:text-6xl tracking-tight text-[#111111]">
-                Behind the event
-              </h2>
-
-              {showPlaceholdersNote && (
-                <p className="font-mono text-sm sm:text-base font-bold text-[#111111]/80 mt-3">
-                  Faculty and student leadership will be announced soon.
-                </p>
-              )}
-            </div>
-
-            {/* 1. FACULTY LEADERSHIP */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
-                <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
-                  Faculty Leadership
-                </h3>
-                <span className="font-mono text-xs text-[#111111]/70 font-bold">
-                  Academic Steering &amp; Advisory
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {hasFacultyConfirmed ? (
-                  confirmedFaculty.map((member, idx) => (
-                    <div
-                      key={idx}
-                      className="p-5 bg-white brutal-border brutal-shadow flex items-start gap-4 text-left"
-                    >
-                      {member.photo ? (
-                        <img
-                          src={member.photo}
-                          alt={`${member.name}, ${member.roles?.join(', ') || ''}`}
-                          loading="lazy"
-                          width={64}
-                          height={64}
-                          className="w-16 h-16 object-cover border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0"
-                        />
-                      ) : (
-                        <div
-                          className="w-16 h-16 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0"
-                          aria-label={member.name}
-                        >
-                          <span className="font-display font-black text-xl text-[#111111]">
-                            {getMemberInitials(member.name)}
-                          </span>
+                {/* Google Sign-In Card */}
+                <div className="bg-white border-2 border-[#111111] p-4 sm:p-5 shadow-[3px_3px_0px_#111111] space-y-3">
+                  {authUser ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-green-100 border-2 border-[#111111] flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-5 h-5 text-green-700" />
                         </div>
-                      )}
-                      <div className="space-y-1">
-                        <h4 className="font-display font-black text-lg text-[#111111]">
-                          {member.name}
-                        </h4>
-                        <p className="font-mono text-xs font-bold text-[#FF6B1A] uppercase tracking-wide">
-                          {member.roles?.join(', ')}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  // Exactly 2 placeholder cards for Faculty leadership
-                  [1, 2].map((placeholderIdx) => (
-                    <div
-                      key={placeholderIdx}
-                      className="p-5 bg-white border-2 border-dashed border-[#111111] shadow-[3px_3px_0px_#111111] flex items-start gap-4 text-left"
-                    >
-                      <div
-                        className="w-14 h-14 sm:w-16 sm:h-16 bg-[#FFF8EC] border-2 border-[#111111] flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#111111]"
-                        aria-hidden="true"
-                      >
-                        <span className="font-mono font-black text-2xl text-[#111111]">?</span>
-                      </div>
-                      <div className="space-y-1.5 flex-1">
-                        <span
-                          className="font-mono text-xs font-bold text-[#111111] uppercase tracking-wider block"
-                          style={{ fontVariant: 'all-small-caps' }}
-                        >
-                          Faculty leadership
-                        </span>
-                        <div className="font-display font-black text-lg sm:text-xl text-[#111111] leading-snug">
-                          To be announced
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* 2. STUDENT LEADERSHIP */}
-            <div className="space-y-6 sm:space-y-8">
-              <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
-                <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
-                  Student Leadership
-                </h3>
-                <span className="font-mono text-xs text-[#111111]/70 font-bold">
-                  Organising Secretariat &amp; Execution
-                </span>
-              </div>
-
-              {/* CORE TEAM: large cards (1 col at 360px, 2 col >= 400px, 4 col desktop) */}
-              <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                {coreStudents.map((member, idx) => {
-                  const photoUrl = getTeamMemberPhoto(member.name, member.photo);
-                  const cleanLinkedIn = getCleanLinkedInUrl(member.linkedin);
-
-                  return (
-                    <div
-                      key={`core-${member.name}-${idx}`}
-                      className="p-5 sm:p-6 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-4 text-left transition-transform hover:-translate-y-0.5 min-w-0"
-                    >
-                      <div className="space-y-4">
-                        {photoUrl ? (
-                          <img
-                            src={photoUrl}
-                            loading="lazy"
-                            width={320}
-                            height={320}
-                            alt={`${member.name}, ${member.roles.join(', ')}`}
-                            className="w-full aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
-                          />
-                        ) : (
-                          <div
-                            className="w-full aspect-square bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0 select-none"
-                            aria-label={member.name}
-                          >
-                            <span className="font-display font-black text-3xl sm:text-4xl text-[#111111]">
-                              {getMemberInitials(member.name)}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-display font-black text-sm uppercase text-[#111111]">
+                              Verified Google Account
+                            </span>
+                            <span className="bg-[#FFD400] text-[#111111] border border-[#111111] font-mono text-[10px] font-bold px-1.5 py-0.5">
+                              LOCKED
                             </span>
                           </div>
-                        )}
-
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-display font-black text-lg sm:text-xl text-[#111111] leading-tight break-words">
-                            {member.name}
-                          </h4>
-                          {cleanLinkedIn && (
-                            <a
-                              href={cleanLinkedIn}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label={`${member.name} on LinkedIn`}
-                              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0"
-                            >
-                              <Linkedin className="w-4 h-4 text-[#111111]" />
-                            </a>
-                          )}
+                          <p className="font-mono text-xs text-[#111111] font-bold mt-0.5 break-all">
+                            {authUser.email}
+                          </p>
                         </div>
                       </div>
-
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {member.roles.map((r, roleIdx) => (
-                          <span
-                            key={roleIdx}
-                            className="inline-block px-2 py-0.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px] sm:text-xs font-bold text-[#111111] shadow-[1px_1px_0px_#111111] uppercase tracking-wider"
-                            style={{ fontVariant: 'all-small-caps' }}
-                          >
-                            {r}
-                          </span>
-                        ))}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGoogleSignOut}
+                        className="font-mono text-xs font-bold text-[#FF6B1A] underline hover:text-[#111111] cursor-pointer min-h-[44px] flex items-center self-start sm:self-auto"
+                      >
+                        Change account
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* DEPARTMENT LEADS: smaller cards (2 col mobile, 4 col desktop) */}
-              {leadStudents.length > 0 && (
-                <div className="pt-6 sm:pt-8 space-y-4">
-                  <div className="flex items-center gap-3 border-b-2 border-[#111111] pb-2">
-                    <span className="w-2.5 h-2.5 bg-[#FF6B1A] border border-[#111111] inline-block" />
-                    <h4 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-wide">
-                      Department leads
-                    </h4>
-                    <span className="font-mono text-xs font-bold text-[#111111]/70">
-                      ({leadStudents.length})
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-                    {leadStudents.map((member, idx) => {
-                      const photoUrl = getTeamMemberPhoto(member.name, member.photo);
-                      const cleanLinkedIn = getCleanLinkedInUrl(member.linkedin);
-
-                      return (
-                        <div
-                          key={`lead-${member.name}-${idx}`}
-                          className="p-3.5 sm:p-5 bg-white brutal-border brutal-shadow flex flex-col justify-between gap-3 text-left transition-transform hover:-translate-y-0.5 min-w-0"
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                              {photoUrl ? (
-                                <img
-                                  src={photoUrl}
-                                  loading="lazy"
-                                  width={160}
-                                  height={160}
-                                  alt={`${member.name}, ${member.roles.join(', ')}`}
-                                  className="w-16 h-16 sm:w-20 sm:h-20 aspect-square object-cover object-top border-2 border-[#111111] shadow-[2px_2px_0px_#111111] bg-[#FFF8EC] shrink-0"
-                                />
-                              ) : (
-                                <div
-                                  className="w-16 h-16 sm:w-20 sm:h-20 aspect-square bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0 select-none"
-                                  aria-label={member.name}
-                                >
-                                  <span className="font-display font-black text-xl sm:text-2xl text-[#111111]">
-                                    {getMemberInitials(member.name)}
-                                  </span>
-                                </div>
-                              )}
-
-                              {cleanLinkedIn && (
-                                <a
-                                  href={cleanLinkedIn}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  aria-label={`${member.name} on LinkedIn`}
-                                  className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-white border-2 border-[#111111] hover:bg-[#FFD400] shadow-[2px_2px_0px_#111111] text-[#111111] transition-colors cursor-pointer shrink-0"
-                                >
-                                  <Linkedin className="w-3.5 h-3.5 text-[#111111]" />
-                                </a>
-                              )}
-                            </div>
-
-                            <div>
-                              <h5 className="font-display font-black text-base sm:text-lg text-[#111111] leading-tight break-words">
-                                {member.name}
-                              </h5>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap gap-1.5 pt-1">
-                            {member.roles.map((r, roleIdx) => (
-                              <span
-                                key={roleIdx}
-                                className="inline-block px-1.5 py-0.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[10px] sm:text-[11px] font-bold text-[#111111] shadow-[1px_1px_0px_#111111] uppercase tracking-wider break-words"
-                                style={{ fontVariant: 'all-small-caps' }}
-                              >
-                                {r}
-                              </span>
-                            ))}
-                          </div>
+                  ) : isInAppBrowser ? (
+                    <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 font-display font-black text-sm uppercase text-[#111111]">
+                          <AlertCircle className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                          <span>In-App Browser Detected</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* "Join the team" note only if CONFIG.volunteerFormUrl is non-empty */}
-            {Boolean(volunteerUrl) && (
-              <div className="pt-2 border-t-2 border-[#111111]">
-                <a
-                  href={volunteerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline hover:no-underline cursor-pointer min-h-[44px]"
-                >
-                  <span>Join the team</span>
-                  <span aria-hidden="true">→</span>
-                </a>
-              </div>
-            )}
-
-          </section>
-        );
-      })()}
-
-      {/* =================================================================== */}
-      {/* 9. REGISTRATION (07) — MAIN FORM SECTION (id="register")            */}
-      {/* =================================================================== */}
-      <section id="register" className="px-4 sm:px-8 py-16 sm:py-24 max-w-4xl mx-auto text-left border-b-2 border-[#111111] scroll-mt-16">
-        
-        {/* Section Header with live counter if enabled */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3">
-            <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-              07
-            </span>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-              Registration
-            </span>
-          </div>
-
-          {/* Visible counter if showCount is true */}
-          {showCounter && (
-            <div className="inline-flex items-center gap-2 bg-[#FFD400] border-2 border-[#111111] px-3 py-1 font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111]">
-              <Users className="w-4 h-4 text-[#FF6B1A]" />
-              <span>{registrationCount} students registered</span>
-            </div>
-          )}
-        </div>
-
-        {/* ================================================================= */}
-        {/* CASE A: REGISTRATIONS CLOSED VARIANT                              */}
-        {/* ================================================================= */}
-        {regStatus === 'closed' ? (
-          <div className="p-8 sm:p-14 bg-white brutal-border brutal-shadow-lg text-center space-y-4">
-            <div className="w-12 h-12 bg-[#FFF2D6] border-2 border-[#111111] flex items-center justify-center mx-auto text-[#111111]">
-              <Lock className="w-6 h-6 text-[#FF6B1A]" />
-            </div>
-            <h2 className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
-              Registrations Closed
-            </h2>
-            <p className="text-base font-sans text-[#111111]/80 max-w-md mx-auto">
-              Delegate registrations for Startup Conclave 1.0 are currently closed. For inquiries, please reach out to the secretariat.
-            </p>
-            {Boolean((CONFIG.contactEmail || CONFIG.contact?.email)?.trim()) && (
-              <div className="pt-2">
-                <a
-                  href={`mailto:${(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()}`}
-                  className="brutal-btn bg-[#FFD400] text-[#111111] px-5 py-3 font-mono text-sm font-bold uppercase inline-block min-h-[46px] flex items-center justify-center mx-auto"
-                >
-                  Contact Secretariat ({(CONFIG.contactEmail || CONFIG.contact?.email || '').trim()})
-                </a>
-              </div>
-            )}
-          </div>
-        ) : submittedRecord ? (
-          /* =============================================================== */
-          /* CASE B: SUCCESS CONFIRMATION SCREEN                             */
-          /* =============================================================== */
-          <div className="p-6 sm:p-10 glass space-y-6 text-left animate-brutal-pop">
-            
-            {/* Top Confirmed Header with Checkmark Micro-Interaction */}
-            <div className="p-5 bg-[#FFD400] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex items-start sm:items-center gap-4 relative overflow-hidden">
-              
-              {/* Animated Neo-Brutalist Checkmark Box */}
-              <div className="w-12 h-12 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center shrink-0 relative transition-transform duration-300">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="w-7 h-7 text-[#111111]"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M 4.5 12.5 L 9.5 17.5 L 19.5 6.5"
-                    stroke="#111111"
-                    strokeWidth="3.5"
-                    strokeLinecap="square"
-                    strokeLinejoin="miter"
-                    className="animate-check-draw"
-                  />
-                </svg>
-              </div>
-
-              {/* Status and ID */}
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`font-mono text-xs font-black uppercase tracking-wider px-2 py-0.5 border border-[#111111] ${
-                    submittedRecord.status === 'waitlist'
-                      ? 'bg-amber-300 text-amber-950'
-                      : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
-                      ? 'bg-[#FFD400] text-[#111111]'
-                      : 'bg-white text-[#FF6B1A]'
-                  }`}>
-                    {submittedRecord.status === 'waitlist'
-                      ? 'WAITLIST ENTRY'
-                      : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
-                      ? 'PAYMENT VERIFICATION PENDING'
-                      : 'REGISTRATION CONFIRMED'}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-[#111111] bg-[#FFF2D6] px-2 py-0.5 border border-[#111111]">
-                    <span className="w-2 h-2 rounded-full bg-emerald-600 animate-sync-glow shrink-0" />
-                    <span>Saved to Firebase</span>
-                  </span>
-                </div>
-
-                <h2 className="font-display font-extrabold text-2xl text-[#111111] leading-tight">
-                  {submittedRecord.status === 'waitlist'
-                    ? 'You are on the waitlist.'
-                    : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
-                    ? 'Registration received. Payment verification pending'
-                    : "You're registered for the conclave."}
-                </h2>
-                
-                <p className="text-sm font-mono font-bold text-[#111111]">
-                  Registration ID: <span className="text-[#FF6B1A] text-base">{submittedRecord.id}</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Email Confirmation Status Banner & Controls */}
-            {emailStatus === 'sending' && (
-              <div className="p-3 bg-[#FFF8EC] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2.5 text-xs font-mono text-left">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#FF6B1A] animate-ping shrink-0" />
-                <span className="text-[#111111]">
-                  Sending confirmation email to <strong className="font-bold">{submittedRecord.email}</strong>...
-                </span>
-              </div>
-            )}
-
-            {emailStatus === 'sent' && (
-              <div className="p-4 bg-[#E6F4EA] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-1 text-left">
-                <div className="flex items-center gap-2 text-emerald-950 font-bold text-sm">
-                  <Check className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0" />
-                  <span>Confirmation email sent to <strong className="font-bold">{submittedRecord.email}</strong></span>
-                </div>
-                <p className="text-xs text-[#111111]/80 font-medium">
-                  Check Spam/Promotions if you do not see it.
-                </p>
-              </div>
-            )}
-
-            {emailStatus === 'failed' && (
-              <div className="p-4 bg-[#FEE2E2] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2 text-left">
-                <div className="flex items-start gap-2 text-red-950 font-bold text-sm">
-                  <AlertCircle className="w-4 h-4 text-red-700 stroke-[2.5] shrink-0 mt-0.5" />
-                  <span>We could not send the email yet. Your pass is below, download it now.</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 pt-0.5">
-                  <button
-                    type="button"
-                    onClick={handleResendEmail}
-                    disabled={resendCooldown > 0 || resendClicks >= 3}
-                    className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-3.5 py-2 font-mono text-xs font-bold border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
-                  >
-                    <Mail className="w-3.5 h-3.5 text-[#FF6B1A]" />
-                    <span>
-                      {resendCooldown > 0
-                        ? `Resend email (${resendCooldown}s)`
-                        : resendClicks >= 3
-                        ? 'Resend limit reached (3/3)'
-                        : `Resend email${resendClicks > 0 ? ` (${3 - resendClicks} left)` : ''}`}
-                    </span>
-                  </button>
-                </div>
-                <p className="text-xs text-[#111111]/75 font-medium">
-                  Check Spam/Promotions if you do not see it.
-                </p>
-              </div>
-            )}
-
-            {emailStatus === 'idle' && (
-              <div className="p-3 bg-[#FFF8EC] border-2 border-[#111111] text-xs font-mono text-left text-[#111111]/80">
-                Check Spam/Promotions if you do not see it.
-              </div>
-            )}
-
-            {/* Ticket QR Code Gate Pass Preview (Locally Generated, Zero Third-Party Requests) */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 p-4 glass text-left">
-              <div className="p-1.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0">
-                <QRCodeCanvas
-                  id="pass-qr-canvas"
-                  value={JSON.stringify(
-                    submittedRecord.ticketCode
-                      ? { id: submittedRecord.id, t: submittedRecord.ticketCode }
-                      : { id: submittedRecord.id }
-                  )}
-                  size={160}
-                  level="M"
-                  className="w-24 h-24 object-contain"
-                />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase text-[#FF6B1A]">
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>Official Entry Pass QR</span>
-                  {submittedRecord.ticketCode && (
-                    <span className="font-mono text-[10px] text-[#111111]/70 bg-[#FFF8EC] px-1.5 py-0.5 border border-[#111111] ml-auto">
-                      SECURE PASS
-                    </span>
-                  )}
-                </div>
-                <div className="font-display font-black text-base sm:text-lg text-[#111111]">
-                  Scan at DVSIET Gate Check-in
-                </div>
-                <p className="text-xs font-sans text-[#111111]/80 leading-relaxed">
-                  Present this QR code or your Registration ID (<span className="font-mono font-bold">{submittedRecord.id}</span>) on your screen at the registration desk for instant venue admission.
-                </p>
-                {submittedRecord.ticketCode && (
-                  <div className="font-mono text-[11px] text-[#111111]/80 pt-1">
-                    Pass Security Code: <span className="font-bold text-[#FF6B1A]">{submittedRecord.ticketCode}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Prominent On-Screen Instruction & Action Row */}
-            <div className="p-5 bg-[#FFD400] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3 text-left">
-              <div className="flex items-center gap-2.5">
-                <Camera className="w-5 h-5 text-[#111111] shrink-0" />
-                <h3 className="font-display font-black text-base sm:text-lg text-[#111111] uppercase tracking-wide">
-                  Take a screenshot of your Registration ID
-                </h3>
-              </div>
-              <p className="font-sans text-xs sm:text-sm text-[#111111] font-semibold leading-relaxed">
-                Save your Registration ID (<span className="font-mono font-bold text-base">{submittedRecord.id}</span>) now. You must present it along with your college or government ID at the registration desk for venue access.
-              </p>
-
-              {/* Action Buttons: Copy ID & Download Confirmation */}
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                {/* Copy ID Button */}
-                <button
-                  type="button"
-                  onClick={handleCopyId}
-                  className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-4 py-2.5 font-mono text-xs sm:text-sm font-bold border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2 cursor-pointer transition-all min-h-[44px]"
-                >
-                  {copiedId ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
-                      <span className="text-emerald-800 font-black">Copied ({submittedRecord.id})</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 text-[#FF6B1A]" />
-                      <span>Copy ID</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Download confirmation (PDF or image) Button */}
-                <button
-                  type="button"
-                  onClick={handleDownloadConfirmation}
-                  disabled={isDownloadingPass}
-                  className="brutal-btn bg-[#111111] hover:bg-[#222222] text-[#FFD400] px-4 py-2.5 font-display font-bold text-xs sm:text-sm uppercase tracking-wider border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2 cursor-pointer transition-all min-h-[44px] disabled:opacity-60"
-                >
-                  <Download className="w-4 h-4 text-[#FFD400]" />
-                  <span>{isDownloadingPass ? 'Generating...' : 'Download confirmation (PDF or image)'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Mandatory Venue and Entry Notice Line */}
-            <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2.5 text-left font-sans">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#111111]/20 pb-2">
-                <div className="flex items-center gap-2 font-display font-black text-sm sm:text-base text-[#111111]">
-                  <MapPin className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                  <span>Venue: DVSIET, Meerut</span>
-                </div>
-                <span className="font-mono text-xs font-bold text-[#111111]/70 bg-white px-2 py-0.5 border border-[#111111]">
-                  Startup Conclave 1.0
-                </span>
-              </div>
-
-              <div className="font-sans font-bold text-sm sm:text-base text-[#111111] flex items-center gap-2.5">
-                <Calendar className="w-5 h-5 text-[#FF6B1A] shrink-0" />
-                <span>Date and entry details will be shared by email and WhatsApp.</span>
-              </div>
-
-              <div className="font-mono text-xs text-[#111111]/85 pt-1.5 border-t border-[#111111]/20 flex flex-wrap items-center gap-x-4 gap-y-1">
-                {(() => {
-                  const e = (CONFIG.contactEmail || CONFIG.contact?.email || '').trim();
-                  const ph = (CONFIG.contactPhone || CONFIG.contact?.phone || '').trim();
-                  return (
-                    <>
-                      {(e || ph) && <span className="font-black text-[#111111]">Organiser Contact:</span>}
-                      {e && (
-                        <a href={`mailto:${e}`} className="underline font-bold text-[#FF6B1A] hover:text-[#111111]">
-                          {e}
-                        </a>
-                      )}
-                      {e && ph && <span>•</span>}
-                      {ph && (
-                        <a href={`tel:${ph}`} className="underline font-bold text-[#111111] hover:text-[#FF6B1A]">
-                          {ph}
-                        </a>
-                      )}
-                      {(e || ph) && <span>•</span>}
-                      <span className="text-[#111111]/70">Dewan V.S. Institute of Engineering & Technology, Meerut</span>
-                    </>
-                  );
-                })()}
-              </div>
-            </div>
-
-            {/* Summary of what they entered */}
-            <div className="p-5 bg-[#FFF8EC] border-2 border-[#111111] space-y-3 font-sans text-sm">
-              <span className="font-mono font-black text-xs uppercase tracking-wider text-[#111111] block border-b border-[#111111]/20 pb-2">
-                Registration Summary
-              </span>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <span className="text-[#111111]/70 text-xs block">Full Name:</span>
-                  <span className="font-bold text-[#111111]">{submittedRecord.name}</span>
-                </div>
-                <div>
-                  <span className="text-[#111111]/70 text-xs block">Ticket / Pass:</span>
-                  <span className="font-bold text-[#111111]">
-                    {submittedRecord.ticket === 'pitch' ? CONFIG.tickets.pitch.label : CONFIG.tickets.participant.label}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[#111111]/70 text-xs block">Email Address:</span>
-                  <span className="font-bold text-[#111111]">{submittedRecord.email}</span>
-                </div>
-                <div>
-                  <span className="text-[#111111]/70 text-xs block">WhatsApp Phone:</span>
-                  <span className="font-bold text-[#111111]">{submittedRecord.phone}</span>
-                </div>
-                <div>
-                  <span className="text-[#111111]/70 text-xs block">College / Organisation:</span>
-                  <span className="font-bold text-[#111111]">
-                    {typeof submittedRecord.college === 'object' && submittedRecord.college
-                      ? (submittedRecord.college as any).name
-                      : submittedRecord.college}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[#111111]/70 text-xs block">Category:</span>
-                  <span className="font-bold text-[#111111]">{submittedRecord.role} · {submittedRecord.city}</span>
-                </div>
-                <div>
-                  <span className="text-[#111111]/70 text-xs block">Status:</span>
-                  <span className={`font-bold ${
-                    submittedRecord.status === 'waitlist'
-                      ? 'text-amber-800'
-                      : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
-                      ? 'text-amber-800'
-                      : 'text-emerald-800'
-                  }`}>
-                    {submittedRecord.status === 'waitlist'
-                      ? 'Waitlist (Capacity reached)'
-                      : submittedRecord.ticket === 'pitch' && submittedRecord.paymentStatus !== 'verified'
-                      ? 'Payment Verification Pending'
-                      : 'Registered'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[#111111]/70 text-xs block">Payment Status:</span>
-                  <span className={`font-bold font-mono text-xs ${
-                    submittedRecord.paymentStatus === 'not_required'
-                      ? 'text-stone-700'
-                      : submittedRecord.paymentStatus === 'verified'
-                      ? 'text-emerald-700'
-                      : submittedRecord.paymentStatus === 'rejected'
-                      ? 'text-red-700'
-                      : 'text-amber-800'
-                  }`}>
-                    {submittedRecord.paymentStatus === 'not_required'
-                      ? 'Not Required (Free)'
-                      : submittedRecord.paymentStatus === 'verified'
-                      ? 'Verified'
-                      : submittedRecord.paymentStatus === 'rejected'
-                      ? 'Rejected'
-                      : `Pending Verification ${submittedRecord.paymentUtr ? `(UTR: ${submittedRecord.paymentUtr})` : ''}`}
-                  </span>
-                </div>
-              </div>
-
-              {submittedRecord.wantsToPitch && (
-                <div className="pt-3 border-t border-[#111111]/20 space-y-2 text-left">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF6B1A]">
-                      🎤 Pitch Arena Application
-                    </span>
-                    {submittedRecord.stage && (
-                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-[#FFF8EC] border border-[#111111]">
-                        {submittedRecord.stage} Stage
-                      </span>
-                    )}
-                  </div>
-
-                  {submittedRecord.startupName && (
-                    <div>
-                      <span className="text-[#111111]/70 text-xs block">Startup Name:</span>
-                      <span className="font-bold text-base text-[#111111]">{submittedRecord.startupName}</span>
-                    </div>
-                  )}
-
-                  {submittedRecord.startupPitch && (
-                    <div>
-                      <span className="text-[#111111]/70 text-xs block">Pitch Summary:</span>
-                      <p className="text-sm text-[#111111]/80 italic">"{submittedRecord.startupPitch}"</p>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 font-mono text-xs">
-                    {submittedRecord.sector && (
-                      <div className="p-2 bg-[#FFF8EC] border border-[#111111]">
-                        <span className="text-[#111111]/80 block text-[10px]">SECTOR</span>
-                        <strong className="text-[#111111]">{submittedRecord.sector}</strong>
-                      </div>
-                    )}
-                    {submittedRecord.teamSize && (
-                      <div className="p-2 bg-[#FFF8EC] border border-[#111111]">
-                        <span className="text-[#111111]/80 block text-[10px]">TEAM SIZE</span>
-                        <strong className="text-[#111111]">{submittedRecord.teamSize} {submittedRecord.teamSize === '1' ? 'Founder' : 'Members'}</strong>
-                      </div>
-                    )}
-                    {submittedRecord.pitchDeckLink && (
-                      <div className="p-2 bg-[#FFF8EC] border border-[#111111] col-span-2 sm:col-span-1">
-                        <span className="text-[#111111]/80 block text-[10px]">PITCH DECK</span>
-                        <a
-                          href={submittedRecord.pitchDeckLink.startsWith('http') ? submittedRecord.pitchDeckLink : `https://${submittedRecord.pitchDeckLink}`}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="font-bold text-[#FF6B1A] underline hover:text-[#111111] inline-flex items-center gap-1"
-                        >
-                          <span>Open Deck</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-2 flex items-center justify-between border-t-2 border-[#111111]">
-              <span className="text-xs font-mono text-[#111111]/70">
-                Logged to Central Conclave Database
-              </span>
-              <button
-                type="button"
-                onClick={handleResetRegistration}
-                className="text-xs font-mono font-bold text-[#FF6B1A] underline hover:text-[#111111] min-h-[44px] flex items-center cursor-pointer"
-              >
-                Register another person →
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* =============================================================== */
-          /* CASE C: ACTIVE REGISTRATION FORM (Stored in Firestore & Cache)   */
-          /* =============================================================== */
-          <div className="p-6 sm:p-10 bg-white brutal-border brutal-shadow-lg space-y-6">
-            
-            <div className="border-b-2 border-[#111111] pb-4 space-y-1">
-              <h2 className="font-display font-black text-2xl sm:text-4xl text-[#111111]">
-                Register for Startup Conclave 1.0
-              </h2>
-              {/* 1-Line Intro */}
-              <p className="text-sm sm:text-base font-sans text-[#111111]/80 font-medium">
-                Registration happens on this site. Date and entry details will be shared on email and WhatsApp.
-              </p>
-            </div>
-
-            {errors.form && (
-              <div className="p-3.5 sm:p-4 bg-red-100 border-2 border-red-500 text-red-800 text-sm font-bold flex flex-col gap-2 animate-in fade-in">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <AlertCircle className="w-5 h-5 shrink-0 text-red-600" />
-                    <span>{errors.form}</span>
-                  </div>
-                  {isNetworkError && (
-                    <button
-                      type="button"
-                      disabled={isSubmitting}
-                      onClick={(e) => handleRegisterSubmit(e)}
-                      className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-mono font-bold text-xs uppercase tracking-wider border border-[#111111] shadow-[2px_2px_0px_#111111] shrink-0 self-start sm:self-auto cursor-pointer flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <RotateCw className={`w-3.5 h-3.5 ${isSubmitting ? 'animate-spin' : ''}`} />
-                      <span>Retry</span>
-                    </button>
-                  )}
-                </div>
-                {errors.formCode && (
-                  <div className="text-[11px] text-gray-500 font-mono font-normal">
-                    Error code: {errors.formCode}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <form onSubmit={handleRegisterSubmit} noValidate className="space-y-4 font-sans text-sm">
-              
-              {/* Anti-Bot Honeypot Field (Hidden from humans) */}
-              <div className="hidden" aria-hidden="true">
-                <label htmlFor="user_nickname">Do not fill this</label>
-                <input
-                  id="user_nickname"
-                  type="text"
-                  value={honeypot}
-                  onChange={(e) => setHoneypot(e.target.value)}
-                  tabIndex={-1}
-                  autoComplete="off"
-                />
-              </div>
-
-              {/* Ticket Type Selection */}
-              <div className="space-y-2">
-                <label className="font-bold text-[#111111] block">Select Ticket / Pass *</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTicket('participant');
-                      setWantsToPitch(false);
-                    }}
-                    className={`p-3.5 border-2 border-[#111111] text-left transition-all cursor-pointer ${
-                      ticket === 'participant'
-                        ? 'bg-[#FFD400] shadow-[3px_3px_0px_#111111]'
-                        : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm sm:text-base text-[#111111]">
-                        {CONFIG.tickets.participant.label}
-                      </span>
-                      <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-white">
-                        {CONFIG.tickets.participant.fee === 0 ? 'FREE' : `₹${CONFIG.tickets.participant.fee}`}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#111111]/70 mt-1">
-                      Full 2-day attendee delegate pass
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!isPitchOpen) {
-                        setErrors((prev) => ({ ...prev, form: 'Pitch registrations open soon.' }));
-                        return;
-                      }
-                      setErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.form;
-                        return next;
-                      });
-                      setTicket('pitch');
-                      setWantsToPitch(true);
-                    }}
-                    className={`p-3.5 border-2 border-[#111111] text-left transition-all ${
-                      !isPitchOpen
-                        ? 'opacity-80 bg-[#F4EFE6] cursor-not-allowed shadow-[1px_1px_0px_#111111]'
-                        : ticket === 'pitch'
-                        ? 'bg-[#FF6B1A] text-[#111111] shadow-[3px_3px_0px_#111111] cursor-pointer'
-                        : 'bg-white hover:bg-[#FFF8EC] shadow-[1px_1px_0px_#111111] cursor-pointer'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm sm:text-base text-[#111111]">
-                        {CONFIG.tickets.pitch.label}
-                      </span>
-                      <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FFD400] text-[#111111]">
-                        {!isPitchOpen ? 'OPENS SOON' : `₹${CONFIG.tickets.pitch.fee}`}
-                      </span>
-                    </div>
-                    <p className={`text-xs mt-1 ${ticket === 'pitch' && isPitchOpen ? 'text-[#111111]/85 font-medium' : 'text-[#111111]/70'}`}>
-                      {!isPitchOpen
-                        ? 'Pitch registrations open soon'
-                        : 'Pitch your startup to jury & investors + delegate entry'}
-                    </p>
-                  </button>
-                </div>
-              </div>
-
-              {/* Google Sign-In Card */}
-              <div className="bg-white border-2 border-[#111111] p-4 sm:p-5 shadow-[3px_3px_0px_#111111] space-y-3">
-                {authUser ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-green-100 border-2 border-[#111111] flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-5 h-5 text-green-700" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-display font-black text-sm uppercase text-[#111111]">
-                            Verified Google Account
-                          </span>
-                          <span className="bg-[#FFD400] text-[#111111] border border-[#111111] font-mono text-[10px] font-bold px-1.5 py-0.5">
-                            LOCKED
-                          </span>
-                        </div>
-                        <p className="font-mono text-xs text-[#111111] font-bold mt-0.5 break-all">
-                          {authUser.email}
+                        <p className="text-xs text-[#111111] font-sans font-medium">
+                          Open this page in Chrome or Safari to sign in with Google
                         </p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={handleCopyPageLink}
+                        className="brutal-btn bg-[#FFD400] hover:bg-[#FFE55B] text-[#111111] border-2 border-[#111111] px-4 py-2 font-display font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[2px_2px_0px_#111111] min-h-[44px] shrink-0 transition-all"
+                      >
+                        {copiedPageLink ? (
+                          <>
+                            <Check className="w-4 h-4 text-[#111111]" />
+                            <span>Link Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4 text-[#111111]" />
+                            <span>Copy link</span>
+                          </>
+                        )}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleGoogleSignOut}
-                      className="font-mono text-xs font-bold text-[#FF6B1A] underline hover:text-[#111111] cursor-pointer min-h-[44px] flex items-center self-start sm:self-auto"
-                    >
-                      Change account
-                    </button>
-                  </div>
-                ) : isInAppBrowser ? (
-                  <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 font-display font-black text-sm uppercase text-[#111111]">
-                        <AlertCircle className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                        <span>In-App Browser Detected</span>
-                      </div>
-                      <p className="text-xs text-[#111111] font-sans font-medium">
-                        Open this page in Chrome or Safari to sign in with Google
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleCopyPageLink}
-                      className="brutal-btn bg-[#FFD400] hover:bg-[#FFE55B] text-[#111111] border-2 border-[#111111] px-4 py-2 font-display font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[2px_2px_0px_#111111] min-h-[44px] shrink-0 transition-all"
-                    >
-                      {copiedPageLink ? (
-                        <>
-                          <Check className="w-4 h-4 text-[#111111]" />
-                          <span>Link Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4 text-[#111111]" />
-                          <span>Copy link</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 font-display font-black text-sm uppercase text-[#111111]">
-                        <Shield className="w-4 h-4 text-[#FF6B1A]" />
-                        <span>Sign In with Google</span>
-                      </div>
-                      <p className="text-xs text-[#111111]/80 font-sans">
-                        Sign in with Google to verify your email. We use it only for your ticket and event updates.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleGoogleSignIn}
-                      disabled={isGoogleSigningIn}
-                      className="brutal-btn bg-[#FFD400] hover:bg-[#FFE55B] text-[#111111] border-2 border-[#111111] px-5 py-2.5 font-display font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer shadow-[2px_2px_0px_#111111] min-h-[44px] shrink-0 transition-all disabled:opacity-60"
-                    >
-                      {isGoogleSigningIn ? (
-                        <>
-                          <RotateCw className="w-4 h-4 animate-spin text-[#111111]" />
-                          <span>Connecting...</span>
-                        </>
-                      ) : (
-                        <>
-                          <GoogleIcon className="w-4 h-4 shrink-0" />
-                          <span>Continue with Google</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-
-                {/* Error message displayed once, directly below button */}
-                {googleAuthError && (
-                  <div className="p-2.5 bg-red-100 border-2 border-red-800 text-red-900 font-mono text-xs flex flex-col gap-1 shadow-[1px_1px_0px_#111111]">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0 text-red-700" />
-                        <span>{googleAuthError}</span>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 font-display font-black text-sm uppercase text-[#111111]">
+                          <Shield className="w-4 h-4 text-[#FF6B1A]" />
+                          <span>Sign In with Google</span>
+                        </div>
+                        <p className="text-xs text-[#111111]/80 font-sans">
+                          Sign in with Google to verify your email. We use it only for your ticket and event updates.
+                        </p>
                       </div>
                       <button
                         type="button"
                         onClick={handleGoogleSignIn}
-                        className="font-bold underline uppercase text-red-900 hover:text-black cursor-pointer shrink-0 text-[11px]"
+                        disabled={isGoogleSigningIn}
+                        className="brutal-btn bg-[#FFD400] hover:bg-[#FFE55B] text-[#111111] border-2 border-[#111111] px-5 py-2.5 font-display font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer shadow-[2px_2px_0px_#111111] min-h-[44px] shrink-0 transition-all disabled:opacity-60"
                       >
-                        Retry
+                        {isGoogleSigningIn ? (
+                          <>
+                            <RotateCw className="w-4 h-4 animate-spin text-[#111111]" />
+                            <span>Connecting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <GoogleIcon className="w-4 h-4 shrink-0" />
+                            <span>Continue with Google</span>
+                          </>
+                        )}
                       </button>
                     </div>
-                    {googleAuthErrorCode && (
-                      <div className="text-[11px] text-gray-500 font-mono">
-                        Error code: {googleAuthErrorCode}
+                  )}
+
+                  {/* Error message displayed once, directly below button */}
+                  {googleAuthError && (
+                    <div className="p-2.5 bg-red-100 border-2 border-red-800 text-red-900 font-mono text-xs flex flex-col gap-1 shadow-[1px_1px_0px_#111111]">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0 text-red-700" />
+                          <span>{googleAuthError}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleGoogleSignIn}
+                          className="font-bold underline uppercase text-red-900 hover:text-black cursor-pointer shrink-0 text-[11px]"
+                        >
+                          Retry
+                        </button>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Form locked banner when not signed in */}
-              {!authUser && (
-                <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2.5 font-mono text-xs text-[#111111]">
-                  <Lock className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                  <span>
-                    <strong>Form locked:</strong> Sign in with Google above to unlock the registration form.
-                  </span>
-                </div>
-              )}
-
-              {/* Form Fields: Disabled until authenticated */}
-              <fieldset disabled={!authUser} className={`space-y-4 border-0 p-0 m-0 ${!authUser ? 'opacity-50 cursor-not-allowed select-none' : ''}`}>
-
-              {/* 1. Full Name */}
-              <div className="space-y-1.5">
-                <label htmlFor="reg-fullName" className="font-bold text-[#111111] block cursor-pointer">
-                  Full Name *
-                </label>
-                <input
-                  id="reg-fullName"
-                  type="text"
-                  autoComplete="name"
-                  required
-                  value={fullName}
-                  onChange={(e) => {
-                    setFullName(e.target.value);
-                    if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: '' }));
-                  }}
-                  placeholder="Enter your full name"
-                  aria-invalid={Boolean(errors.fullName)}
-                  aria-describedby={errors.fullName ? 'reg-fullName-error' : undefined}
-                  className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.fullName ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
-                />
-                {errors.fullName && (
-                  <p id="reg-fullName-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
-                    {errors.fullName}
-                  </p>
-                )}
-              </div>
-
-              {/* 2. Email & Phone (10-digit Indian Number) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor="reg-email" className="font-bold text-[#111111] block cursor-pointer">
-                      Email Address *
-                    </label>
-                    {authUser ? (
-                      <span className="font-mono text-[10px] font-black uppercase text-green-800 bg-green-100 px-1.5 py-0.5 border border-green-800 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-700" />
-                        Verified
-                      </span>
-                    ) : (
-                      <span className="font-mono text-[10px] font-bold uppercase text-[#111111]/60 bg-[#EFE9DC] px-1.5 py-0.5 border border-[#111111]">
-                        Locked
-                      </span>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <input
-                      id="reg-email"
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                      required
-                      readOnly
-                      value={email}
-                      aria-invalid={Boolean(errors.email)}
-                      aria-describedby={errors.email ? 'reg-email-error' : undefined}
-                      placeholder="Sign in with Google above to unlock"
-                      className="w-full p-3 bg-[#EFE9DC] border-2 border-[#111111] font-sans font-bold text-[#111111] cursor-not-allowed min-h-[46px] text-base pr-20"
-                      title={authUser ? 'Locked to your verified Google account' : 'Sign in with Google above to unlock'}
-                    />
-                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs font-mono font-bold text-[#111111]/70 pointer-events-none">
-                      <Lock className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Locked</span>
+                      {googleAuthErrorCode && (
+                        <div className="text-[11px] text-gray-500 font-mono">
+                          Error code: {googleAuthErrorCode}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  {errors.email && (
-                    <p id="reg-email-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
-                      {errors.email}
-                    </p>
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="reg-phone" className="font-bold text-[#111111] block cursor-pointer">
-                    Phone / WhatsApp (10 digits) *
-                  </label>
-                  <input
-                    id="reg-phone"
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel"
-                    required
-                    maxLength={10}
-                    value={phone}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                      setPhone(val);
-                      if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
-                    }}
-                    placeholder="10-digit number"
-                    aria-invalid={Boolean(errors.phone)}
-                    aria-describedby={errors.phone ? 'reg-phone-error' : undefined}
-                    className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.phone ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white font-mono min-h-[46px] text-base`}
-                  />
-                  {errors.phone && (
-                    <p id="reg-phone-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
-                      {errors.phone}
-                    </p>
-                  )}
-                </div>
-              </div>
+                {/* Form locked banner when not signed in */}
+                {!authUser && (
+                  <div className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2.5 font-mono text-xs text-[#111111]">
+                    <Lock className="w-4 h-4 text-[#FF6B1A] shrink-0" />
+                    <span>
+                      <strong>Form locked:</strong> Sign in with Google above to unlock the registration form.
+                    </span>
+                  </div>
+                )}
 
-              {/* 3. Role & City */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="reg-role" className="font-bold text-[#111111] block cursor-pointer">
-                    I am a *
-                  </label>
-                  <select
-                    id="reg-role"
-                    value={role}
-                    onChange={(e) => {
-                      const newRole = e.target.value as any;
-                      setRole(newRole);
-                      setErrors((prev) => {
-                        const next = { ...prev };
-                        delete next.college;
-                        delete next.course;
-                        delete next.year;
-                        delete next.professionalRole;
-                        return next;
-                      });
-                    }}
-                    className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white font-medium min-h-[46px] text-base cursor-pointer"
-                  >
-                    <option value="Student">Student</option>
-                    <option value="Founder">Founder</option>
-                    <option value="Professional">Professional</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
+                {/* Form Fields: Disabled until authenticated */}
+                <fieldset disabled={!authUser} className={`space-y-4 border-0 p-0 m-0 ${!authUser ? 'opacity-50 cursor-not-allowed select-none' : ''}`}>
 
-                <div className="space-y-1.5">
-                  <label htmlFor="reg-city" className="font-bold text-[#111111] block cursor-pointer">
-                    City
-                  </label>
-                  <input
-                    id="reg-city"
-                    type="text"
-                    autoComplete="address-level2"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="e.g. Meerut, Delhi, Noida"
-                    className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white min-h-[46px] text-base"
-                  />
-                </div>
-              </div>
-
-              {/* 4. College & Education (Students) OR Organisation & Role (Non-Students) */}
-              {role === 'Student' ? (
-                <>
-                  {/* College / University Name */}
+                  {/* 1. Full Name */}
                   <div className="space-y-1.5">
-                    <label htmlFor="reg-college" className="font-bold text-[#111111] block cursor-pointer">
-                      College / University Name *
+                    <label htmlFor="reg-fullName" className="font-bold text-[#111111] block cursor-pointer">
+                      Full Name *
                     </label>
                     <input
-                      id="reg-college"
+                      id="reg-fullName"
                       type="text"
-                      autoComplete="organization"
+                      autoComplete="name"
                       required
-                      value={college}
+                      value={fullName}
                       onChange={(e) => {
-                        setCollege(e.target.value);
-                        if (errors.college) setErrors((prev) => ({ ...prev, college: '' }));
+                        setFullName(e.target.value);
+                        if (errors.fullName) setErrors((prev) => ({ ...prev, fullName: '' }));
                       }}
-                      placeholder="e.g. DVSIET Meerut"
-                      aria-invalid={Boolean(errors.college)}
-                      aria-describedby={errors.college ? 'reg-college-error' : undefined}
-                      className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.college ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
+                      placeholder="Enter your full name"
+                      aria-invalid={Boolean(errors.fullName)}
+                      aria-describedby={errors.fullName ? 'reg-fullName-error' : undefined}
+                      className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.fullName ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
                     />
-                    {errors.college && (
-                      <p id="reg-college-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
-                        {errors.college}
+                    {errors.fullName && (
+                      <p id="reg-fullName-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                        {errors.fullName}
                       </p>
                     )}
                   </div>
 
-                  {/* Degree / Course & Current Year Selects */}
-                  <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Degree / Course Select */}
-                      <div className="space-y-1.5">
-                        <label htmlFor="reg-courseSelect" className="font-bold text-[#111111] block cursor-pointer">
-                          Degree / Course *
-                        </label>
-                        <select
-                          id="reg-courseSelect"
-                          required
-                          value={courseSelect}
-                          onChange={(e) => {
-                            setCourseSelect(e.target.value);
-                            if (errors.course) setErrors((prev) => ({ ...prev, course: '' }));
-                          }}
-                          aria-invalid={Boolean(errors.course)}
-                          aria-describedby={errors.course ? 'reg-course-error' : undefined}
-                          className={`w-full p-2.5 bg-white border-2 ${errors.course ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
-                        >
-                          <option value="">Select Degree / Course</option>
-                          <option value="B.Tech / B.E.">B.Tech / B.E.</option>
-                          <option value="BCA">BCA</option>
-                          <option value="B.Sc">B.Sc</option>
-                          <option value="BBA">BBA</option>
-                          <option value="B.Com">B.Com</option>
-                          <option value="BA">BA</option>
-                          <option value="M.Tech">M.Tech</option>
-                          <option value="MCA">MCA</option>
-                          <option value="MBA">MBA</option>
-                          <option value="M.Sc">M.Sc</option>
-                          <option value="Diploma / Polytechnic">Diploma / Polytechnic</option>
-                          <option value="PhD / Research Scholar">PhD / Research Scholar</option>
-                          <option value="Other">Other (Please specify)</option>
-                        </select>
-                        {courseSelect === 'Other' && (
-                          <div className="pt-2">
-                            <label htmlFor="reg-customCourse" className="sr-only">
-                              Specify Degree / Course
-                            </label>
-                            <input
-                              id="reg-customCourse"
-                              type="text"
-                              required
-                              value={customCourse}
-                              onChange={(e) => {
-                                setCustomCourse(e.target.value);
-                                if (errors.course) setErrors((prev) => ({ ...prev, course: '' }));
-                              }}
-                              placeholder="Specify your degree / course"
-                              aria-invalid={Boolean(errors.course)}
-                              aria-describedby={errors.course ? 'reg-course-error' : undefined}
-                              className={`w-full p-2.5 bg-white border-2 ${errors.course ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
-                            />
-                          </div>
-                        )}
-                        {errors.course && (
-                          <p id="reg-course-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
-                            {errors.course}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Current Year Select */}
-                      <div className="space-y-1.5">
-                        <label htmlFor="reg-yearSelect" className="font-bold text-[#111111] block cursor-pointer">
-                          Current Year *
-                        </label>
-                        <select
-                          id="reg-yearSelect"
-                          required
-                          value={yearSelect}
-                          onChange={(e) => {
-                            setYearSelect(e.target.value);
-                            if (errors.year) setErrors((prev) => ({ ...prev, year: '' }));
-                          }}
-                          aria-invalid={Boolean(errors.year)}
-                          aria-describedby={errors.year ? 'reg-year-error' : undefined}
-                          className={`w-full p-2.5 bg-white border-2 ${errors.year ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
-                        >
-                          <option value="">Select Current Year</option>
-                          <option value="1st Year">1st Year</option>
-                          <option value="2nd Year">2nd Year</option>
-                          <option value="3rd Year">3rd Year</option>
-                          <option value="4th Year">4th Year</option>
-                          <option value="5th Year">5th Year</option>
-                          <option value="Passed out">Passed out / Alumni</option>
-                          <option value="Other">Other (Please specify)</option>
-                        </select>
-                        {yearSelect === 'Other' && (
-                          <div className="pt-2">
-                            <label htmlFor="reg-customYear" className="sr-only">
-                              Specify Current Year
-                            </label>
-                            <input
-                              id="reg-customYear"
-                              type="text"
-                              required
-                              value={customYear}
-                              onChange={(e) => {
-                                setCustomYear(e.target.value);
-                                if (errors.year) setErrors((prev) => ({ ...prev, year: '' }));
-                              }}
-                              placeholder="Specify your current year"
-                              aria-invalid={Boolean(errors.year)}
-                              aria-describedby={errors.year ? 'reg-year-error' : undefined}
-                              className={`w-full p-2.5 bg-white border-2 ${errors.year ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
-                            />
-                          </div>
-                        )}
-                        {errors.year && (
-                          <p id="reg-year-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
-                            {errors.year}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                /* Non-Student Delegates: Organisation & Role */
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label htmlFor="reg-college" className="font-bold text-[#111111] block cursor-pointer">
-                      Organisation Name *
-                    </label>
-                    <input
-                      id="reg-college"
-                      type="text"
-                      autoComplete="organization"
-                      required
-                      value={college}
-                      onChange={(e) => {
-                        setCollege(e.target.value);
-                        if (errors.college) setErrors((prev) => ({ ...prev, college: '' }));
-                      }}
-                      placeholder="e.g. Acme Labs, Startup India"
-                      aria-invalid={Boolean(errors.college)}
-                      aria-describedby={errors.college ? 'reg-college-error' : undefined}
-                      className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.college ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
-                    />
-                    {errors.college && (
-                      <p id="reg-college-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
-                        {errors.college}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label htmlFor="reg-professionalRole" className="font-bold text-[#111111] block cursor-pointer">
-                      Role / Designation *
-                    </label>
-                    <input
-                      id="reg-professionalRole"
-                      type="text"
-                      autoComplete="organization-title"
-                      required
-                      value={professionalRole}
-                      onChange={(e) => {
-                        setProfessionalRole(e.target.value);
-                        if (errors.professionalRole) setErrors((prev) => ({ ...prev, professionalRole: '' }));
-                      }}
-                      placeholder="e.g. Founder, Software Engineer, PM"
-                      aria-invalid={Boolean(errors.professionalRole)}
-                      aria-describedby={errors.professionalRole ? 'reg-professionalRole-error' : undefined}
-                      className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.professionalRole ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
-                    />
-                    {errors.professionalRole && (
-                      <p id="reg-professionalRole-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
-                        {errors.professionalRole}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* 5. Pitch Arena Section */}
-              {ticket === 'pitch' && (
-                <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] space-y-3.5 animate-in fade-in">
-                  <div className="flex items-center justify-between border-b border-[#111111]/20 pb-2">
-                    <div className="flex items-center gap-2">
-                      <Rocket className="w-4 h-4 text-[#FF6B1A]" />
-                      <span className="font-bold text-[#111111] uppercase tracking-wide text-xs sm:text-sm">
-                        Pitch Arena Application Details
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTicket('participant');
-                        setWantsToPitch(false);
-                      }}
-                      className="text-[11px] font-mono underline text-[#111111]/70 hover:text-[#FF6B1A] cursor-pointer"
-                    >
-                      Switch to Attendee pass
-                    </button>
-                  </div>
-
-                  {/* 1. Startup Name */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="reg-startupName" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                      Startup Name *
-                    </label>
-                    <input
-                      id="reg-startupName"
-                      type="text"
-                      autoComplete="organization"
-                      required
-                      value={startupName}
-                      onChange={(e) => {
-                        setStartupName(e.target.value);
-                        if (errors.startupName) setErrors((prev) => ({ ...prev, startupName: '' }));
-                      }}
-                      placeholder="e.g. KisanAI"
-                      aria-invalid={Boolean(errors.startupName)}
-                      aria-describedby={errors.startupName ? 'reg-startupName-error' : undefined}
-                      className={`w-full p-2.5 bg-white border-2 ${errors.startupName ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
-                    />
-                    {errors.startupName && (
-                      <p id="reg-startupName-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.startupName}</p>
-                    )}
-                  </div>
-
-                  {/* 2. Sector & Stage */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Sector Dropdown */}
+                  {/* 2. Email & Phone (10-digit Indian Number) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label htmlFor="reg-pitchSector" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                        Sector *
-                      </label>
-                      <select
-                        id="reg-pitchSector"
-                        value={pitchSector}
-                        onChange={(e) => {
-                          setPitchSector(e.target.value);
-                          if (errors.pitchSector) setErrors((prev) => ({ ...prev, pitchSector: '' }));
-                        }}
-                        aria-invalid={Boolean(errors.pitchSector)}
-                        aria-describedby={errors.pitchSector ? 'reg-pitchSector-error' : undefined}
-                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchSector ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
-                      >
-                        <option value="">Select Sector</option>
-                        <option value="AgriTech">AgriTech</option>
-                        <option value="FinTech">FinTech</option>
-                        <option value="EdTech">EdTech</option>
-                        <option value="HealthTech">HealthTech</option>
-                        <option value="AI/ML">AI/ML</option>
-                        <option value="SaaS">SaaS</option>
-                        <option value="E-commerce">E-commerce</option>
-                        <option value="Social Impact">Social Impact</option>
-                        <option value="Other">Other</option>
-                      </select>
-                      {errors.pitchSector && (
-                        <p id="reg-pitchSector-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchSector}</p>
+                      <div className="flex items-center justify-between">
+                        <label htmlFor="reg-email" className="font-bold text-[#111111] block cursor-pointer">
+                          Email Address *
+                        </label>
+                        {authUser ? (
+                          <span className="font-mono text-[10px] font-black uppercase text-green-800 bg-green-100 px-1.5 py-0.5 border border-green-800 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-green-700" />
+                            Verified
+                          </span>
+                        ) : (
+                          <span className="font-mono text-[10px] font-bold uppercase text-[#111111]/60 bg-[#EFE9DC] px-1.5 py-0.5 border border-[#111111]">
+                            Locked
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <input
+                          id="reg-email"
+                          type="email"
+                          inputMode="email"
+                          autoComplete="email"
+                          required
+                          readOnly
+                          value={email}
+                          aria-invalid={Boolean(errors.email)}
+                          aria-describedby={errors.email ? 'reg-email-error' : undefined}
+                          placeholder="Sign in with Google above to unlock"
+                          className="w-full p-3 bg-[#EFE9DC] border-2 border-[#111111] font-sans font-bold text-[#111111] cursor-not-allowed min-h-[46px] text-base pr-20"
+                          title={authUser ? 'Locked to your verified Google account' : 'Sign in with Google above to unlock'}
+                        />
+                        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs font-mono font-bold text-[#111111]/70 pointer-events-none">
+                          <Lock className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Locked</span>
+                        </div>
+                      </div>
+                      {errors.email && (
+                        <p id="reg-email-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                          {errors.email}
+                        </p>
                       )}
                     </div>
 
-                    {/* Stage Dropdown */}
                     <div className="space-y-1.5">
-                      <label htmlFor="reg-pitchStage" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                        Stage *
-                      </label>
-                      <select
-                        id="reg-pitchStage"
-                        value={pitchStage}
-                        onChange={(e) => {
-                          setPitchStage(e.target.value as any);
-                          if (errors.pitchStage) setErrors((prev) => ({ ...prev, pitchStage: '' }));
-                        }}
-                        aria-invalid={Boolean(errors.pitchStage)}
-                        aria-describedby={errors.pitchStage ? 'reg-pitchStage-error' : undefined}
-                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchStage ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
-                      >
-                        <option value="">Select Stage</option>
-                        <option value="Idea">Idea</option>
-                        <option value="Prototype">Prototype</option>
-                        <option value="Launched">Launched</option>
-                        <option value="Revenue">Revenue</option>
-                      </select>
-                      {errors.pitchStage && (
-                        <p id="reg-pitchStage-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchStage}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 3. One-Liner Description / Startup Pitch */}
-                  <div className="space-y-1.5">
-                    <label htmlFor="reg-startupPitch" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                      One-Line Description / Startup Pitch *
-                    </label>
-                    <input
-                      id="reg-startupPitch"
-                      type="text"
-                      required
-                      value={startupPitch}
-                      onChange={(e) => {
-                        setStartupPitch(e.target.value);
-                        if (errors.startupPitch) setErrors((prev) => ({ ...prev, startupPitch: '' }));
-                      }}
-                      placeholder="e.g. Automated sensors for farmers in Western UP"
-                      aria-invalid={Boolean(errors.startupPitch)}
-                      aria-describedby={errors.startupPitch ? 'reg-startupPitch-error' : undefined}
-                      className={`w-full p-2.5 bg-white border-2 ${errors.startupPitch ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
-                    />
-                    {errors.startupPitch && (
-                      <p id="reg-startupPitch-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.startupPitch}</p>
-                    )}
-                  </div>
-
-                  {/* 4. Pitch Deck Link & Team Size */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {/* Pitch Deck Link */}
-                    <div className="space-y-1.5">
-                      <label htmlFor="reg-pitchDeckLink" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                        Pitch Deck Link *
+                      <label htmlFor="reg-phone" className="font-bold text-[#111111] block cursor-pointer">
+                        Phone / WhatsApp (10 digits) *
                       </label>
                       <input
-                        id="reg-pitchDeckLink"
-                        type="url"
-                        inputMode="url"
-                        autoComplete="url"
+                        id="reg-phone"
+                        type="tel"
+                        inputMode="numeric"
+                        autoComplete="tel"
                         required
-                        value={pitchDeckLink}
+                        maxLength={10}
+                        value={phone}
                         onChange={(e) => {
-                          setPitchDeckLink(e.target.value);
-                          if (errors.pitchDeckLink) setErrors((prev) => ({ ...prev, pitchDeckLink: '' }));
+                          const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                          setPhone(val);
+                          if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
                         }}
-                        placeholder="Google Drive or Canva link"
-                        aria-invalid={Boolean(errors.pitchDeckLink)}
-                        aria-describedby={errors.pitchDeckLink ? 'reg-pitchDeckLink-error' : undefined}
-                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchDeckLink ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                        placeholder="10-digit number"
+                        aria-invalid={Boolean(errors.phone)}
+                        aria-describedby={errors.phone ? 'reg-phone-error' : undefined}
+                        className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.phone ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white font-mono min-h-[46px] text-base`}
                       />
-                      {errors.pitchDeckLink && (
-                        <p id="reg-pitchDeckLink-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchDeckLink}</p>
+                      {errors.phone && (
+                        <p id="reg-phone-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                          {errors.phone}
+                        </p>
                       )}
                     </div>
+                  </div>
 
-                    {/* Team Size Dropdown */}
+                  {/* 3. Role & City */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label htmlFor="reg-pitchTeamSize" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                        Team Size *
+                      <label htmlFor="reg-role" className="font-bold text-[#111111] block cursor-pointer">
+                        I am a *
                       </label>
                       <select
-                        id="reg-pitchTeamSize"
-                        value={pitchTeamSize}
+                        id="reg-role"
+                        value={role}
                         onChange={(e) => {
-                          setPitchTeamSize(e.target.value);
-                          if (errors.pitchTeamSize) setErrors((prev) => ({ ...prev, pitchTeamSize: '' }));
+                          const newRole = e.target.value as any;
+                          setRole(newRole);
+                          setErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.college;
+                            delete next.course;
+                            delete next.year;
+                            delete next.professionalRole;
+                            return next;
+                          });
                         }}
-                        aria-invalid={Boolean(errors.pitchTeamSize)}
-                        aria-describedby={errors.pitchTeamSize ? 'reg-pitchTeamSize-error' : undefined}
-                        className={`w-full p-2.5 bg-white border-2 ${errors.pitchTeamSize ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                        className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white font-medium min-h-[46px] text-base cursor-pointer"
                       >
-                        <option value="">Select Team Size</option>
-                        <option value="1">1 (Solo Founder)</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
-                        <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
+                        <option value="Student">Student</option>
+                        <option value="Founder">Founder</option>
+                        <option value="Professional">Professional</option>
+                        <option value="Other">Other</option>
                       </select>
-                      {errors.pitchTeamSize && (
-                        <p id="reg-pitchTeamSize-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchTeamSize}</p>
-                      )}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label htmlFor="reg-city" className="font-bold text-[#111111] block cursor-pointer">
+                        City
+                      </label>
+                      <input
+                        id="reg-city"
+                        type="text"
+                        autoComplete="address-level2"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="e.g. Meerut, Delhi, Noida"
+                        className="w-full p-3 bg-[#FFF8EC] border-2 border-[#111111] font-sans focus:outline-none focus:bg-white min-h-[46px] text-base"
+                      />
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* 5.5 UPI Fee Payment Block (Rendered for Pitch pass) */}
-              {ticket === 'pitch' && (
-                !isPitchOpen ? (
-                  <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
-                    <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
-                      <div>
-                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-[#111111] px-2 py-0.5 border border-[#111111]">
-                          {CONFIG.tickets.pitch.label.toUpperCase()}
-                        </span>
-                        <h3 className="font-display font-black text-xl text-[#111111] mt-1">
-                          ₹{CONFIG.tickets.pitch.fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ Startup Pitch Pass</span>
-                        </h3>
-                      </div>
-                      <span className="font-mono text-xs font-bold uppercase px-2 py-1 bg-[#FFD400] text-[#111111] border border-[#111111]">
-                        OPENS SOON
-                      </span>
-                    </div>
-                    <div className="p-3.5 bg-white border-2 border-[#111111] space-y-1">
-                      <p className="font-bold text-[#111111] text-sm">Pitch registrations open soon</p>
-                      <p className="text-xs text-[#111111]/70">
-                        Pitch ticket UPI payment details will be published once pitch slots are unlocked. In the meantime, you can register with a free Attendee Delegate pass.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTicket('participant');
-                        setWantsToPitch(false);
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-[#111111] border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors cursor-pointer min-h-[44px]"
-                    >
-                      Switch to Attendee Delegate (Free)
-                    </button>
-                  </div>
-                ) : (
-                  <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-4">
-                    <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
-                      <div>
-                        <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-[#111111] px-2 py-0.5 border border-[#111111]">
-                          {CONFIG.tickets.pitch.label.toUpperCase()} FEE
-                        </span>
-                        <h3 className="font-display font-black text-xl text-[#111111] mt-1">
-                          ₹{CONFIG.tickets.pitch.fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ Startup Pitch Pass</span>
-                        </h3>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] font-mono text-[#111111]/70 block">Payee</span>
-                        <span className="font-mono text-xs font-bold text-[#111111]">
-                          {CONFIG.payment.payeeName.trim() || CONFIG.event.name}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      {/* UPI ID with Copy button */}
-                      <div className="space-y-1">
-                        <label className="font-mono text-xs font-bold text-[#111111] block">
-                          UPI ID:
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <code className="flex-1 p-2.5 bg-white border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] select-all truncate">
-                            {CONFIG.payment.upiId}
-                          </code>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (navigator.clipboard) {
-                                navigator.clipboard.writeText(CONFIG.payment.upiId);
-                                setCopiedUpi(true);
-                                setTimeout(() => setCopiedUpi(false), 2000);
-                              }
-                            }}
-                            className="px-3 py-2.5 bg-white hover:bg-[#FFD400] border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer min-h-[44px]"
-                          >
-                            {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                            <span>{copiedUpi ? 'Copied' : 'Copy UPI'}</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Client-side QR Code and Deep Link Button */}
-                      <div className="p-3.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col sm:flex-row items-center gap-4">
-                        <div className="p-2.5 bg-[#FFF8EC] border-2 border-[#111111] shrink-0 flex items-center justify-center">
-                          <QRCodeSVG
-                            value={upiPayUrl}
-                            size={144}
-                            level="M"
-                            className="w-[144px] h-[144px]"
-                          />
-                        </div>
-                        <div className="space-y-3 text-center sm:text-left flex-1">
-                          <div>
-                            <span className="font-bold text-sm text-[#111111] block">
-                              Scan QR Code to Pay ₹{CONFIG.tickets.pitch.fee}
-                            </span>
-                            <p className="text-xs text-[#111111]/70 mt-0.5">
-                              Scan with Google Pay, PhonePe, Paytm, BHIM, or any UPI app.
-                            </p>
-                          </div>
-                          <div>
-                            <a
-                              href={upiPayUrl}
-                              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-[#111111] border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-all cursor-pointer min-h-[44px]"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                              <span>Open UPI app</span>
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 12-digit UTR Input */}
+                  {/* 4. College & Education (Students) OR Organisation & Role (Non-Students) */}
+                  {role === 'Student' ? (
+                    <>
+                      {/* College / University Name */}
                       <div className="space-y-1.5">
-                        <label htmlFor="reg-paymentUtr" className="font-bold text-[#111111] block cursor-pointer">
-                          12-Digit UPI Reference Number (UTR / Txn ID) *
+                        <label htmlFor="reg-college" className="font-bold text-[#111111] block cursor-pointer">
+                          College / University Name *
                         </label>
                         <input
-                          id="reg-paymentUtr"
+                          id="reg-college"
                           type="text"
+                          autoComplete="organization"
                           required
-                          inputMode="numeric"
-                          maxLength={12}
-                          value={paymentUtr}
+                          value={college}
                           onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '').slice(0, 12);
-                            setPaymentUtr(val);
-                            if (errors.paymentUtr) setErrors((prev) => ({ ...prev, paymentUtr: '' }));
+                            setCollege(e.target.value);
+                            if (errors.college) setErrors((prev) => ({ ...prev, college: '' }));
                           }}
-                          placeholder="e.g. 428901234567"
-                          aria-invalid={Boolean(errors.paymentUtr)}
-                          aria-describedby={errors.paymentUtr ? 'reg-paymentUtr-error' : undefined}
-                          className={`w-full p-2.5 bg-white border-2 ${errors.paymentUtr ? 'border-red-600' : 'border-[#111111]'} font-mono text-base font-bold tracking-wider min-h-[46px]`}
+                          placeholder="e.g. DVSIET Meerut"
+                          aria-invalid={Boolean(errors.college)}
+                          aria-describedby={errors.college ? 'reg-college-error' : undefined}
+                          className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.college ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
                         />
-                        {errors.paymentUtr && (
-                          <p id="reg-paymentUtr-error" role="alert" className="text-xs text-red-600 font-bold">{errors.paymentUtr}</p>
+                        {errors.college && (
+                          <p id="reg-college-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                            {errors.college}
+                          </p>
                         )}
-                        <p className="text-[11px] font-mono text-[#111111]/70">
-                          Enter the 12-digit numeric reference shown in your UPI app payment receipt after paying.
-                        </p>
                       </div>
 
-                      {CONFIG.payment.refundPolicyText && (
-                        <p className="text-[11px] font-sans text-[#111111]/60 italic border-t border-[#111111]/20 pt-2">
-                          Refund Policy: {CONFIG.payment.refundPolicyText}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )
-              )}
+                      {/* Degree / Course & Current Year Selects */}
+                      <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Degree / Course Select */}
+                          <div className="space-y-1.5">
+                            <label htmlFor="reg-courseSelect" className="font-bold text-[#111111] block cursor-pointer">
+                              Degree / Course *
+                            </label>
+                            <select
+                              id="reg-courseSelect"
+                              required
+                              value={courseSelect}
+                              onChange={(e) => {
+                                setCourseSelect(e.target.value);
+                                if (errors.course) setErrors((prev) => ({ ...prev, course: '' }));
+                              }}
+                              aria-invalid={Boolean(errors.course)}
+                              aria-describedby={errors.course ? 'reg-course-error' : undefined}
+                              className={`w-full p-2.5 bg-white border-2 ${errors.course ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                            >
+                              <option value="">Select Degree / Course</option>
+                              <option value="B.Tech / B.E.">B.Tech / B.E.</option>
+                              <option value="BCA">BCA</option>
+                              <option value="B.Sc">B.Sc</option>
+                              <option value="BBA">BBA</option>
+                              <option value="B.Com">B.Com</option>
+                              <option value="BA">BA</option>
+                              <option value="M.Tech">M.Tech</option>
+                              <option value="MCA">MCA</option>
+                              <option value="MBA">MBA</option>
+                              <option value="M.Sc">M.Sc</option>
+                              <option value="Diploma / Polytechnic">Diploma / Polytechnic</option>
+                              <option value="PhD / Research Scholar">PhD / Research Scholar</option>
+                              <option value="Other">Other (Please specify)</option>
+                            </select>
+                            {courseSelect === 'Other' && (
+                              <div className="pt-2">
+                                <label htmlFor="reg-customCourse" className="sr-only">
+                                  Specify Degree / Course
+                                </label>
+                                <input
+                                  id="reg-customCourse"
+                                  type="text"
+                                  required
+                                  value={customCourse}
+                                  onChange={(e) => {
+                                    setCustomCourse(e.target.value);
+                                    if (errors.course) setErrors((prev) => ({ ...prev, course: '' }));
+                                  }}
+                                  placeholder="Specify your degree / course"
+                                  aria-invalid={Boolean(errors.course)}
+                                  aria-describedby={errors.course ? 'reg-course-error' : undefined}
+                                  className={`w-full p-2.5 bg-white border-2 ${errors.course ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                                />
+                              </div>
+                            )}
+                            {errors.course && (
+                              <p id="reg-course-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                                {errors.course}
+                              </p>
+                            )}
+                          </div>
 
-              {/* 6. Consent Checkbox with Privacy Notice Link */}
-              <div className="pt-2">
-                <div className="flex items-start sm:items-center gap-3 min-h-[46px]">
-                  <input
-                    type="checkbox"
-                    id="reg-consentCheck"
-                    required
-                    checked={consentAgreed}
-                    onChange={(e) => {
-                      setConsentAgreed(e.target.checked);
-                      if (errors.consent) setErrors((prev) => ({ ...prev, consent: '' }));
-                    }}
-                    aria-invalid={Boolean(errors.consent)}
-                    aria-describedby={errors.consent ? 'reg-consent-error' : undefined}
-                    className="w-5 h-5 accent-[#FF6B1A] border-2 border-[#111111] rounded-none cursor-pointer shrink-0 mt-0.5 sm:mt-0"
-                  />
-                  <label htmlFor="reg-consentCheck" className="text-xs sm:text-sm font-semibold text-[#111111] cursor-pointer leading-normal select-none">
-                    <span>I agree to be contacted about this event.</span>{' '}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleOpenPrivacyModal();
-                      }}
-                      className="text-[#FF6B1A] underline hover:text-[#111111] font-bold cursor-pointer inline transition-colors"
-                    >
-                      See Privacy Notice
-                    </button>
-                  </label>
-                </div>
-                {errors.consent && (
-                  <p id="reg-consent-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
-                    {errors.consent}
-                  </p>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={!authUser || isSubmitting || (ticket === 'pitch' && !isPitchOpen)}
-                  className={`w-full brutal-btn text-[#111111] p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${
-                    !authUser
-                      ? 'bg-neutral-400 text-neutral-800 opacity-60 cursor-not-allowed shadow-none border-2 border-[#111111]'
-                      : ticket === 'pitch' && !isPitchOpen
-                      ? 'bg-neutral-400 text-neutral-800 opacity-70 cursor-not-allowed shadow-none border-2 border-[#111111]'
-                      : isSubmitting
-                      ? 'bg-[#FF6B1A] opacity-60 cursor-not-allowed pointer-events-none'
-                      : 'bg-[#FF6B1A] cursor-pointer hover:bg-[#E05307]'
-                  }`}
-                >
-                  {!authUser ? (
-                    <span className="flex items-center gap-2">
-                      <Lock className="w-4 h-4" />
-                      <span>Sign in with Google above to unlock</span>
-                    </span>
-                  ) : ticket === 'pitch' && !isPitchOpen ? (
-                    <span>Pitch registrations open soon</span>
-                  ) : isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <RotateCw className="w-5 h-5 animate-spin" />
-                      <span>Submitting registration...</span>
-                    </span>
-                  ) : (
-                    <>
-                      <span>{ticket === 'pitch' ? 'Submit Pitch Registration' : 'Register for Startup Conclave 1.0'}</span>
-                      <ArrowRight className="w-5 h-5" />
+                          {/* Current Year Select */}
+                          <div className="space-y-1.5">
+                            <label htmlFor="reg-yearSelect" className="font-bold text-[#111111] block cursor-pointer">
+                              Current Year *
+                            </label>
+                            <select
+                              id="reg-yearSelect"
+                              required
+                              value={yearSelect}
+                              onChange={(e) => {
+                                setYearSelect(e.target.value);
+                                if (errors.year) setErrors((prev) => ({ ...prev, year: '' }));
+                              }}
+                              aria-invalid={Boolean(errors.year)}
+                              aria-describedby={errors.year ? 'reg-year-error' : undefined}
+                              className={`w-full p-2.5 bg-white border-2 ${errors.year ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                            >
+                              <option value="">Select Current Year</option>
+                              <option value="1st Year">1st Year</option>
+                              <option value="2nd Year">2nd Year</option>
+                              <option value="3rd Year">3rd Year</option>
+                              <option value="4th Year">4th Year</option>
+                              <option value="5th Year">5th Year</option>
+                              <option value="Passed out">Passed out / Alumni</option>
+                              <option value="Other">Other (Please specify)</option>
+                            </select>
+                            {yearSelect === 'Other' && (
+                              <div className="pt-2">
+                                <label htmlFor="reg-customYear" className="sr-only">
+                                  Specify Current Year
+                                </label>
+                                <input
+                                  id="reg-customYear"
+                                  type="text"
+                                  required
+                                  value={customYear}
+                                  onChange={(e) => {
+                                    setCustomYear(e.target.value);
+                                    if (errors.year) setErrors((prev) => ({ ...prev, year: '' }));
+                                  }}
+                                  placeholder="Specify your current year"
+                                  aria-invalid={Boolean(errors.year)}
+                                  aria-describedby={errors.year ? 'reg-year-error' : undefined}
+                                  className={`w-full p-2.5 bg-white border-2 ${errors.year ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                                />
+                              </div>
+                            )}
+                            {errors.year && (
+                              <p id="reg-year-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                                {errors.year}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </>
+                  ) : (
+                    /* Non-Student Delegates: Organisation & Role */
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label htmlFor="reg-college" className="font-bold text-[#111111] block cursor-pointer">
+                          Organisation Name *
+                        </label>
+                        <input
+                          id="reg-college"
+                          type="text"
+                          autoComplete="organization"
+                          required
+                          value={college}
+                          onChange={(e) => {
+                            setCollege(e.target.value);
+                            if (errors.college) setErrors((prev) => ({ ...prev, college: '' }));
+                          }}
+                          placeholder="e.g. Acme Labs, Startup India"
+                          aria-invalid={Boolean(errors.college)}
+                          aria-describedby={errors.college ? 'reg-college-error' : undefined}
+                          className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.college ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
+                        />
+                        {errors.college && (
+                          <p id="reg-college-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                            {errors.college}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label htmlFor="reg-professionalRole" className="font-bold text-[#111111] block cursor-pointer">
+                          Role / Designation *
+                        </label>
+                        <input
+                          id="reg-professionalRole"
+                          type="text"
+                          autoComplete="organization-title"
+                          required
+                          value={professionalRole}
+                          onChange={(e) => {
+                            setProfessionalRole(e.target.value);
+                            if (errors.professionalRole) setErrors((prev) => ({ ...prev, professionalRole: '' }));
+                          }}
+                          placeholder="e.g. Founder, Software Engineer, PM"
+                          aria-invalid={Boolean(errors.professionalRole)}
+                          aria-describedby={errors.professionalRole ? 'reg-professionalRole-error' : undefined}
+                          className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.professionalRole ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
+                        />
+                        {errors.professionalRole && (
+                          <p id="reg-professionalRole-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                            {errors.professionalRole}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   )}
-                </button>
-              </div>
 
-              </fieldset>
+                  {/* 5. Pitch Arena Section */}
+                  {ticket === 'pitch' && (
+                    <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] space-y-3.5 animate-in fade-in">
+                      <div className="flex items-center justify-between border-b border-[#111111]/20 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Rocket className="w-4 h-4 text-[#FF6B1A]" />
+                          <span className="font-bold text-[#111111] uppercase tracking-wide text-xs sm:text-sm">
+                            Pitch Arena Application Details
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTicket('participant');
+                            setWantsToPitch(false);
+                          }}
+                          className="text-[11px] font-mono underline text-[#111111]/70 hover:text-[#FF6B1A] cursor-pointer"
+                        >
+                          Switch to Attendee pass
+                        </button>
+                      </div>
 
-              <div className="text-center font-mono text-xs text-[#111111]/70">
-                DVSIET Meerut · No third-party forms
-              </div>
-            </form>
+                      {/* 1. Startup Name */}
+                      <div className="space-y-1.5">
+                        <label htmlFor="reg-startupName" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                          Startup Name *
+                        </label>
+                        <input
+                          id="reg-startupName"
+                          type="text"
+                          autoComplete="organization"
+                          required
+                          value={startupName}
+                          onChange={(e) => {
+                            setStartupName(e.target.value);
+                            if (errors.startupName) setErrors((prev) => ({ ...prev, startupName: '' }));
+                          }}
+                          placeholder="e.g. KisanAI"
+                          aria-invalid={Boolean(errors.startupName)}
+                          aria-describedby={errors.startupName ? 'reg-startupName-error' : undefined}
+                          className={`w-full p-2.5 bg-white border-2 ${errors.startupName ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                        />
+                        {errors.startupName && (
+                          <p id="reg-startupName-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.startupName}</p>
+                        )}
+                      </div>
 
-          </div>
-        )}
+                      {/* 2. Sector & Stage */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Sector Dropdown */}
+                        <div className="space-y-1.5">
+                          <label htmlFor="reg-pitchSector" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                            Sector *
+                          </label>
+                          <select
+                            id="reg-pitchSector"
+                            value={pitchSector}
+                            onChange={(e) => {
+                              setPitchSector(e.target.value);
+                              if (errors.pitchSector) setErrors((prev) => ({ ...prev, pitchSector: '' }));
+                            }}
+                            aria-invalid={Boolean(errors.pitchSector)}
+                            aria-describedby={errors.pitchSector ? 'reg-pitchSector-error' : undefined}
+                            className={`w-full p-2.5 bg-white border-2 ${errors.pitchSector ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                          >
+                            <option value="">Select Sector</option>
+                            <option value="AgriTech">AgriTech</option>
+                            <option value="FinTech">FinTech</option>
+                            <option value="EdTech">EdTech</option>
+                            <option value="HealthTech">HealthTech</option>
+                            <option value="AI/ML">AI/ML</option>
+                            <option value="SaaS">SaaS</option>
+                            <option value="E-commerce">E-commerce</option>
+                            <option value="Social Impact">Social Impact</option>
+                            <option value="Other">Other</option>
+                          </select>
+                          {errors.pitchSector && (
+                            <p id="reg-pitchSector-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchSector}</p>
+                          )}
+                        </div>
 
-      </section>
+                        {/* Stage Dropdown */}
+                        <div className="space-y-1.5">
+                          <label htmlFor="reg-pitchStage" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                            Stage *
+                          </label>
+                          <select
+                            id="reg-pitchStage"
+                            value={pitchStage}
+                            onChange={(e) => {
+                              setPitchStage(e.target.value as any);
+                              if (errors.pitchStage) setErrors((prev) => ({ ...prev, pitchStage: '' }));
+                            }}
+                            aria-invalid={Boolean(errors.pitchStage)}
+                            aria-describedby={errors.pitchStage ? 'reg-pitchStage-error' : undefined}
+                            className={`w-full p-2.5 bg-white border-2 ${errors.pitchStage ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                          >
+                            <option value="">Select Stage</option>
+                            <option value="Idea">Idea</option>
+                            <option value="Prototype">Prototype</option>
+                            <option value="Launched">Launched</option>
+                            <option value="Revenue">Revenue</option>
+                          </select>
+                          {errors.pitchStage && (
+                            <p id="reg-pitchStage-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchStage}</p>
+                          )}
+                        </div>
+                      </div>
 
-      {/* =================================================================== */}
-      {/* 10. FAQ ACCORDION (6 Questions)                                     */}
-      {/* =================================================================== */}
-      <section id="faq" className="px-4 sm:px-8 py-16 sm:py-24 max-w-4xl mx-auto text-left border-b-2 border-[#111111]">
-        
-        <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-            Clear Answers
-          </span>
-        </div>
+                      {/* 3. One-Liner Description / Startup Pitch */}
+                      <div className="space-y-1.5">
+                        <label htmlFor="reg-startupPitch" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                          One-Line Description / Startup Pitch *
+                        </label>
+                        <input
+                          id="reg-startupPitch"
+                          type="text"
+                          required
+                          value={startupPitch}
+                          onChange={(e) => {
+                            setStartupPitch(e.target.value);
+                            if (errors.startupPitch) setErrors((prev) => ({ ...prev, startupPitch: '' }));
+                          }}
+                          placeholder="e.g. Automated sensors for farmers in Western UP"
+                          aria-invalid={Boolean(errors.startupPitch)}
+                          aria-describedby={errors.startupPitch ? 'reg-startupPitch-error' : undefined}
+                          className={`w-full p-2.5 bg-white border-2 ${errors.startupPitch ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                        />
+                        {errors.startupPitch && (
+                          <p id="reg-startupPitch-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.startupPitch}</p>
+                        )}
+                      </div>
 
-        <h2 className="font-display font-extrabold text-2xl sm:text-4xl text-[#111111] mb-8">
-          Frequently Asked Questions
-        </h2>
+                      {/* 4. Pitch Deck Link & Team Size */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Pitch Deck Link */}
+                        <div className="space-y-1.5">
+                          <label htmlFor="reg-pitchDeckLink" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                            Pitch Deck Link *
+                          </label>
+                          <input
+                            id="reg-pitchDeckLink"
+                            type="url"
+                            inputMode="url"
+                            autoComplete="url"
+                            required
+                            value={pitchDeckLink}
+                            onChange={(e) => {
+                              setPitchDeckLink(e.target.value);
+                              if (errors.pitchDeckLink) setErrors((prev) => ({ ...prev, pitchDeckLink: '' }));
+                            }}
+                            placeholder="Google Drive or Canva link"
+                            aria-invalid={Boolean(errors.pitchDeckLink)}
+                            aria-describedby={errors.pitchDeckLink ? 'reg-pitchDeckLink-error' : undefined}
+                            className={`w-full p-2.5 bg-white border-2 ${errors.pitchDeckLink ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
+                          />
+                          {errors.pitchDeckLink && (
+                            <p id="reg-pitchDeckLink-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchDeckLink}</p>
+                          )}
+                        </div>
 
-        <div className="space-y-3.5">
-          {CONFIG.faq.map((item, idx) => {
-            const isOpen = openFaqIndex === idx;
-            return (
-              <div
-                key={idx}
-                className="bg-white brutal-border brutal-shadow-sm transition-all"
-              >
-                <button
-                  type="button"
-                  onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
-                  className="w-full p-4 sm:p-5 text-left font-display font-bold text-base sm:text-lg flex items-center justify-between gap-4 cursor-pointer min-h-[50px]"
-                >
-                  <span>{item.q}</span>
-                  <ChevronDown
-                    className={`w-5 h-5 text-[#FF6B1A] shrink-0 transition-transform duration-200 ${
-                      isOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
+                        {/* Team Size Dropdown */}
+                        <div className="space-y-1.5">
+                          <label htmlFor="reg-pitchTeamSize" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
+                            Team Size *
+                          </label>
+                          <select
+                            id="reg-pitchTeamSize"
+                            value={pitchTeamSize}
+                            onChange={(e) => {
+                              setPitchTeamSize(e.target.value);
+                              if (errors.pitchTeamSize) setErrors((prev) => ({ ...prev, pitchTeamSize: '' }));
+                            }}
+                            aria-invalid={Boolean(errors.pitchTeamSize)}
+                            aria-describedby={errors.pitchTeamSize ? 'reg-pitchTeamSize-error' : undefined}
+                            className={`w-full p-2.5 bg-white border-2 ${errors.pitchTeamSize ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
+                          >
+                            <option value="">Select Team Size</option>
+                            <option value="1">1 (Solo Founder)</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                          </select>
+                          {errors.pitchTeamSize && (
+                            <p id="reg-pitchTeamSize-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchTeamSize}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                {isOpen && (
-                  <div className="px-4 sm:px-5 pb-5 pt-1 text-sm sm:text-base font-sans text-[#111111]/85 border-t border-[#111111]/15 leading-relaxed font-medium">
-                    {item.a}
+                  {/* 5.5 UPI Fee Payment Block (Rendered for Pitch pass) */}
+                  {ticket === 'pitch' && (
+                    !isPitchOpen ? (
+                      <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
+                        <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
+                          <div>
+                            <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-[#111111] px-2 py-0.5 border border-[#111111]">
+                              {CONFIG.tickets.pitch.label.toUpperCase()}
+                            </span>
+                            <h3 className="font-display font-black text-xl text-[#111111] mt-1">
+                              ₹{CONFIG.tickets.pitch.fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ Startup Pitch Pass</span>
+                            </h3>
+                          </div>
+                          <span className="font-mono text-xs font-bold uppercase px-2 py-1 bg-[#FFD400] text-[#111111] border border-[#111111]">
+                            OPENS SOON
+                          </span>
+                        </div>
+                        <div className="p-3.5 bg-white border-2 border-[#111111] space-y-1">
+                          <p className="font-bold text-[#111111] text-sm">Pitch registrations open soon</p>
+                          <p className="text-xs text-[#111111]/70">
+                            Pitch ticket UPI payment details will be published once pitch slots are unlocked. In the meantime, you can register with a free Attendee Delegate pass.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTicket('participant');
+                            setWantsToPitch(false);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-[#111111] border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors cursor-pointer min-h-[44px]"
+                        >
+                          Switch to Attendee Delegate (Free)
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-4">
+                        <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
+                          <div>
+                            <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-[#111111] px-2 py-0.5 border border-[#111111]">
+                              {CONFIG.tickets.pitch.label.toUpperCase()} FEE
+                            </span>
+                            <h3 className="font-display font-black text-xl text-[#111111] mt-1">
+                              ₹{CONFIG.tickets.pitch.fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ Startup Pitch Pass</span>
+                            </h3>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] font-mono text-[#111111]/70 block">Payee</span>
+                            <span className="font-mono text-xs font-bold text-[#111111]">
+                              {CONFIG.payment.payeeName.trim() || CONFIG.event.name}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          {/* UPI ID with Copy button */}
+                          <div className="space-y-1">
+                            <label className="font-mono text-xs font-bold text-[#111111] block">
+                              UPI ID:
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 p-2.5 bg-white border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] select-all truncate">
+                                {CONFIG.payment.upiId}
+                              </code>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (navigator.clipboard) {
+                                    navigator.clipboard.writeText(CONFIG.payment.upiId);
+                                    setCopiedUpi(true);
+                                    setTimeout(() => setCopiedUpi(false), 2000);
+                                  }
+                                }}
+                                className="px-3 py-2.5 bg-white hover:bg-[#FFD400] border-2 border-[#111111] font-mono text-xs font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer min-h-[44px]"
+                              >
+                                {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                <span>{copiedUpi ? 'Copied' : 'Copy UPI'}</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Client-side QR Code and Deep Link Button */}
+                          <div className="p-3.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col sm:flex-row items-center gap-4">
+                            <div className="p-2.5 bg-[#FFF8EC] border-2 border-[#111111] shrink-0 flex items-center justify-center">
+                              <QRCodeSVG
+                                value={upiPayUrl}
+                                size={144}
+                                level="M"
+                                className="w-[144px] h-[144px]"
+                              />
+                            </div>
+                            <div className="space-y-3 text-center sm:text-left flex-1">
+                              <div>
+                                <span className="font-bold text-sm text-[#111111] block">
+                                  Scan QR Code to Pay ₹{CONFIG.tickets.pitch.fee}
+                                </span>
+                                <p className="text-xs text-[#111111]/70 mt-0.5">
+                                  Scan with Google Pay, PhonePe, Paytm, BHIM, or any UPI app.
+                                </p>
+                              </div>
+                              <div>
+                                <a
+                                  href={upiPayUrl}
+                                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-[#FFD400] hover:bg-[#FF6B1A] hover:text-[#111111] border-2 border-[#111111] font-mono text-xs sm:text-sm font-bold text-[#111111] shadow-[2px_2px_0px_#111111] transition-all cursor-pointer min-h-[44px]"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                  <span>Open UPI app</span>
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 12-digit UTR Input */}
+                          <div className="space-y-1.5">
+                            <label htmlFor="reg-paymentUtr" className="font-bold text-[#111111] block cursor-pointer">
+                              12-Digit UPI Reference Number (UTR / Txn ID) *
+                            </label>
+                            <input
+                              id="reg-paymentUtr"
+                              type="text"
+                              required
+                              inputMode="numeric"
+                              maxLength={12}
+                              value={paymentUtr}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '').slice(0, 12);
+                                setPaymentUtr(val);
+                                if (errors.paymentUtr) setErrors((prev) => ({ ...prev, paymentUtr: '' }));
+                              }}
+                              placeholder="e.g. 428901234567"
+                              aria-invalid={Boolean(errors.paymentUtr)}
+                              aria-describedby={errors.paymentUtr ? 'reg-paymentUtr-error' : undefined}
+                              className={`w-full p-2.5 bg-white border-2 ${errors.paymentUtr ? 'border-red-600' : 'border-[#111111]'} font-mono text-base font-bold tracking-wider min-h-[46px]`}
+                            />
+                            {errors.paymentUtr && (
+                              <p id="reg-paymentUtr-error" role="alert" className="text-xs text-red-600 font-bold">{errors.paymentUtr}</p>
+                            )}
+                            <p className="text-[11px] font-mono text-[#111111]/70">
+                              Enter the 12-digit numeric reference shown in your UPI app payment receipt after paying.
+                            </p>
+                          </div>
+
+                          {CONFIG.payment.refundPolicyText && (
+                            <p className="text-[11px] font-sans text-[#111111]/60 italic border-t border-[#111111]/20 pt-2">
+                              Refund Policy: {CONFIG.payment.refundPolicyText}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  {/* 6. Consent Checkbox with Privacy Notice Link */}
+                  <div className="pt-2">
+                    <div className="flex items-start sm:items-center gap-3 min-h-[46px]">
+                      <input
+                        type="checkbox"
+                        id="reg-consentCheck"
+                        required
+                        checked={consentAgreed}
+                        onChange={(e) => {
+                          setConsentAgreed(e.target.checked);
+                          if (errors.consent) setErrors((prev) => ({ ...prev, consent: '' }));
+                        }}
+                        aria-invalid={Boolean(errors.consent)}
+                        aria-describedby={errors.consent ? 'reg-consent-error' : undefined}
+                        className="w-5 h-5 accent-[#FF6B1A] border-2 border-[#111111] rounded-none cursor-pointer shrink-0 mt-0.5 sm:mt-0"
+                      />
+                      <label htmlFor="reg-consentCheck" className="text-xs sm:text-sm font-semibold text-[#111111] cursor-pointer leading-normal select-none">
+                        <span>I agree to be contacted about this event.</span>{' '}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleOpenPrivacyModal();
+                          }}
+                          className="text-[#FF6B1A] underline hover:text-[#111111] font-bold cursor-pointer inline transition-colors"
+                        >
+                          See Privacy Notice
+                        </button>
+                      </label>
+                    </div>
+                    {errors.consent && (
+                      <p id="reg-consent-error" role="alert" className="text-xs text-red-600 font-bold mt-1">
+                        {errors.consent}
+                      </p>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
+
+                  {/* Submit Button */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={!authUser || isSubmitting || (ticket === 'pitch' && !isPitchOpen)}
+                      className={`w-full brutal-btn text-[#111111] p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${!authUser
+                          ? 'bg-neutral-400 text-neutral-800 opacity-60 cursor-not-allowed shadow-none border-2 border-[#111111]'
+                          : ticket === 'pitch' && !isPitchOpen
+                            ? 'bg-neutral-400 text-neutral-800 opacity-70 cursor-not-allowed shadow-none border-2 border-[#111111]'
+                            : isSubmitting
+                              ? 'bg-[#FF6B1A] opacity-60 cursor-not-allowed pointer-events-none'
+                              : 'bg-[#FF6B1A] cursor-pointer hover:bg-[#E05307]'
+                        }`}
+                    >
+                      {!authUser ? (
+                        <span className="flex items-center gap-2">
+                          <Lock className="w-4 h-4" />
+                          <span>Sign in with Google above to unlock</span>
+                        </span>
+                      ) : ticket === 'pitch' && !isPitchOpen ? (
+                        <span>Pitch registrations open soon</span>
+                      ) : isSubmitting ? (
+                        <span className="flex items-center gap-2">
+                          <RotateCw className="w-5 h-5 animate-spin" />
+                          <span>Submitting registration...</span>
+                        </span>
+                      ) : (
+                        <>
+                          <span>{ticket === 'pitch' ? 'Submit Pitch Registration' : 'Register for Startup Conclave 1.0'}</span>
+                          <ArrowRight className="w-5 h-5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                </fieldset>
+
+                <div className="text-center font-mono text-xs text-[#111111]/70">
+                  DVSIET Meerut · No third-party forms
+                </div>
+              </form>
+
+            </div>
+          )}
+
+        </section>
+
+        {/* =================================================================== */}
+        {/* 10. FAQ ACCORDION (6 Questions)                                     */}
+        {/* =================================================================== */}
+        <section id="faq" className="px-4 sm:px-8 py-16 sm:py-24 max-w-4xl mx-auto text-left border-b-2 border-[#111111]">
+
+          <div className="flex items-center gap-3 mb-6">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
+              Clear Answers
+            </span>
+          </div>
+
+          <h2 className="font-display font-extrabold text-2xl sm:text-4xl text-[#111111] mb-8">
+            Frequently Asked Questions
+          </h2>
+
+          <div className="space-y-3.5">
+            {CONFIG.faq.map((item, idx) => {
+              const isOpen = openFaqIndex === idx;
+              return (
+                <div
+                  key={idx}
+                  className="bg-white brutal-border brutal-shadow-sm transition-all"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                    className="w-full p-4 sm:p-5 text-left font-display font-bold text-base sm:text-lg flex items-center justify-between gap-4 cursor-pointer min-h-[50px]"
+                  >
+                    <span>{item.q}</span>
+                    <ChevronDown
+                      className={`w-5 h-5 text-[#FF6B1A] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''
+                        }`}
+                    />
+                  </button>
+
+                  {isOpen && (
+                    <div className="px-4 sm:px-5 pb-5 pt-1 text-sm sm:text-base font-sans text-[#111111]/85 border-t border-[#111111]/15 leading-relaxed font-medium">
+                      {item.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
       </main>
 
       {/* =================================================================== */}
@@ -4637,7 +4565,7 @@ export const SinglePage: React.FC = () => {
       {/* =================================================================== */}
       <footer className="px-4 sm:px-8 py-12 sm:py-16 max-w-6xl mx-auto text-left font-sans text-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pb-10 border-b-2 border-[#111111]">
-          
+
           <div className="space-y-2">
             <div className="font-display font-black text-xl text-[#111111]">
               {CONFIG.event.name.toUpperCase()}
@@ -4802,7 +4730,7 @@ export const SinglePage: React.FC = () => {
             tabIndex={-1}
             className="bg-[#FFF8EC] brutal-border brutal-shadow-lg p-6 sm:p-8 max-w-lg w-full text-left space-y-4 max-h-[90vh] overflow-y-auto"
           >
-            
+
             <div className="flex items-center justify-between border-b-2 border-[#111111] pb-3">
               <h2 id="partner-modal-title" className="font-display font-black text-xl text-[#111111]">
                 Partner With Startup Conclave 1.0
@@ -4968,9 +4896,8 @@ export const SinglePage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={partnerSubmitting}
-                    className={`brutal-btn bg-[#FF6B1A] text-[#111111] px-5 py-2 font-display font-bold text-xs uppercase min-h-[44px] ${
-                      partnerSubmitting ? 'opacity-60 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
-                    }`}
+                    className={`brutal-btn bg-[#FF6B1A] text-[#111111] px-5 py-2 font-display font-bold text-xs uppercase min-h-[44px] ${partnerSubmitting ? 'opacity-60 cursor-not-allowed pointer-events-none' : 'cursor-pointer'
+                      }`}
                   >
                     {partnerSubmitting ? (
                       <span className="flex items-center gap-1.5">
@@ -5010,7 +4937,7 @@ export const SinglePage: React.FC = () => {
             tabIndex={-1}
             className="bg-[#FFF8EC] brutal-border brutal-shadow-lg p-5 sm:p-8 max-w-2xl w-full text-left space-y-5 max-h-[90vh] overflow-y-auto animate-brutal-pop"
           >
-            
+
             {/* Draft Notice Banner */}
             <div className="p-3 bg-[#FFD400] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-2.5">
               <AlertCircle className="w-5 h-5 text-[#111111] shrink-0" />
@@ -5048,7 +4975,7 @@ export const SinglePage: React.FC = () => {
 
             {/* Modal Body: Plain-Language Sections */}
             <div className="space-y-4 font-sans text-sm text-[#111111] leading-relaxed">
-              
+
               {/* Section 1: What Data Is Collected */}
               <div className="p-4 bg-white border-2 border-[#111111] space-y-2">
                 <div className="flex items-center gap-2 font-display font-black text-base text-[#111111]">
