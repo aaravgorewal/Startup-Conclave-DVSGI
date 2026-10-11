@@ -38,7 +38,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider } from '../../services/firebase.ts';
 import { mapAuthError } from '../../services/errorMapping.ts';
-import { CONFIG, type LogoItem, type TeamMember, type Guest } from '../../config.ts';
+import { CONFIG, type LogoItem, type TeamMember, type Guest, type SponsorNeed } from '../../config.ts';
 import { getTeamMemberPhoto } from '../teamPhotos.ts';
 import {
   createRegistration,
@@ -2561,6 +2561,121 @@ export const SinglePage: React.FC = () => {
           </div>
         </div>
 
+        {/* 2. WHAT WE ARE LOOKING FOR: Sponsorship block */}
+        {(() => {
+          const confirmedNeeds = (CONFIG.sponsorNeeds || []).filter((n) => n.confirmed);
+          const sponsorContactEmail = (CONFIG.sponsorContactEmail || '').trim();
+          const hasSponsorDeck = Boolean(
+            CONFIG.sponsorDeckUrl && CONFIG.sponsorDeckUrl.startsWith('https://')
+          );
+
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2">
+                <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] uppercase tracking-tight">
+                  What we are looking for
+                </h3>
+                <span className="font-mono text-xs text-[#111111]/70 font-bold">
+                  Sponsorship Needs
+                </span>
+              </div>
+
+              {confirmedNeeds.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {confirmedNeeds.map((need, idx) => (
+                    <div
+                      key={`${need.title}-${idx}`}
+                      className="p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-3"
+                    >
+                      <div className="space-y-2">
+                        <h4 className="font-display font-black text-lg text-[#111111]">
+                          {need.title}
+                        </h4>
+                        <p className="text-sm font-sans text-[#111111]/85 leading-relaxed font-medium">
+                          {need.description}
+                        </p>
+                      </div>
+                      {Boolean(need.amount && need.amount.trim()) && (
+                        <div className="pt-2 border-t border-[#111111]/20">
+                          <span className="font-mono text-xs sm:text-sm font-black text-[#FF6B1A]">
+                            {need.amount?.trim()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="font-mono text-xs uppercase tracking-wider text-[#111111]/70 font-bold">
+                    Ways to partner
+                  </p>
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
+                    {[
+                      'Cash sponsorship',
+                      'Technology credits',
+                      'Food & beverage',
+                      'Merchandise',
+                      'Media partnership',
+                      'Travel & hospitality',
+                      'Other',
+                    ].map((chip) => (
+                      <span
+                        key={chip}
+                        className="px-3.5 py-2 bg-white brutal-border shadow-[2px_2px_0px_#111111] font-mono text-xs sm:text-sm font-bold text-[#111111]"
+                      >
+                        {chip}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons & Contact */}
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    const formEl = document.getElementById('partner-form');
+                    if (formEl) {
+                      formEl.scrollIntoView({ behavior: 'smooth' });
+                    }
+                    setPartnerFormStartTime(Date.now());
+                    setPartnerHoneypot('');
+                    setPartnerError('');
+                    handleOpenPartnerModal(e);
+                  }}
+                  className="brutal-btn bg-[#FFD400] text-[#111111] px-5 py-2.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px]"
+                >
+                  Become a partner
+                </button>
+
+                {hasSponsorDeck && (
+                  <a
+                    href={CONFIG.sponsorDeckUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="brutal-btn bg-white hover:bg-[#FFF8EC] text-[#111111] px-5 py-2.5 font-display font-bold text-sm uppercase tracking-wider rounded-[2px] cursor-pointer min-h-[44px] inline-flex items-center gap-1.5"
+                  >
+                    <span>Download sponsorship deck</span>
+                    <span aria-hidden="true">↓</span>
+                  </a>
+                )}
+
+                {Boolean(sponsorContactEmail) && (
+                  <a
+                    href={`mailto:${sponsorContactEmail}?subject=Sponsorship%20Inquiry%20-%20Startup%20Conclave%201.0`}
+                    className="inline-flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold text-[#FF6B1A] hover:text-[#111111] underline transition-colors min-h-[44px] px-2"
+                  >
+                    <span>{sponsorContactEmail}</span>
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* 2. PARTNERSHIP OPTIONS: Title / Innovation / Gold / Supporting (hidden if empty) */}
         {Boolean(CONFIG.partnerTiers && CONFIG.partnerTiers.length > 0) && (
           <div className="space-y-4">
@@ -4711,7 +4826,7 @@ export const SinglePage: React.FC = () => {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handlePartnerSubmit} className="space-y-3 font-sans text-sm">
+              <form id="partner-form" onSubmit={handlePartnerSubmit} className="space-y-3 font-sans text-sm">
                 {/* Anti-Bot Honeypot Field */}
                 <div className="hidden" aria-hidden="true">
                   <label htmlFor="partner_nickname">Do not fill this</label>
