@@ -47,8 +47,10 @@ import {
   TeamMemberDetail,
 } from '../../services/registrations.ts';
 import {
-  uploadPaymentScreenshot,
   validatePaymentScreenshotFile,
+  compressScreenshot,
+  uploadPaymentProof,
+  formatFileSize,
 } from '../../services/storage.ts';
 import { getEventSettings } from '../../services/admin.ts';
 import {
@@ -681,11 +683,35 @@ export const SinglePage: React.FC = () => {
   const [paymentScreenshotFile, setPaymentScreenshotFile] = useState<File | null>(null);
   const [paymentScreenshotPreview, setPaymentScreenshotPreview] = useState<string | null>(null);
   const [paymentScreenshotName, setPaymentScreenshotName] = useState<string>('');
+  const [paymentOriginalSize, setPaymentOriginalSize] = useState<number>(0);
+  const [paymentCompressedSize, setPaymentCompressedSize] = useState<number>(0);
+  const [compressedBlob, setCompressedBlob] = useState<Blob | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'compressing' | 'uploading' | 'success' | 'error'>('idle');
+  const [uploadErrorCode, setUploadErrorCode] = useState<string | null>(null);
+  const [uploadErrorMessage, setUploadErrorMessage] = useState<string | null>(null);
+  const [uploadedProofId, setUploadedProofId] = useState<string | null>(null);
   const [isUploadingScreenshot, setIsUploadingScreenshot] = useState<boolean>(false);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
+  const activeUploadCancelRef = useRef<(() => void) | null>(null);
   const [paymentUtr, setPaymentUtr] = useState('');
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(false);
   const [honeypot, setHoneypot] = useState('');
+
+  // Clean up any ongoing upload or preview on unmount
+  useEffect(() => {
+    return () => {
+      if (activeUploadCancelRef.current) {
+        activeUploadCancelRef.current();
+      }
+      if (paymentScreenshotPreview) {
+        try {
+          URL.revokeObjectURL(paymentScreenshotPreview);
+        } catch {}
+      }
+    };
+  }, [paymentScreenshotPreview]);
 
   // Handle Team Member field updates
   const handleMemberChange = (index: number, field: keyof TeamMemberDetail, value: string) => {
@@ -728,34 +754,126 @@ export const SinglePage: React.FC = () => {
     });
   };
 
-  // Handle Payment Screenshot File selection
-  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const check = validatePaymentScreenshotFile(file);
-    if (!check.valid) {
-      setErrors((prev) => ({ ...prev, paymentScreenshot: check.error || 'Invalid file format or size.' }));
-      return;
+  // Helper to trigger proof upload to Cloudinary via XMLHttpRequest
+  const startProofUpload = async (blob: Blob) => {
+    if (activeUploadCancelRef.current) {
+      activeUploadCancelRef.current();
+      activeUploadCancelRef.current = null;
     }
 
+    setUploadStatus('uploading');
+    setIsUploadingScreenshot(true);
+    setUploadProgress(0);
+    setUploadErrorCode(null);
+    setUploadErrorMessage(null);
+
+    const { promise, cancel } = uploadPaymentProof(blob, {
+      onProgress: (percent) => {
+        setUploadProgress(percent);
+      },
+      timeoutMs: 30000,
+    });
+
+    activeUploadCancelRef.current = cancel;
+
+    try {
+      const res = await promise;
+      activeUploadCancelRef.current = null;
+      setIsUploadingScreenshot(false);
+
+      if (res.success && res.publicId) {
+        setUploadStatus('success');
+        setUploadedProofId(res.publicId);
+        setUploadProgress(100);
+      } else {
+        setUploadStatus('error');
+        setUploadErrorCode(res.errorCode || 'upload/failed');
+        setUploadErrorMessage(res.error || 'Failed to upload screenshot.');
+      }
+    } catch (err: any) {
+      activeUploadCancelRef.current = null;
+      setIsUploadingScreenshot(false);
+      setUploadStatus('error');
+      setUploadErrorCode(err?.code || 'upload/unknown');
+      setUploadErrorMessage(err?.message || 'Upload failed.');
+    }
+  };
+
+  // Process selected file: compress client-side, display thumbnail & size, and start upload
+  const handleProcessScreenshotFile = async (file: File) => {
+    if (!file) return;
+
+    if (activeUploadCancelRef.current) {
+      activeUploadCancelRef.current();
+      activeUploadCancelRef.current = null;
+    }
+    if (paymentScreenshotPreview) {
+      try {
+        URL.revokeObjectURL(paymentScreenshotPreview);
+      } catch {}
+    }
+
+    setPaymentScreenshotFile(file);
+    setPaymentScreenshotName(file.name);
+    setPaymentOriginalSize(file.size);
+    setPaymentCompressedSize(0);
+    setCompressedBlob(null);
+    setUploadedProofId(null);
+    setUploadErrorCode(null);
+    setUploadErrorMessage(null);
     setErrors((prev) => {
       const copy = { ...prev };
       delete copy.paymentScreenshot;
       return copy;
     });
 
-    setPaymentScreenshotFile(file);
-    setPaymentScreenshotName(file.name);
-    try {
-      const preview = URL.createObjectURL(file);
-      setPaymentScreenshotPreview(preview);
-    } catch {
-      // Fallback
+    // 1. Client-side compression
+    setUploadStatus('compressing');
+    const compResult = await compressScreenshot(file);
+
+    if (!compResult.success) {
+      setUploadStatus('error');
+      setUploadErrorCode('compression/unsupported-format');
+      setUploadErrorMessage(compResult.error);
+      setPaymentScreenshotPreview(null);
+      setErrors((prev) => ({
+        ...prev,
+        paymentScreenshot: compResult.error,
+      }));
+      return;
+    }
+
+    setPaymentScreenshotPreview(compResult.data.previewUrl);
+    setPaymentCompressedSize(compResult.data.compressedSize);
+    setCompressedBlob(compResult.data.blob);
+
+    // 2. Start Cloudinary upload immediately
+    await startProofUpload(compResult.data.blob);
+  };
+
+  // Handle Payment Screenshot File selection
+  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleProcessScreenshotFile(file);
     }
   };
 
+  // Retry upload if cancelled, timed out or errored
+  const handleRetryUpload = async () => {
+    if (compressedBlob) {
+      await startProofUpload(compressedBlob);
+    } else if (paymentScreenshotFile) {
+      await handleProcessScreenshotFile(paymentScreenshotFile);
+    }
+  };
+
+  // Remove screenshot and reset upload state
   const handleRemoveScreenshot = () => {
+    if (activeUploadCancelRef.current) {
+      activeUploadCancelRef.current();
+      activeUploadCancelRef.current = null;
+    }
     if (paymentScreenshotPreview) {
       try {
         URL.revokeObjectURL(paymentScreenshotPreview);
@@ -764,6 +882,15 @@ export const SinglePage: React.FC = () => {
     setPaymentScreenshotFile(null);
     setPaymentScreenshotPreview(null);
     setPaymentScreenshotName('');
+    setPaymentOriginalSize(0);
+    setPaymentCompressedSize(0);
+    setCompressedBlob(null);
+    setUploadStatus('idle');
+    setUploadProgress(0);
+    setUploadErrorCode(null);
+    setUploadErrorMessage(null);
+    setUploadedProofId(null);
+    setIsUploadingScreenshot(false);
     const input = document.getElementById('reg-paymentScreenshot') as HTMLInputElement;
     if (input) input.value = '';
   };
@@ -968,7 +1095,8 @@ export const SinglePage: React.FC = () => {
     paymentStatus?: string;
     paymentAmount?: number;
     paymentUtr?: string;
-    paymentScreenshotUrl?: string;
+    paymentProofId?: string;
+    paymentProofStatus?: 'uploaded' | 'pending';
     status?: string;
   } | null>(null);
 
@@ -1285,10 +1413,10 @@ export const SinglePage: React.FC = () => {
         }
       }
 
-      // 3. Payment Screenshot Validation
-      if (!paymentScreenshotFile) {
+      // 3. Payment Screenshot Validation (non-blocking if upload failed after retry)
+      if (!paymentScreenshotFile && !uploadedProofId) {
         newErrors.paymentScreenshot = 'Payment screenshot is required for paid registrations.';
-      } else {
+      } else if (paymentScreenshotFile && !uploadedProofId && uploadStatus === 'idle') {
         const check = validatePaymentScreenshotFile(paymentScreenshotFile);
         if (!check.valid) {
           newErrors.paymentScreenshot = check.error || 'Invalid payment screenshot file.';
@@ -1382,24 +1510,8 @@ export const SinglePage: React.FC = () => {
     setIsSubmitting(true);
     setIsNetworkError(false);
 
-    let screenshotUrl = '';
-    let screenshotPath = '';
-
-    if (isPaid && paymentScreenshotFile) {
-      setIsUploadingScreenshot(true);
-      const uploadRes = await uploadPaymentScreenshot(paymentScreenshotFile, emailTrim);
-      setIsUploadingScreenshot(false);
-
-      if (!uploadRes.success || !uploadRes.url) {
-        setIsSubmitting(false);
-        setErrors({
-          paymentScreenshot: uploadRes.error || 'Failed to upload payment screenshot. Please try again.',
-        });
-        return;
-      }
-      screenshotUrl = uploadRes.url;
-      screenshotPath = uploadRes.storagePath || '';
-    }
+    const proofId = uploadedProofId || '';
+    const proofStatus: 'uploaded' | 'pending' = (isPaid && proofId) ? 'uploaded' : 'pending';
 
     const requiredMembers = Number(pitchTeamSize) === 3 ? 3 : 2;
     const effectiveTeamMembers: TeamMemberDetail[] = isPaid
@@ -1434,8 +1546,8 @@ export const SinglePage: React.FC = () => {
       teamSize: isPaid ? pitchTeamSize : undefined,
       teamMembers: isPaid ? effectiveTeamMembers : undefined,
       paymentUtr: isPaid && paymentUtr.trim() ? paymentUtr.trim() : undefined,
-      paymentScreenshotUrl: isPaid ? screenshotUrl : undefined,
-      paymentScreenshotPath: isPaid ? screenshotPath : undefined,
+      paymentProofId: isPaid && proofId ? proofId : undefined,
+      paymentProofStatus: isPaid ? proofStatus : undefined,
       emailVerified: true,
     };
 
@@ -1468,7 +1580,8 @@ export const SinglePage: React.FC = () => {
         paymentStatus: isPaid ? 'pending' : 'not_required',
         paymentAmount: isStall ? CONFIG.tickets.stall.fee : isPitch ? CONFIG.tickets.pitch.fee : 0,
         paymentUtr: isPaid ? paymentUtr.trim() : undefined,
-        paymentScreenshotUrl: isPaid ? screenshotUrl : undefined,
+        paymentProofId: isPaid && proofId ? proofId : undefined,
+        paymentProofStatus: isPaid ? proofStatus : undefined,
         status: res.status || 'registered',
       });
       setRegistrationCount((prev) => prev + 1);
@@ -3518,29 +3631,32 @@ export const SinglePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Payment Screenshot Preview if uploaded */}
-                {submittedRecord.paymentScreenshotUrl && (
+                {/* Payment Screenshot Preview */}
+                {paymentScreenshotPreview || submittedRecord.paymentProofId ? (
                   <div className="pt-3 border-t border-[#111111]/20 space-y-1.5 text-left">
                     <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF6B1A] block">
                       🧾 Payment Receipt Proof
                     </span>
                     <div className="flex items-center gap-3 p-2 bg-white border border-[#111111]">
-                      <img
-                        src={submittedRecord.paymentScreenshotUrl}
-                        alt="Payment receipt proof"
-                        className="w-14 h-14 object-cover border border-[#111111] bg-[#FFF8EC]"
-                      />
+                      {paymentScreenshotPreview ? (
+                        <img
+                          src={paymentScreenshotPreview}
+                          alt="Payment receipt proof"
+                          className="w-14 h-14 object-cover border border-[#111111] bg-[#FFF8EC]"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 border border-[#111111] bg-[#FFF8EC] flex items-center justify-center font-mono text-[10px]">
+                          PROVED
+                        </div>
+                      )}
                       <div className="text-xs font-mono space-y-0.5">
-                        <a
-                          href={submittedRecord.paymentScreenshotUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-bold text-[#FF6B1A] underline hover:text-[#111111] inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          View Full Screenshot <ExternalLink className="w-3 h-3" />
-                        </a>
+                        {submittedRecord.paymentProofId && (
+                          <p className="text-[#111111]/70 text-[10px] truncate max-w-[200px]" title={submittedRecord.paymentProofId}>
+                            Proof ID: <span className="font-bold">{submittedRecord.paymentProofId}</span>
+                          </p>
+                        )}
                         {submittedRecord.paymentUtr && (
-                          <p className="text-[#111111]/80">UTR: {submittedRecord.paymentUtr}</p>
+                          <p className="text-[#111111]/80 font-bold">UTR: {submittedRecord.paymentUtr}</p>
                         )}
                         <span className="text-[10px] text-amber-800 font-bold block">
                           Status: Verification Pending by Organisers
@@ -3548,7 +3664,16 @@ export const SinglePage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                )}
+                ) : submittedRecord.paymentUtr ? (
+                  <div className="pt-3 border-t border-[#111111]/20 space-y-1 text-left">
+                    <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-amber-800 block">
+                      ⚠️ Payment Verification Pending
+                    </span>
+                    <p className="text-xs text-[#111111]/80 font-mono">
+                      UTR recorded: <strong className="text-[#111111]">{submittedRecord.paymentUtr}</strong>. Screenshot proof is pending verification.
+                    </p>
+                  </div>
+                ) : null}
               </div>
 
               <div className="pt-2 flex items-center justify-between border-t-2 border-[#111111]">
@@ -4609,70 +4734,146 @@ export const SinglePage: React.FC = () => {
 
                           {/* Payment Screenshot Upload */}
                           <div className="space-y-2">
-                            <label
-                              htmlFor="reg-paymentScreenshot"
-                              className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer"
-                            >
-                              Payment Screenshot *
-                            </label>
+                            <div className="flex items-center justify-between">
+                              <label
+                                htmlFor="reg-paymentScreenshot"
+                                className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer"
+                              >
+                                Payment Screenshot *
+                              </label>
+                              {uploadStatus === 'success' && (
+                                <span className="font-mono text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 border border-emerald-600 font-bold uppercase inline-flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-700" /> Uploaded
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-[#111111]/80 font-medium">
-                              Upload a screenshot of your successful payment.
+                              Upload a screenshot of your successful UPI transfer showing the UTR / Reference ID.
                             </p>
 
-                            {!paymentScreenshotPreview ? (
-                              <div className={`p-4 bg-white border-2 border-dashed ${
-                                errors.paymentScreenshot ? 'border-red-600 bg-red-50/20' : 'border-[#111111]'
-                              } text-center space-y-2 relative transition-colors`}>
-                                <div className="flex flex-col items-center justify-center gap-1.5 py-1">
-                                  <div className="w-10 h-10 rounded-full bg-[#FFD400] border-2 border-[#111111] flex items-center justify-center">
-                                    <Upload className="w-5 h-5 text-[#111111]" />
+                            {!paymentScreenshotPreview && !paymentScreenshotFile ? (
+                              <div
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setIsDragOver(true);
+                                }}
+                                onDragEnter={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setIsDragOver(true);
+                                }}
+                                onDragLeave={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setIsDragOver(false);
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setIsDragOver(false);
+                                  const file = e.dataTransfer.files?.[0];
+                                  if (file) {
+                                    handleProcessScreenshotFile(file);
+                                  }
+                                }}
+                                className={`p-4 sm:p-5 border-2 border-dashed transition-colors text-center space-y-2 relative cursor-pointer ${
+                                  isDragOver
+                                    ? 'border-[#FF6B1A] bg-amber-50/80 shadow-[2px_2px_0px_#FF6B1A]'
+                                    : errors.paymentScreenshot
+                                    ? 'border-red-600 bg-red-50/20'
+                                    : 'border-[#111111] bg-white hover:bg-[#FFF8EC]'
+                                }`}
+                                onClick={() => {
+                                  const input = document.getElementById('reg-paymentScreenshot') as HTMLInputElement;
+                                  if (input) input.click();
+                                }}
+                              >
+                                <div className="flex flex-col items-center justify-center gap-2 py-2">
+                                  <div className="w-12 h-12 rounded-full bg-[#FFD400] border-2 border-[#111111] flex items-center justify-center shadow-[2px_2px_0px_#111111]">
+                                    <Camera className="w-6 h-6 text-[#111111]" />
                                   </div>
-                                  <label
-                                    htmlFor="reg-paymentScreenshot"
-                                    className="font-bold text-xs sm:text-sm text-[#FF6B1A] underline hover:text-[#111111] cursor-pointer"
-                                  >
-                                    Choose screenshot file
-                                  </label>
-                                  <span className="text-[11px] font-mono text-[#111111]/70">
-                                    Supports JPG, JPEG, PNG, WebP (Max 5 MB)
-                                  </span>
+                                  <div>
+                                    <span className="font-bold text-xs sm:text-sm text-[#FF6B1A] underline block">
+                                      {isDragOver ? 'Drop screenshot here' : 'Take photo or choose screenshot'}
+                                    </span>
+                                    <span className="text-[11px] font-mono text-[#111111]/70 block mt-0.5">
+                                      Drag & drop on desktop · Camera or gallery on mobile
+                                    </span>
+                                    <span className="text-[10px] font-mono text-[#111111]/50 block mt-0.5">
+                                      JPG, PNG, WebP, HEIC · Automatically compressed &lt; 400 KB
+                                    </span>
+                                  </div>
                                 </div>
                                 <input
                                   id="reg-paymentScreenshot"
                                   type="file"
-                                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                                  accept="image/*"
                                   onChange={handleScreenshotChange}
                                   aria-invalid={Boolean(errors.paymentScreenshot)}
                                   aria-describedby={errors.paymentScreenshot ? 'reg-paymentScreenshot-error' : undefined}
-                                  className="w-full text-xs font-mono cursor-pointer file:mr-3 file:py-1.5 file:px-3 file:border file:border-[#111111] file:text-xs file:font-bold file:bg-[#FFD400] file:text-[#111111] hover:file:bg-[#FF6B1A] file:cursor-pointer"
+                                  className="sr-only"
                                 />
                               </div>
                             ) : (
-                              <div className="p-3 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2.5">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFF8EC] border-2 border-[#111111] shrink-0 overflow-hidden flex items-center justify-center">
-                                    <img
-                                      src={paymentScreenshotPreview}
-                                      alt="Screenshot preview"
-                                      className="w-full h-full object-cover"
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
+                              <div className="p-3 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-3">
+                                <div className="flex items-start gap-3">
+                                  {paymentScreenshotPreview ? (
+                                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#FFF8EC] border-2 border-[#111111] shrink-0 overflow-hidden flex items-center justify-center">
+                                      <img
+                                        src={paymentScreenshotPreview}
+                                        alt="Screenshot preview"
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-stone-100 border-2 border-[#111111] shrink-0 flex items-center justify-center">
+                                      <ImageIcon className="w-6 h-6 text-[#111111]/40" />
+                                    </div>
+                                  )}
+
+                                  <div className="flex-1 min-w-0 space-y-1">
                                     <div className="flex items-center gap-1.5">
                                       <ImageIcon className="w-4 h-4 text-[#FF6B1A] shrink-0" />
                                       <span className="font-mono text-xs font-bold text-[#111111] truncate block">
-                                        {paymentScreenshotName}
+                                        {paymentScreenshotName || 'Payment Screenshot'}
                                       </span>
                                     </div>
-                                    <span className="text-[11px] font-mono text-emerald-700 block mt-0.5">
-                                      ✓ Ready to upload on submit
-                                    </span>
-                                    <div className="mt-2 flex items-center gap-2">
+
+                                    {/* File size info */}
+                                    <div className="font-mono text-[11px] text-[#111111]/70">
+                                      {paymentOriginalSize > 0 && (
+                                        <span>Original: {formatFileSize(paymentOriginalSize)}</span>
+                                      )}
+                                      {paymentCompressedSize > 0 && (
+                                        <span className="text-emerald-800 font-bold ml-1.5">
+                                          → Compressed: {formatFileSize(paymentCompressedSize)}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Status line */}
+                                    {uploadStatus === 'compressing' && (
+                                      <span className="text-[11px] font-mono text-[#FF6B1A] font-bold flex items-center gap-1">
+                                        <RotateCw className="w-3 h-3 animate-spin" />
+                                        Optimizing image...
+                                      </span>
+                                    )}
+
+                                    {uploadStatus === 'success' && (
+                                      <span className="text-[11px] font-mono text-emerald-700 font-bold flex items-center gap-1">
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                        Attached to registration
+                                      </span>
+                                    )}
+
+                                    {/* Change / Remove Buttons */}
+                                    <div className="pt-1 flex items-center gap-2">
                                       <label
                                         htmlFor="reg-paymentScreenshot"
-                                        className="text-xs font-mono font-bold text-[#111111] px-2.5 py-1 bg-[#FFD400] hover:bg-[#FF6B1A] border border-[#111111] cursor-pointer inline-flex items-center gap-1"
+                                        className="text-xs font-mono font-bold text-[#111111] px-2.5 py-1 bg-[#FFD400] hover:bg-[#FF6B1A] border border-[#111111] cursor-pointer inline-flex items-center gap-1 shadow-[1px_1px_0px_#111111]"
                                       >
-                                        Replace screenshot
+                                        Change
                                       </label>
                                       <button
                                         type="button"
@@ -4684,10 +4885,57 @@ export const SinglePage: React.FC = () => {
                                     </div>
                                   </div>
                                 </div>
+
+                                {/* Resumable progress bar */}
+                                {uploadStatus === 'uploading' && (
+                                  <div className="p-2.5 bg-[#FFF8EC] border border-[#111111] space-y-1.5">
+                                    <div className="flex items-center justify-between text-xs font-mono">
+                                      <span className="font-bold text-[#111111] flex items-center gap-1.5">
+                                        <RotateCw className="w-3.5 h-3.5 animate-spin text-[#FF6B1A]" />
+                                        Uploading payment proof...
+                                      </span>
+                                      <span className="font-bold text-[#FF6B1A]">{uploadProgress}%</span>
+                                    </div>
+                                    <div className="w-full bg-white border border-[#111111] h-3 overflow-hidden">
+                                      <div
+                                        className="bg-[#FF6B1A] h-full transition-all duration-150"
+                                        style={{ width: `${uploadProgress}%` }}
+                                      />
+                                    </div>
+                                    <span className="text-[10px] font-mono text-[#111111]/60 block text-right">
+                                      30s timeout · cancellable
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Error banner on timeout or failure */}
+                                {uploadStatus === 'error' && (
+                                  <div className="p-3 bg-red-50 border-2 border-red-600 text-red-900 space-y-2 text-xs">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div>
+                                        <span className="font-bold uppercase tracking-wider block text-red-700 font-mono text-[11px]">
+                                          {uploadErrorCode ? `Error [${uploadErrorCode}]` : 'Upload Error'}
+                                        </span>
+                                        <p className="mt-0.5">{uploadErrorMessage || 'Screenshot upload failed.'}</p>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={handleRetryUpload}
+                                        className="px-2.5 py-1 bg-red-600 text-white font-mono font-bold text-xs uppercase hover:bg-red-700 border border-[#111111] shadow-[1px_1px_0px_#111111] shrink-0 cursor-pointer"
+                                      >
+                                        Retry
+                                      </button>
+                                    </div>
+                                    <p className="font-semibold text-red-950 text-[11px] border-t border-red-200 pt-1.5">
+                                      Screenshot upload failed, you can still submit. Keep your payment screenshot ready for verification.
+                                    </p>
+                                  </div>
+                                )}
+
                                 <input
                                   id="reg-paymentScreenshot"
                                   type="file"
-                                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                                  accept="image/*"
                                   onChange={handleScreenshotChange}
                                   className="sr-only"
                                 />
@@ -4783,21 +5031,26 @@ export const SinglePage: React.FC = () => {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      disabled={isSubmitting || ((ticket === 'pitch' || ticket === 'stall') && !isPitchOpen)}
+                      disabled={isSubmitting || isUploadingScreenshot || ((ticket === 'pitch' || ticket === 'stall') && !isPitchOpen)}
                       className={`w-full brutal-btn text-[#111111] p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${
                         (ticket === 'pitch' || ticket === 'stall') && !isPitchOpen
                           ? 'bg-neutral-400 text-neutral-800 opacity-70 cursor-not-allowed shadow-none border-2 border-[#111111]'
-                          : isSubmitting
+                          : isSubmitting || isUploadingScreenshot
                             ? 'bg-[#FF6B1A] opacity-60 cursor-not-allowed pointer-events-none'
                             : 'bg-[#FF6B1A] cursor-pointer hover:bg-[#E05307]'
                       }`}
                     >
                       {(ticket === 'pitch' || ticket === 'stall') && !isPitchOpen ? (
                         <span>Registrations open soon</span>
+                      ) : isUploadingScreenshot ? (
+                        <span className="flex items-center gap-2">
+                          <RotateCw className="w-5 h-5 animate-spin" />
+                          <span>Uploading screenshot ({uploadProgress}%)...</span>
+                        </span>
                       ) : isSubmitting ? (
                         <span className="flex items-center gap-2">
                           <RotateCw className="w-5 h-5 animate-spin" />
-                          <span>{isUploadingScreenshot ? 'Uploading screenshot & registering...' : 'Submitting registration...'}</span>
+                          <span>Submitting registration...</span>
                         </span>
                       ) : (
                         <>

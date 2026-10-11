@@ -74,6 +74,7 @@ import {
   toIso,
 } from '../services/admin.ts';
 import { CollegeInfo } from '../services/registrations.ts';
+import { fetchProofUrl } from '../services/storage.ts';
 
 const getCollegeName = (col: CollegeInfo | string | undefined | null): string => {
   if (!col) return '';
@@ -252,11 +253,25 @@ export const AdminPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [undoToast?.secondsRemaining]);
 
+  // Proof Viewer Modal State (Cloudinary Authenticated URL)
+  const [proofModal, setProofModal] = useState<{
+    isOpen: boolean;
+    loading: boolean;
+    url?: string;
+    error?: string;
+    regName?: string;
+    regId?: string;
+    proofId?: string;
+    utr?: string;
+  } | null>(null);
+
   // Keyboard accessibility: ESC key closes modal dialogs and side drawer
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (confirmDialog?.isOpen) {
+        if (proofModal?.isOpen) {
+          setProofModal(null);
+        } else if (confirmDialog?.isOpen) {
           setConfirmDialog(null);
         } else if (activeDetailItem) {
           setActiveDetailItem(null);
@@ -265,7 +280,7 @@ export const AdminPage: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [confirmDialog, activeDetailItem]);
+  }, [proofModal, confirmDialog, activeDetailItem]);
 
   // Action Error Toast State for Failed Admin Operations (P5)
   const [adminActionError, setAdminActionError] = useState<string | null>(null);
@@ -754,6 +769,78 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  // Payment proof viewing via Cloudinary authenticated signed delivery URL
+  const handleOpenProof = async (reg: AdminRegistration) => {
+    const proofId =
+      reg.paymentProofId ||
+      reg.payment?.proofId ||
+      (reg as any).paymentProofPath;
+    const legacyUrl =
+      (reg as any).paymentProofUrl ||
+      (reg as any).paymentScreenshotUrl ||
+      (reg.payment as any)?.screenshotUrl;
+    const utr = reg.payment?.utr || reg.paymentUtr || '—';
+
+    // If there's a legacy direct URL starting with http, view directly
+    if (!proofId && legacyUrl && typeof legacyUrl === 'string' && legacyUrl.startsWith('http')) {
+      setProofModal({
+        isOpen: true,
+        loading: false,
+        url: legacyUrl,
+        regName: reg.name,
+        regId: reg.registrationId || reg.id,
+        proofId: legacyUrl,
+        utr,
+      });
+      return;
+    }
+
+    if (!proofId) {
+      setAdminActionError('No payment proof ID found for this registration.');
+      return;
+    }
+
+    setProofModal({
+      isOpen: true,
+      loading: true,
+      regName: reg.name,
+      regId: reg.registrationId || reg.id,
+      proofId,
+      utr,
+    });
+
+    try {
+      if (!currentUser) {
+        throw new Error('You must be signed in as admin');
+      }
+      const idToken = await currentUser.getIdToken(true);
+      const res = await fetchProofUrl(proofId, idToken);
+      if (res.success && res.url) {
+        setProofModal((prev) => (prev ? { ...prev, loading: false, url: res.url } : null));
+      } else {
+        setProofModal((prev) =>
+          prev
+            ? {
+                ...prev,
+                loading: false,
+                error: res.error || 'Failed to generate secure delivery link.',
+              }
+            : null
+        );
+      }
+    } catch (err: any) {
+      setProofModal((prev) =>
+        prev
+          ? {
+              ...prev,
+              loading: false,
+              error: err?.message || 'Authentication error while retrieving payment proof.',
+            }
+          : null
+      );
+    }
+  };
+
   // Requirement: Add confirmation dialog for any delete
   const handleDeleteRegistration = (reg: AdminRegistration) => {
     setConfirmDialog({
@@ -1227,7 +1314,9 @@ export const AdminPage: React.FC = () => {
         'Payment Amount (Paise)': r.payment?.amountPaise ?? (pAmount * 100),
         'Payment UTR': pUtr,
         'Payment Method': r.payment?.method || (pUtr ? 'upi' : ''),
-        'Payment Screenshot URL': r.paymentScreenshotUrl || r.payment?.screenshotUrl || '',
+        'Payment Proof ID': r.paymentProofId || r.payment?.proofId || (r as any).paymentProofPath || '',
+        'Payment Proof Status': r.paymentProofStatus || (r.paymentProofId || r.payment?.proofId ? 'uploaded' : (isPaid ? 'pending' : 'not_required')),
+        'Payment Screenshot URL': (r as any).paymentScreenshotUrl || (r as any).paymentProofUrl || (r.payment as any)?.screenshotUrl || '',
         'Payment Rejection Reason': r.paymentRejectionReason || r.rejectionReason || '',
         'Payment Verified By': r.paymentVerifiedBy || '',
         'Payment Verified At': r.paymentVerifiedAt || '',
@@ -2285,6 +2374,7 @@ export const AdminPage: React.FC = () => {
                     <th className="p-3 text-center">Verified</th>
                     <th className="p-3">College (+ state)</th>
                     <th className="p-3 text-center">Payment status</th>
+                    <th className="p-3 text-center">Proof</th>
                     <th className="p-3">UTR</th>
                     <th className="p-3">Status</th>
                     <th onClick={() => handleSort('createdAt')} className="p-3 cursor-pointer hover:bg-[#FFD400]/50">
@@ -2407,6 +2497,47 @@ export const AdminPage: React.FC = () => {
                               )}
                             </div>
                           );
+                        })()}
+                      </td>
+                      <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        {(() => {
+                          const isPaid = reg.ticket === 'pitch' || reg.ticket === 'stall' || reg.wantsToPitch;
+                          const proofId =
+                            reg.paymentProofId ||
+                            reg.payment?.proofId ||
+                            (reg as any).paymentProofPath;
+                          const legacyUrl =
+                            (reg as any).paymentProofUrl ||
+                            (reg as any).paymentScreenshotUrl ||
+                            (reg.payment as any)?.screenshotUrl;
+                          const hasProof = Boolean(proofId || legacyUrl);
+
+                          if (hasProof) {
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenProof(reg)}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-white hover:bg-[#FFD400] text-[#111111] font-mono text-[10px] font-bold border border-[#111111] shadow-[1px_1px_0px_#111111] active:translate-x-[1px] active:translate-y-[1px] transition-colors cursor-pointer"
+                                title="View payment proof via secure link"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-[#FF6B1A]" />
+                                <span>View</span>
+                              </button>
+                            );
+                          }
+
+                          if (isPaid || reg.paymentProofStatus === 'pending') {
+                            return (
+                              <span
+                                className="font-mono text-[9px] font-bold text-amber-950 bg-amber-100 px-1.5 py-0.5 border border-amber-600 uppercase"
+                                title="No payment proof uploaded (UTR only / pending)"
+                              >
+                                PENDING
+                              </span>
+                            );
+                          }
+
+                          return <span className="text-[#111111]/40 font-mono text-[10px]">—</span>;
                         })()}
                       </td>
                       <td className="p-3 font-mono text-[11px] text-[#111111]">
@@ -3810,36 +3941,62 @@ export const AdminPage: React.FC = () => {
 
               {/* Payment Screenshot Preview */}
               {(() => {
-                const screenshotUrl =
-                  activeDetailItem.paymentScreenshotUrl ||
-                  activeDetailItem.payment?.screenshotUrl;
-                if (!screenshotUrl) return null;
-                return (
-                  <div className="p-2.5 bg-white border border-[#111111] space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold uppercase tracking-wide text-[10px] text-[#111111]">
-                        Payment Screenshot
+                const isPaid =
+                  activeDetailItem.ticket === 'pitch' ||
+                  activeDetailItem.ticket === 'stall' ||
+                  activeDetailItem.wantsToPitch;
+                const proofId =
+                  activeDetailItem.paymentProofId ||
+                  activeDetailItem.payment?.proofId ||
+                  (activeDetailItem as any).paymentProofPath;
+                const legacyUrl =
+                  (activeDetailItem as any).paymentProofUrl ||
+                  (activeDetailItem as any).paymentScreenshotUrl ||
+                  (activeDetailItem.payment as any)?.screenshotUrl;
+                const hasProof = Boolean(proofId || legacyUrl);
+
+                if (hasProof) {
+                  return (
+                    <div className="p-3 bg-white border-2 border-[#111111] space-y-2 shadow-[2px_2px_0px_#111111]">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold uppercase tracking-wide text-[10px] text-[#111111]">
+                          Payment Screenshot / Proof
+                        </span>
+                        <span className="font-mono text-[9px] bg-[#FFF8EC] text-[#FF6B1A] font-bold px-1.5 py-0.5 border border-[#111111]">
+                          Cloudinary Protected
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <span className="font-mono text-[10px] text-[#111111]/70 truncate max-w-[180px]">
+                          {proofId ? `ID: ${proofId}` : 'Legacy URL'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenProof(activeDetailItem)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#FFD400] text-[#111111] font-bold text-xs border border-[#111111] shadow-[1px_1px_0px_#111111] hover:bg-[#FF6B1A] hover:text-white transition-colors cursor-pointer shrink-0"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View Proof Modal</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (isPaid || activeDetailItem.paymentProofStatus === 'pending') {
+                  return (
+                    <div className="p-2.5 bg-amber-50 border border-amber-300 space-y-1">
+                      <span className="font-bold uppercase tracking-wide text-[10px] text-amber-900 block">
+                        Payment Proof: Pending
                       </span>
-                      <a
-                        href={screenshotUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#FF6B1A] underline cursor-pointer"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        <span>View Full Image</span>
-                      </a>
+                      <p className="text-[11px] text-amber-950 font-mono">
+                        No screenshot uploaded. Registered with UTR only ({activeDetailItem.payment?.utr || activeDetailItem.paymentUtr || 'None'}).
+                      </p>
                     </div>
-                    <div className="border border-[#111111]/30 bg-[#FFF8EC] overflow-hidden flex items-center justify-center max-h-48">
-                      <img
-                        src={screenshotUrl}
-                        alt="Payment receipt screenshot"
-                        className="w-full h-auto max-h-48 object-contain cursor-pointer"
-                        onClick={() => window.open(screenshotUrl, '_blank', 'noopener,noreferrer')}
-                      />
-                    </div>
-                  </div>
-                );
+                  );
+                }
+
+                return null;
               })()}
 
               {/* Rejection Reason Display */}
@@ -4187,6 +4344,142 @@ export const AdminPage: React.FC = () => {
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* PAYMENT PROOF MODAL (CLOUDINARY AUTHENTICATED SHORT-LIVED URL)     */}
+      {/* =================================================================== */}
+      {proofModal?.isOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="proof-modal-title"
+          className="fixed inset-0 z-50 bg-[#111111]/75 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setProofModal(null)}
+        >
+          <div
+            className="bg-[#FFF8EC] border-2 border-[#111111] shadow-[8px_8px_0px_#111111] max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden text-[#111111]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="bg-[#FFD400] px-4 py-3 border-b-2 border-[#111111] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-[#111111]" />
+                <h3 id="proof-modal-title" className="font-display font-extrabold text-sm uppercase tracking-wide">
+                  Payment Proof Verification
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProofModal(null)}
+                className="w-7 h-7 flex items-center justify-center border border-[#111111] bg-white hover:bg-[#111111] hover:text-white transition-colors cursor-pointer text-xs font-mono font-bold shadow-[1px_1px_0px_#111111]"
+                aria-label="Close proof modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4">
+              {/* Meta bar */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-3 bg-white border border-[#111111] text-xs font-mono shadow-[1px_1px_0px_#111111]">
+                <div>
+                  <span className="text-[#111111]/60 block text-[10px] uppercase">Applicant</span>
+                  <span className="font-bold truncate block">{proofModal.regName || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[#111111]/60 block text-[10px] uppercase">Registration ID</span>
+                  <span className="font-bold truncate block">{proofModal.regId || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[#111111]/60 block text-[10px] uppercase">Payment UTR</span>
+                  <span className="font-bold text-[#FF6B1A] truncate block">{proofModal.utr || '—'}</span>
+                </div>
+              </div>
+
+              {/* State: Loading */}
+              {proofModal.loading && (
+                <div className="py-16 text-center space-y-3">
+                  <RefreshCw className="w-8 h-8 animate-spin mx-auto text-[#FF6B1A]" />
+                  <p className="font-display font-bold text-sm text-[#111111]">
+                    Generating secure short-lived delivery URL...
+                  </p>
+                  <p className="font-mono text-xs text-[#111111]/60">
+                    Verifying admin identity and querying Cloudinary
+                  </p>
+                </div>
+              )}
+
+              {/* State: Error */}
+              {!proofModal.loading && proofModal.error && (
+                <div className="p-4 bg-red-50 border-2 border-red-500 text-red-950 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+                    <span className="font-bold text-sm">Failed to load payment proof</span>
+                  </div>
+                  <p className="font-mono text-xs">{proofModal.error}</p>
+                  {proofModal.proofId && (
+                    <p className="font-mono text-[10px] text-red-800 break-all">
+                      Public ID: {proofModal.proofId}
+                    </p>
+                  )}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetReg = registrations.find(
+                          (r) => r.id === proofModal.regId || r.registrationId === proofModal.regId
+                        );
+                        if (targetReg) handleOpenProof(targetReg);
+                      }}
+                      className="px-3 py-1.5 bg-red-600 text-white font-mono text-xs font-bold border border-[#111111] hover:bg-red-700 cursor-pointer shadow-[1px_1px_0px_#111111]"
+                    >
+                      Retry Loading
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* State: Image loaded */}
+              {!proofModal.loading && proofModal.url && (
+                <div className="space-y-3">
+                  <div className="border-2 border-[#111111] bg-neutral-900 flex items-center justify-center p-2 min-h-[220px] max-h-[55vh] overflow-auto shadow-[2px_2px_0px_#111111]">
+                    <img
+                      src={proofModal.url}
+                      alt={`Payment proof for ${proofModal.regName || 'applicant'}`}
+                      className="max-h-[50vh] w-auto max-w-full object-contain mx-auto"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="font-mono text-[10px] text-[#111111]/70 bg-amber-100 border border-amber-600 px-2 py-0.5">
+                      🔒 Signed link valid for 10 minutes
+                    </span>
+                    <a
+                      href={proofModal.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-bold text-[#FF6B1A] hover:underline"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Open full image in new tab ↗</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-[#FFF8EC] px-4 py-3 border-t-2 border-[#111111] flex items-center justify-end gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setProofModal(null)}
+                className="px-4 py-1.5 bg-white hover:bg-[#111111] hover:text-white text-[#111111] font-bold text-xs border border-[#111111] shadow-[2px_2px_0px_#111111] transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

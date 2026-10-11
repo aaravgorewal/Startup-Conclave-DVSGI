@@ -27,8 +27,8 @@ export interface PaymentInfo {
   method?: 'upi' | 'razorpay';
   orderId?: string;
   paymentId?: string;
-  screenshotUrl?: string;
-  screenshotPath?: string;
+  proofId?: string;
+  proofStatus?: 'uploaded' | 'pending';
   rejectionReason?: string;
 }
 
@@ -55,8 +55,8 @@ export interface RegistrationInput {
   teamSize?: '2' | '3' | string | number;
   teamMembers?: TeamMemberDetail[];
   paymentUtr?: string;
-  paymentScreenshotUrl?: string;
-  paymentScreenshotPath?: string;
+  paymentProofId?: string;
+  paymentProofStatus?: 'uploaded' | 'pending';
   emailVerified?: boolean;
 }
 
@@ -88,8 +88,8 @@ export interface RegistrationRecord {
   paymentStatus?: 'not_required' | 'pending' | 'verified' | 'rejected' | string;
   paymentAmount?: number;
   paymentUtr?: string;
-  paymentScreenshotUrl?: string;
-  paymentScreenshotPath?: string;
+  paymentProofId?: string;
+  paymentProofStatus?: 'uploaded' | 'pending';
   paymentVerifiedAt?: string | null;
   paymentVerifiedBy?: string | null;
   paymentRejectionReason?: string | null;
@@ -437,15 +437,6 @@ export const createRegistration = async (
         };
       }
     }
-
-    // Payment Screenshot Validation
-    if (!input.paymentScreenshotUrl || !input.paymentScreenshotUrl.trim()) {
-      return {
-        success: false,
-        isNetworkError: false,
-        error: 'Payment screenshot is required for paid registrations.',
-      };
-    }
   }
 
   if (isPitch) {
@@ -477,14 +468,17 @@ export const createRegistration = async (
       };
     }
     const amountPaise = isStall ? 129900 : 99900;
+    const proofId = (input.paymentProofId || '').trim();
+    const proofStatus: 'uploaded' | 'pending' = input.paymentProofStatus || (proofId ? 'uploaded' : 'pending');
+
     paymentInfo = {
       required: true,
       status: 'pending',
       amountPaise,
       utr: cleanUtr,
       method: 'upi',
-      screenshotUrl: input.paymentScreenshotUrl ? input.paymentScreenshotUrl.trim() : '',
-      screenshotPath: input.paymentScreenshotPath ? input.paymentScreenshotPath.trim() : '',
+      proofId: proofId || undefined,
+      proofStatus,
     };
   } else {
     paymentInfo = {
@@ -535,8 +529,8 @@ export const createRegistration = async (
     paymentStatus: paymentInfo.status,
     paymentAmount: Math.round(paymentInfo.amountPaise / 100),
     paymentUtr: paymentInfo.utr || '',
-    paymentScreenshotUrl: isPaid && input.paymentScreenshotUrl ? input.paymentScreenshotUrl.trim() : '',
-    paymentScreenshotPath: isPaid && input.paymentScreenshotPath ? input.paymentScreenshotPath.trim() : '',
+    paymentProofId: paymentInfo.proofId || '',
+    paymentProofStatus: paymentInfo.proofStatus,
     paymentRejectionReason: null,
     rejectionReason: null,
     paymentVerifiedAt: null,
@@ -624,8 +618,8 @@ export const createRegistration = async (
         paymentStatus: record.paymentStatus || 'not_required',
         paymentAmount: record.paymentAmount || 0,
         paymentUtr: record.paymentUtr || '',
-        paymentScreenshotUrl: record.paymentScreenshotUrl || '',
-        paymentScreenshotPath: record.paymentScreenshotPath || '',
+        paymentProofId: record.paymentProofId || '',
+        paymentProofStatus: record.paymentProofStatus || (isPaid ? 'pending' : 'not_required'),
         paymentRejectionReason: null,
         rejectionReason: null,
         paymentVerifiedAt: null,
