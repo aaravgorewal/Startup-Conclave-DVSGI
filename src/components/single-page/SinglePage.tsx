@@ -481,7 +481,7 @@ export const SinglePage: React.FC = () => {
       eventStatus: 'https://schema.org/EventScheduled',
       location: {
         '@type': 'Place',
-        name: 'Dewan V.S. Institute of Engineering & Technology (DVSIET)',
+        name: 'Dewan VS Group of Institutions (DVSGI)',
         address: {
           '@type': 'PostalAddress',
           streetAddress: 'NH-58, By-Pass Road, Partapur',
@@ -493,7 +493,7 @@ export const SinglePage: React.FC = () => {
       },
       organizer: {
         '@type': 'Organization',
-        name: 'Dewan V.S. Institute of Engineering & Technology (DVSIET)',
+        name: 'Dewan VS Group of Institutions (DVSGI)',
         url: canonicalUrl,
       },
     };
@@ -1464,15 +1464,15 @@ export const SinglePage: React.FC = () => {
 
       ctx.fillStyle = '#FF6B1A';
       ctx.font = '900 20px sans-serif';
-      ctx.fillText('Venue: DVSIET, Meerut', 95, 518);
+      ctx.fillText(`Venue: ${CONFIG.event.venue}`, 95, 518);
 
       ctx.fillStyle = '#111111';
       ctx.font = '700 17px sans-serif';
-      ctx.fillText('Date and entry details will be shared by email and WhatsApp.', 95, 555);
+      ctx.fillText(`Event Date: ${CONFIG.event.date} · ${CONFIG.event.venue}`, 95, 555);
 
       ctx.font = '500 14px monospace';
       ctx.fillStyle = '#444444';
-      ctx.fillText('Dewan V.S. Institute of Engineering & Technology, NH-58, Meerut, UP', 95, 582);
+      ctx.fillText('Dewan VS Group of Institutions, NH-58, Meerut, UP', 95, 582);
 
       // Organiser Contact
       const contactEmail = (CONFIG.contactEmail || CONFIG.contact?.email || '').trim();
@@ -1742,7 +1742,7 @@ export const SinglePage: React.FC = () => {
 
           {/* Drawer Bottom Close Action Bar */}
           <div className="pt-3 border-t-2 border-[#111111] flex items-center justify-between">
-            <span className="font-mono text-xs text-[#111111]/75">DVSIET, Meerut</span>
+            <span className="font-mono text-xs text-[#111111]/75">{CONFIG.event.venue}</span>
             <button
               type="button"
               onClick={handleCloseMobileMenu}
@@ -1795,7 +1795,7 @@ export const SinglePage: React.FC = () => {
               </p>
 
               {/* Quick Info Strip */}
-              <div className="p-2 sm:p-2.5 lg:px-3 lg:py-2 xl:p-3 glass flex flex-wrap md:flex-nowrap items-center gap-x-2 sm:gap-x-3 lg:gap-x-2 xl:gap-x-3 gap-y-1.5 font-mono text-xs sm:text-[13px] xl:text-sm font-bold text-[#111111] w-full max-w-full">
+              <div className="p-2 sm:p-2.5 lg:px-3 lg:py-2 xl:p-3 glass flex flex-wrap items-center gap-x-2 sm:gap-x-3 lg:gap-x-2 xl:gap-x-3 gap-y-1.5 font-mono text-xs sm:text-[13px] xl:text-sm font-bold text-[#111111] w-full max-w-full">
                 <span className="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
                   <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#FF6B1A] shrink-0" />
                   <span>Date: {CONFIG.event.date}</span>
@@ -2032,7 +2032,7 @@ export const SinglePage: React.FC = () => {
                     : 'bg-white text-[#111111]'
                   }`}
               >
-                DAY 01
+                DAY 01 (30 OCT)
               </button>
               <button
                 onClick={() => setActiveDay(2)}
@@ -2041,7 +2041,7 @@ export const SinglePage: React.FC = () => {
                     : 'bg-white text-[#111111]'
                   }`}
               >
-                DAY 02
+                DAY 02 (31 OCT)
               </button>
             </div>
           </div>
@@ -2065,7 +2065,7 @@ export const SinglePage: React.FC = () => {
             >
               <div className="border-b-2 border-[#111111] pb-2.5">
                 <span className="font-mono text-xs font-black text-[#FF6B1A] uppercase tracking-wider block">
-                  DAY ONE
+                  DAY ONE · 30 OCT 2026
                 </span>
                 <h3 className="font-display font-extrabold text-lg sm:text-xl xl:text-2xl text-[#111111]">
                   {CONFIG.schedule.day1.title}
@@ -2090,7 +2090,7 @@ export const SinglePage: React.FC = () => {
             >
               <div className="border-b-2 border-[#111111] pb-2.5">
                 <span className="font-mono text-xs font-black text-[#FF6B1A] uppercase tracking-wider block">
-                  DAY TWO
+                  DAY TWO · 31 OCT 2026
                 </span>
                 <h3 className="font-display font-extrabold text-lg sm:text-xl xl:text-2xl text-[#111111]">
                   {CONFIG.schedule.day2.title}
@@ -2860,7 +2860,7 @@ export const SinglePage: React.FC = () => {
                     )}
                   </div>
                   <div className="font-display font-black text-base sm:text-lg text-[#111111]">
-                    Scan at DVSIET Gate Check-in
+                    Scan at DVSGI Gate Check-in
                   </div>
                   <p className="text-xs font-sans text-[#111111]/80 leading-relaxed">
                     Present this QR code or your Registration ID (<span className="font-mono font-bold">{submittedRecord.id}</span>) on your screen at the registration desk for instant venue admission.
@@ -2924,7 +2924,7 @@ export const SinglePage: React.FC = () => {
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#111111]/20 pb-2">
                   <div className="flex items-center gap-2 font-display font-black text-sm sm:text-base text-[#111111]">
                     <MapPin className="w-4 h-4 text-[#FF6B1A] shrink-0" />
-                    <span>Venue: DVSIET, Meerut</span>
+                    <span>Venue: {CONFIG.event.venue}</span>
                   </div>
                   <span className="font-mono text-xs font-bold text-[#111111]/70 bg-white px-2 py-0.5 border border-[#111111]">
                     Startup Conclave 1.0
@@ -2933,7 +2933,7 @@ export const SinglePage: React.FC = () => {
 
                 <div className="font-sans font-bold text-sm sm:text-base text-[#111111] flex items-center gap-2.5">
                   <Calendar className="w-5 h-5 text-[#FF6B1A] shrink-0" />
-                  <span>Date and entry details will be shared by email and WhatsApp.</span>
+                  <span>Event Date: {CONFIG.event.date} · Entry details will be shared by email and WhatsApp.</span>
                 </div>
 
                 <div className="font-mono text-xs text-[#111111]/85 pt-1.5 border-t border-[#111111]/20 flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -2955,7 +2955,7 @@ export const SinglePage: React.FC = () => {
                           </a>
                         )}
                         {(e || ph) && <span>•</span>}
-                        <span className="text-[#111111]/70">Dewan V.S. Institute of Engineering & Technology, Meerut</span>
+                        <span className="text-[#111111]/70">Dewan VS Group of Institutions, Meerut</span>
                       </>
                     );
                   })()}
@@ -3119,7 +3119,7 @@ export const SinglePage: React.FC = () => {
                 </h2>
                 {/* 1-Line Intro */}
                 <p className="text-sm sm:text-base font-sans text-[#111111]/80 font-medium">
-                  Registration happens on this site. Date and entry details will be shared on email and WhatsApp.
+                  Registration happens on this site. Event Date: {CONFIG.event.date}. Entry details will be shared on email and WhatsApp.
                 </p>
               </div>
 
@@ -3527,7 +3527,7 @@ export const SinglePage: React.FC = () => {
                             setCollege(e.target.value);
                             if (errors.college) setErrors((prev) => ({ ...prev, college: '' }));
                           }}
-                          placeholder="e.g. DVSIET Meerut"
+                          placeholder="e.g. DVSGI Meerut"
                           aria-invalid={Boolean(errors.college)}
                           aria-describedby={errors.college ? 'reg-college-error' : undefined}
                           className={`w-full p-3 bg-[#FFF8EC] border-2 ${errors.college ? 'border-red-600' : 'border-[#111111]'} font-sans focus:outline-none focus:bg-white min-h-[46px] text-base`}
@@ -4139,7 +4139,7 @@ export const SinglePage: React.FC = () => {
                 </fieldset>
 
                 <div className="text-center font-mono text-xs text-[#111111]/70">
-                  DVSIET Meerut · No third-party forms
+                  DVSGI Meerut · No third-party forms
                 </div>
               </form>
 
@@ -4209,7 +4209,7 @@ export const SinglePage: React.FC = () => {
               {CONFIG.event.tagline}
             </p>
             <div className="font-bold text-[#FF6B1A] pt-1">
-              Organised at DVSIET, Meerut
+              Organised at Dewan VS Group of Institutions, Meerut
             </div>
           </div>
 
@@ -4327,7 +4327,7 @@ export const SinglePage: React.FC = () => {
               Privacy Notice
             </button>
           </div>
-          <span>Dewan V.S. Institute of Engineering & Technology, Meerut.</span>
+          <span>Dewan VS Group of Institutions, Meerut.</span>
         </div>
       </footer>
 
@@ -4340,7 +4340,7 @@ export const SinglePage: React.FC = () => {
             STARTUP CONCLAVE 1.0
           </div>
           <div className="font-mono text-xs text-[#FF6B1A] font-bold">
-            DVSIET Meerut · 2 Days
+            DVSGI Meerut · 2 Days
           </div>
         </div>
 
@@ -4452,7 +4452,7 @@ export const SinglePage: React.FC = () => {
                   <h4>Who Can See It (Access)</h4>
                 </div>
                 <p className="text-xs sm:text-sm text-[#111111]/85">
-                  <strong>Organisers only:</strong> Your personal information is accessible only to the authorized Startup Conclave 1.0 Secretariat and designated faculty coordinators at DVSIET Meerut. Your information will <em>never</em> be sold, rented, monetized, or shared with external commercial marketing agencies or unrelated third parties.
+                  <strong>Organisers only:</strong> Your personal information is accessible only to the authorized Startup Conclave 1.0 Secretariat and designated faculty coordinators at Dewan VS Group of Institutions, Meerut. Your information will <em>never</em> be sold, rented, monetized, or shared with external commercial marketing agencies or unrelated third parties.
                 </p>
               </div>
 

@@ -183,12 +183,15 @@ export const CONFIG = {
     tagline: "Where Ideas Meet Capital.",
     taglineHighlightedWord: "Capital.",
     subline:
-      "A 2-day startup and entrepreneurship event at DVSIET, Meerut.",
-    venue: "DVSIET, Meerut",
+      "A 2-day startup and entrepreneurship event at Dewan VS Group of Institutions, Meerut.",
+    venue: "Dewan VS Group of Institutions, Meerut",
     venueFull:
-      "Dewan V.S. Institute of Engineering & Technology (DVSIET), NH-58, By-Pass Road, Partapur, Meerut, Uttar Pradesh 250103",
+      "Dewan VS Group of Institutions (DVSGI), NH-58, By-Pass Road, Partapur, Meerut, Uttar Pradesh 250103",
     locationCity: "Meerut, Uttar Pradesh, India",
-    date: "To be announced",
+    date: "30–31 October 2026",
+    dateConfirmed: true,
+    startDate: "2026-10-30",
+    endDate: "2026-10-31",
     duration: "2 Days",
     mode: "In-Person",
     badgeSticker: "2 DAYS • 1 STAGE",
@@ -197,7 +200,7 @@ export const CONFIG = {
 
   about: {
     sectionNum: "01",
-    headline: "A 2-day startup conclave at DVSIET, Meerut.",
+    headline: "A 2-day startup conclave at Dewan VS Group of Institutions, Meerut.",
     introText:
       "Bringing together students, early-stage founders, and mentors on one campus.",
     pillars: [
@@ -242,7 +245,7 @@ export const CONFIG = {
     sectionNum: "03",
     headline: "Schedule overview.",
     introText: "Two focused days of learning, building, and pitching.",
-    note: "Detailed schedule to be announced. All sessions in-person at DVSIET, Meerut.",
+    note: "30 & 31 October 2026. All sessions in-person at Dewan VS Group of Institutions, Meerut.",
     day1: {
       title: 'Day 1: "Build & Connect"',
       bullets: [
@@ -344,7 +347,7 @@ export const CONFIG = {
     headline: "For Partners",
     tagline: "Partner with Western UP's premier campus entrepreneurship conclave.",
     subline:
-      "Support student entrepreneurs, engage top regional engineering talent, and establish leadership at DVSIET, Meerut.",
+      "Support student entrepreneurs, engage top regional engineering talent, and establish leadership at Dewan VS Group of Institutions, Meerut.",
     badge: "PARTNERSHIPS OPEN",
     tiersPreview: [
       "Title Partner",
@@ -578,7 +581,7 @@ export const CONFIG = {
     },
     {
       q: "Can I attend for only one day?",
-      a: "The event is planned for two full days. Single-day pass availability is to be announced.",
+      a: "The event is planned for two full days (30 and 31 October 2026). Single-day pass availability is to be announced.",
     },
     {
       q: "How do I pitch my startup?",
@@ -586,18 +589,18 @@ export const CONFIG = {
     },
     {
       q: "Where is the venue located and how do I get there?",
-      a: "At Dewan V.S. Institute of Engineering & Technology (DVSIET), NH-58, Partapur, Meerut.",
+      a: "At Dewan VS Group of Institutions (DVSGI), NH-58, Partapur, Meerut.",
     },
     {
       q: "What happens after I register?",
-      a: "Your registration is saved immediately. Date and entry details will be shared on your email/WhatsApp.",
+      a: "Your registration is saved immediately. Event date is 30–31 October 2026 at Dewan VS Group of Institutions, Meerut. Entry details will be shared on your email/WhatsApp.",
     },
   ],
 
   contact: {
     email: 'event@dewaninstitutes.org',
     phone: '',
-    campus: "Dewan V.S. Institute of Engineering & Technology (DVSIET)",
+    campus: "Dewan VS Group of Institutions (DVSGI)",
     city: "Meerut, Uttar Pradesh, India",
     socials: {
       linkedin: "",

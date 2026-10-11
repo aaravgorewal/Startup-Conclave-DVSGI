@@ -1676,7 +1676,7 @@ export const AdminPage: React.FC = () => {
           </form>
 
           <div className="pt-3 border-t-2 border-[#111111] text-[11px] font-mono text-[#111111]/60 text-center">
-            Startup Conclave 1.0 · DVSIET Meerut
+            Startup Conclave 1.0 · DVSGI Meerut
           </div>
         </div>
       </div>
@@ -2480,7 +2480,7 @@ export const AdminPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <span className="inline-block w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
                     <span className="font-mono text-xs font-black uppercase text-[#111111] tracking-wider">
-                      Gate Check-in Desk · DVSIET Meerut
+                      Gate Check-in Desk · DVSGI Meerut
                     </span>
                   </div>
                   <h2 className="font-display font-black text-2xl sm:text-3xl text-[#111111] leading-tight">

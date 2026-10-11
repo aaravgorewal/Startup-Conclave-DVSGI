@@ -195,7 +195,7 @@ export async function sendConfirmationEmailForDoc(
       <h1 style="margin: 8px 0 4px 0; font-size: 24px; font-weight: 800; color: #111111; letter-spacing: -0.5px;">
         Startup Conclave 1.0
       </h1>
-      <p style="margin: 0; font-size: 14px; color: #555555;">DVSIET, Meerut</p>
+      <p style="margin: 0; font-size: 14px; color: #555555;">Dewan VS Group of Institutions, Meerut</p>
     </div>
 
     ${paymentPendingBanner}
@@ -245,7 +245,7 @@ export async function sendConfirmationEmailForDoc(
     ${contactSectionHtml}
 
     <div style="margin-top: 24px; text-align: center; font-size: 12px; color: #777777;">
-      Startup Conclave 1.0 • DVSIET, Meerut
+      Startup Conclave 1.0 • Dewan VS Group of Institutions, Meerut
     </div>
   </div>
 </body>

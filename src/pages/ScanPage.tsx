@@ -552,7 +552,7 @@ export default function ScanPage() {
 
           {/* Footer Notice */}
           <div className="pt-2 border-t border-[#111111]/20 text-[11px] font-mono text-[#111111]/60 text-center">
-            Startup Conclave 1.0 · Gate Operations · DVSIET Meerut
+            Startup Conclave 1.0 · Gate Operations · DVSGI Meerut
           </div>
         </div>
       </div>
@@ -807,7 +807,7 @@ export default function ScanPage() {
               Gate Scanner
             </h1>
             <span className="font-mono text-[10px] text-[#111111]/70 block mt-0.5">
-              DVSIET Meerut
+              DVSGI Meerut
             </span>
           </div>
         </div>

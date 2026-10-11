@@ -36,9 +36,9 @@ export default function PartnersPage() {
     const ogUrl = document.querySelector('meta[property="og:url"]');
     const prevOgUrl = ogUrl ? ogUrl.getAttribute('content') : null;
 
-    const pageTitle = 'Partner with Startup Conclave 1.0 | DVSIET Meerut';
+    const pageTitle = 'Partner with Startup Conclave 1.0 | Dewan VS Group of Institutions, Meerut';
     const pageDesc =
-      'Partner with Startup Conclave 1.0 — a 2-day startup, entrepreneurship and innovation conclave at DVSIET, Meerut.';
+      'Partner with Startup Conclave 1.0 — a 2-day startup, entrepreneurship and innovation conclave at Dewan VS Group of Institutions, Meerut.';
 
     document.title = pageTitle;
     if (metaDesc) metaDesc.setAttribute('content', pageDesc);
@@ -209,12 +209,15 @@ export default function PartnersPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-5 lg:space-y-6">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
             <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#111111] px-2.5 py-1 border border-[#111111]">
               PARTNERSHIPS OPEN
             </span>
             <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
-              DVSIET, MEERUT
+              DEWAN VS GROUP OF INSTITUTIONS, MEERUT
+            </span>
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-white px-2.5 py-1 border border-[#111111]">
+              {CONFIG.event.date}
             </span>
           </div>
 
@@ -223,7 +226,7 @@ export default function PartnersPage() {
               Partner with Startup Conclave 1.0
             </h1>
             <p className="font-sans text-base sm:text-lg lg:text-xl text-[#111111]/85 font-medium leading-relaxed">
-              A 2-day startup, entrepreneurship and innovation conclave at DVSIET, Meerut.
+              A 2-day startup, entrepreneurship and innovation conclave at Dewan VS Group of Institutions, Meerut on {CONFIG.event.date}.
             </p>
           </div>
 
@@ -671,7 +674,7 @@ export default function PartnersPage() {
       <footer className="border-t-2 border-[#111111] bg-[#FFF8EC] py-8 sm:py-10 px-4 md:px-6 lg:px-10">
         <div className="max-w-6xl xl:max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm font-mono text-[#111111]/70">
           <div>
-            <span>© {new Date().getFullYear()} {CONFIG.event.name.toUpperCase()} · DVSIET, Meerut</span>
+            <span>© {new Date().getFullYear()} {CONFIG.event.name.toUpperCase()} · Dewan VS Group of Institutions, Meerut</span>
           </div>
           <div className="flex items-center gap-4">
             <a href="/" className="text-[#FF6B1A] hover:text-[#111111] font-bold underline transition-colors">
