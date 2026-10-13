@@ -691,7 +691,7 @@ export const CONFIG = {
       },
       {
         name: "Devarjun Bhardwaj",
-        roles: ["Sponsorship Head"],
+        roles: ["Sponsorship"],
         photo: "",
         linkedin: "",
         confirmed: true,
