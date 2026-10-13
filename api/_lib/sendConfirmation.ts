@@ -93,9 +93,9 @@ export async function sendConfirmationEmailForDoc(
   const isStall = regData.ticket === 'stall';
   const isPitch = regData.ticket === 'pitch' || regData.wantsToPitch === true;
   const ticketTypeDisplay = isStall
-    ? 'Startup Stall Pass'
+    ? 'Startup Stall Pass (legacy)'
     : isPitch
-      ? 'Hall Pitch Pass'
+      ? 'Startup Pitch Pass (Rs 999 per team)'
       : 'General Attendee Pass';
 
   let collegeDisplay = '';
@@ -120,9 +120,9 @@ export async function sendConfirmationEmailForDoc(
   const contactEmail = process.env.CONTACT_EMAIL?.trim();
   const contactPhone = process.env.CONTACT_PHONE?.trim();
 
-  // Payment status check for pitch tickets
+  // Payment status check for pitch and legacy stall tickets
   const paymentStatus = regData.payment?.status || regData.paymentStatus;
-  const isPaymentPending = isPitch && paymentStatus !== 'verified';
+  const isPaymentPending = (isPitch || isStall) && paymentStatus !== 'verified';
 
   // 5. QR Code generation: qrcode.toBuffer(JSON.stringify({id, t: ticketCode}), {width: 400, margin: 2})
   let qrBuffer: Buffer;

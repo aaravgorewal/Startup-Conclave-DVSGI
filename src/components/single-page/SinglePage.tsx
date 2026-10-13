@@ -1111,14 +1111,14 @@ export const SinglePage: React.FC = () => {
   // Pitch ticket is open only when both upiId and payeeName are configured
   const isPitchOpen = Boolean(CONFIG.payment.upiId?.trim() && CONFIG.payment.payeeName?.trim());
 
-  // Memoized client-side UPI payment deep-link URL (dynamic amount for pitch or stall)
+  // Memoized client-side UPI payment deep-link URL (Startup Pitch: Rs 999)
   const upiPayUrl = useMemo(() => {
     const upiId = CONFIG.payment.upiId?.trim();
     const payee = CONFIG.payment.payeeName?.trim();
     if (!upiId || !payee) return '';
-    const fee = ticket === 'stall' ? CONFIG.tickets.stall.fee : CONFIG.tickets.pitch.fee;
+    const fee = CONFIG.tickets.pitch.fee;
     return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payee)}&am=${fee}&cu=INR`;
-  }, [ticket]);
+  }, []);
 
   // Form Validation & Submission State
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -1403,14 +1403,11 @@ export const SinglePage: React.FC = () => {
     }
 
     const isPitch = ticket === 'pitch';
-    const isStall = ticket === 'stall';
-    const isPaid = isPitch || isStall;
+    const isPaid = isPitch;
 
     if (isPaid) {
       if (!startupName.trim()) {
-        newErrors.startupName = isStall
-          ? 'Startup / product name is required for stall bookings.'
-          : 'Startup name is required for pitch registrations.';
+        newErrors.startupName = 'Startup name is required for pitch registrations.';
       }
       if (!pitchSector) {
         newErrors.pitchSector = 'Please select a sector.';
@@ -1419,15 +1416,13 @@ export const SinglePage: React.FC = () => {
         newErrors.pitchStage = 'Please select a stage.';
       }
       if (!startupPitch.trim()) {
-        newErrors.startupPitch = isStall
-          ? 'Product / showcase description is required for stall bookings.'
-          : 'Startup pitch description is required for pitch registrations.';
+        newErrors.startupPitch = 'Startup pitch description is required for pitch registrations.';
       }
 
       // 1. Team Size Validation (strictly 2 or 3)
       const numTeam = Number(pitchTeamSize);
       if (!pitchTeamSize || (numTeam !== 2 && numTeam !== 3)) {
-        newErrors.pitchTeamSize = 'Team size must be exactly 2 or 3 members for paid registrations.';
+        newErrors.pitchTeamSize = 'A team needs 2 to 3 members';
       }
 
       // 2. Team Members Validation
@@ -1474,7 +1469,7 @@ export const SinglePage: React.FC = () => {
 
       // 4. UTR Validation
       if (!isPitchOpen) {
-        newErrors.form = isStall ? 'Stall bookings open soon.' : 'Pitch registrations open soon.';
+        newErrors.form = 'Pitch registrations open soon.';
       } else {
         const cleanUtr = paymentUtr.trim();
         if (!cleanUtr) {
@@ -1627,7 +1622,7 @@ export const SinglePage: React.FC = () => {
         teamSize: isPaid ? pitchTeamSize : undefined,
         teamMembers: isPaid ? effectiveTeamMembers : undefined,
         paymentStatus: isPaid ? 'pending' : 'not_required',
-        paymentAmount: isStall ? CONFIG.tickets.stall.fee : isPitch ? CONFIG.tickets.pitch.fee : 0,
+        paymentAmount: isPitch ? CONFIG.tickets.pitch.fee : 0,
         paymentUtr: isPaid ? paymentUtr.trim() : undefined,
         paymentProofId: isPaid && proofId ? proofId : undefined,
         paymentProofStatus: isPaid ? proofStatus : undefined,
@@ -2459,12 +2454,12 @@ export const SinglePage: React.FC = () => {
             {CONFIG.schedule.note}
           </p>
 
-          {/* Schedule Display: ONLY TITLES */}
+          {/* Schedule Display: Data-driven time + title */}
           <div className="mt-6 lg:mt-7 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
 
             {/* Day 1 Column */}
             <div
-              className={`p-5 sm:p-6 lg:p-6 xl:p-7 bg-white brutal-border brutal-shadow space-y-3 sm:space-y-4 ${activeDay === 1 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
+              className={`p-5 sm:p-6 lg:p-6 xl:p-7 bg-white brutal-border brutal-shadow space-y-4 ${activeDay === 1 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
                 }`}
             >
               <div className="border-b-2 border-[#111111] pb-2.5">
@@ -2476,12 +2471,17 @@ export const SinglePage: React.FC = () => {
                 </h3>
               </div>
 
-              {/* ONLY SESSION TITLES */}
-              <ul className="space-y-2.5 sm:space-y-3 font-sans text-sm sm:text-base">
-                {CONFIG.schedule.day1.bullets.map((bullet, idx) => (
-                  <li key={idx} className="flex items-center gap-3">
-                    <span className="w-2.5 h-2.5 bg-[#FF6B1A] border-2 border-[#111111] shrink-0" />
-                    <span className="font-bold text-[#111111]">{bullet}</span>
+              {/* Day 1 Items */}
+              <ul className="space-y-2.5 font-sans text-sm sm:text-base">
+                {CONFIG.schedule.day1.items.map((item, idx) => (
+                  <li
+                    key={idx}
+                    className="p-3 bg-[#FFF8EC] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3"
+                  >
+                    <span className="font-bold text-[#111111] flex-1">{item.title}</span>
+                    <span className="font-mono text-xs font-black bg-[#FFD400] text-[#111111] px-2 py-0.5 border border-[#111111] shrink-0 self-start sm:self-center">
+                      {item.time}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -2489,7 +2489,7 @@ export const SinglePage: React.FC = () => {
 
             {/* Day 2 Column */}
             <div
-              className={`p-5 sm:p-6 lg:p-6 xl:p-7 bg-white brutal-border brutal-shadow space-y-3 sm:space-y-4 ${activeDay === 2 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
+              className={`p-5 sm:p-6 lg:p-6 xl:p-7 bg-white brutal-border brutal-shadow space-y-4 ${activeDay === 2 ? 'ring-2 ring-[#FF6B1A]' : 'opacity-85 hidden lg:block'
                 }`}
             >
               <div className="border-b-2 border-[#111111] pb-2.5">
@@ -2501,17 +2501,28 @@ export const SinglePage: React.FC = () => {
                 </h3>
               </div>
 
-              {/* ONLY SESSION TITLES */}
-              <ul className="space-y-2.5 sm:space-y-3 font-sans text-sm sm:text-base">
-                {CONFIG.schedule.day2.bullets.map((bullet, idx) => (
-                  <li key={idx} className="flex items-center gap-3">
-                    <span className="w-2.5 h-2.5 bg-[#FFD400] border-2 border-[#111111] shrink-0" />
-                    <span className="font-bold text-[#111111]">{bullet}</span>
+              {/* Day 2 Items */}
+              <ul className="space-y-2.5 font-sans text-sm sm:text-base">
+                {CONFIG.schedule.day2.items.map((item, idx) => (
+                  <li
+                    key={idx}
+                    className="p-3 bg-[#FFF8EC] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-3"
+                  >
+                    <span className="font-bold text-[#111111] flex-1">{item.title}</span>
+                    <span className="font-mono text-xs font-black bg-[#FFD400] text-[#111111] px-2 py-0.5 border border-[#111111] shrink-0 self-start sm:self-center">
+                      {item.time}
+                    </span>
                   </li>
                 ))}
               </ul>
             </div>
 
+          </div>
+
+          {/* Schedule footnote note */}
+          <div className="mt-5 sm:mt-6 p-3.5 bg-white brutal-border brutal-shadow-sm flex items-center gap-2.5 font-mono text-xs sm:text-sm font-bold text-[#111111]">
+            <span className="w-2.5 h-2.5 bg-[#FF6B1A] border border-[#111111] shrink-0" />
+            <span>{CONFIG.schedule.subnote}</span>
           </div>
         </section>
 
@@ -2543,9 +2554,9 @@ export const SinglePage: React.FC = () => {
               </p>
             </div>
 
-            {/* 3 Responsive Participation Category Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6 items-stretch">
-              {/* Card 1: Hall Pitch — ₹999 */}
+            {/* 2 Responsive Participation Category Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-5 lg:gap-6 items-stretch">
+              {/* Card 1: Startup Pitch — Rs 999 per team */}
               <div className="bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] flex flex-col justify-between p-5 sm:p-6 relative">
                 <div className="space-y-3.5">
                   <div className="flex items-center justify-between gap-2">
@@ -2553,39 +2564,35 @@ export const SinglePage: React.FC = () => {
                       Stage Pitch
                     </span>
                     <span className="font-mono text-sm font-black bg-[#FFD400] text-[#111111] px-2.5 py-1 border border-[#111111]">
-                      ₹999
+                      Rs 999 per team
                     </span>
                   </div>
 
                   <div>
                     <h3 className="font-display font-black text-2xl text-[#111111]">
-                      Hall Pitch
+                      Startup Pitch
                     </h3>
                     <p className="font-mono text-xs font-bold text-[#FF6B1A] mt-0.5">
-                      5m Pitch + 5m Q&A Format
+                      Pitch before the jury · 2 to 3 Members
                     </p>
                   </div>
 
                   <p className="text-xs sm:text-sm text-[#111111]/85 font-medium leading-relaxed">
-                    Present your startup live on stage directly before our expert jury, guest founders, and conclave attendees.
+                    Present your startup live on stage directly before our expert jury, guest founders, and conclave attendees. Teams pitch before the jury.
                   </p>
 
                   <ul className="space-y-2 pt-1 border-t border-[#111111]/15 text-xs sm:text-[13px] text-[#111111]">
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-[#FF6B1A] stroke-[3] shrink-0 mt-0.5" />
-                      <span><strong>5-minute live pitch</strong> followed by 5-minute Q&A</span>
+                      <span><strong>Opportunity to pitch before the jury</strong> (eligible teams)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-[#FF6B1A] stroke-[3] shrink-0 mt-0.5" />
-                      <span><strong>Event kit, goodies & lunch</strong> included for delegate</span>
+                      <span><strong>Team registration</strong> (minimum 2, maximum 3 members)</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-[#FF6B1A] stroke-[3] shrink-0 mt-0.5" />
-                      <span>Actionable evaluation & feedback from expert jury</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-[#FF6B1A] stroke-[3] shrink-0 mt-0.5" />
-                      <span>Full 2-day conclave access & ecosystem spotlight</span>
+                      <span>Access to relevant conclave sessions &amp; activities</span>
                     </li>
                   </ul>
 
@@ -2604,78 +2611,13 @@ export const SinglePage: React.FC = () => {
                     }}
                     className="brutal-btn w-full bg-[#FF6B1A] hover:bg-[#FFD400] text-[#111111] px-4 py-3 font-display font-black text-sm uppercase tracking-wider border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center gap-2 cursor-pointer transition-colors min-h-[46px]"
                   >
-                    <span>Register for Hall Pitch — ₹999</span>
+                    <span>Register for Startup Pitch — Rs 999 per team</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* Card 2: Startup Stall — ₹1,299 */}
-              <div className="bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] flex flex-col justify-between p-5 sm:p-6 relative">
-                <div className="space-y-3.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-black uppercase px-2.5 py-1 bg-[#FFD400] text-[#111111] border border-[#111111]">
-                      Product Showcase
-                    </span>
-                    <span className="font-mono text-sm font-black bg-[#FF6B1A] text-[#111111] px-2.5 py-1 border border-[#111111]">
-                      ₹1,299
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="font-display font-black text-2xl text-[#111111]">
-                      Startup Stall
-                    </h3>
-                    <p className="font-mono text-xs font-bold text-[#111111]/80 mt-0.5">
-                      Product & Prototype Showcase Stall
-                    </p>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-[#111111]/85 font-medium leading-relaxed">
-                    Set up an exhibition stall space to demo products, display prototypes, and connect with students, builders and mentors.
-                  </p>
-
-                  <ul className="space-y-2 pt-1 border-t border-[#111111]/15 text-xs sm:text-[13px] text-[#111111]">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
-                      <span><strong>Dedicated showcase stall space</strong> to exhibit your venture</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
-                      <span>Display working prototypes, software demos & products</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
-                      <span>Direct high footfall engagement from conclave attendees</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
-                      <span>Founder passes included for team exhibition entry</span>
-                    </li>
-                  </ul>
-
-                  <div className="p-2.5 bg-[#FFF8EC] border border-[#111111] font-mono text-[11px] text-[#111111]/80 leading-normal">
-                    <strong>Notice:</strong> Stall availability, setup details, dimensions, included facilities and timings will be communicated after registration.
-                  </div>
-                </div>
-
-                <div className="pt-5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTicket('stall');
-                      setWantsToPitch(false);
-                      handleNavClick('register');
-                    }}
-                    className="brutal-btn w-full bg-[#FFD400] hover:bg-[#FF6B1A] text-[#111111] px-4 py-3 font-display font-black text-sm uppercase tracking-wider border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center justify-center gap-2 cursor-pointer transition-colors min-h-[46px]"
-                  >
-                    <span>Book a Startup Stall — ₹1,299</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Card 3: General Attendee — Free */}
+              {/* Card 2: General Attendee — Free */}
               <div className="bg-[#FFF8EC] border-2 border-[#111111] shadow-[4px_4px_0px_#111111] flex flex-col justify-between p-5 sm:p-6 relative">
                 <div className="space-y-3.5">
                   <div className="flex items-center justify-between gap-2">
@@ -2711,7 +2653,7 @@ export const SinglePage: React.FC = () => {
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
-                      <span>Campus entrepreneurship & collegiate peer networking</span>
+                      <span>Campus entrepreneurship &amp; collegiate peer networking</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-emerald-600 stroke-[3] shrink-0 mt-0.5" />
@@ -2720,7 +2662,7 @@ export const SinglePage: React.FC = () => {
                   </ul>
 
                   <div className="p-2.5 bg-[#FFF2D6] border border-[#111111] font-mono text-[11px] text-[#111111]/80 leading-normal">
-                    <strong>Notice:</strong> General Attendee pass does not include a pitch slot, startup stall, event kit, goodies, or lunch.
+                    <strong>Notice:</strong> General Attendee pass does not include a pitch slot or pitching team participant package.
                   </div>
                 </div>
 
@@ -2741,53 +2683,159 @@ export const SinglePage: React.FC = () => {
               </div>
             </div>
 
-            {/* What Startups Get */}
-            <div className="p-4 sm:p-5 lg:p-6 bg-white brutal-border brutal-shadow space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-black uppercase text-[#111111] tracking-wider block">
-                  What Startups Get
-                </span>
-                <span className="font-mono text-[11px] font-bold text-[#FF6B1A] uppercase">
-                  Stage Privileges
+            {/* Prizes Block: Podium-style cards */}
+            <div className="p-5 sm:p-6 lg:p-7 bg-white brutal-border brutal-shadow space-y-5 text-left">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b-2 border-[#111111] pb-3">
+                <div>
+                  <span className="font-mono text-xs font-black uppercase text-[#FF6B1A] tracking-wider block">
+                    Competition Awards
+                  </span>
+                  <h3 className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+                    Prizes
+                  </h3>
+                </div>
+                <span className="font-mono text-xs font-bold bg-[#FFD400] text-[#111111] px-2.5 py-1 border border-[#111111] self-start sm:self-auto">
+                  PODIUM &amp; CONSOLATION
                 </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-sans">
-                {CONFIG.pitchArena.whatStartupsGet.map((perk) => (
-                  <div key={perk.title} className="p-3.5 bg-[#FFF8EC] border-2 border-[#111111] space-y-1">
-                    <div className="font-display font-black text-base text-[#111111]">
-                      {perk.title}
+
+              {/* Podium 3 Cards: 1st, 2nd, 3rd */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                {/* 2nd Place */}
+                <div className="p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-2 order-2 md:order-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 bg-[#FFF8EC] border border-[#111111] text-[#111111]">
+                      2ND PLACE
+                    </span>
+                    <span className="text-xl" aria-hidden="true">🥈</span>
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+                    Rs 75,000 worth
+                  </div>
+                  <p className="text-xs font-sans text-[#111111]/80 font-medium">
+                    Second Prize package awarded to the runner-up team.
+                  </p>
+                </div>
+
+                {/* 1st Place (Elevated Podium) */}
+                <div className="p-5 sm:p-6 bg-[#FFD400] border-2 border-[#111111] shadow-[5px_5px_0px_#111111] space-y-2 order-1 md:order-2 md:-translate-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-black uppercase px-2.5 py-1 bg-white border-2 border-[#111111] text-[#111111]">
+                      1ST PLACE · WINNER
+                    </span>
+                    <span className="text-2xl" aria-hidden="true">🏆</span>
+                  </div>
+                  <div className="font-display font-black text-3xl sm:text-4xl text-[#111111]">
+                    Rs 1,00,000 worth
+                  </div>
+                  <p className="text-xs sm:text-sm font-sans text-[#111111] font-bold">
+                    First Prize package awarded to the top pitching team.
+                  </p>
+                </div>
+
+                {/* 3rd Place */}
+                <div className="p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-2 order-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 bg-[#FFF8EC] border border-[#111111] text-[#111111]">
+                      3RD PLACE
+                    </span>
+                    <span className="text-xl" aria-hidden="true">🥉</span>
+                  </div>
+                  <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+                    Rs 50,000 worth
+                  </div>
+                  <p className="text-xs font-sans text-[#111111]/80 font-medium">
+                    Third Prize package awarded to the second runner-up team.
+                  </p>
+                </div>
+              </div>
+
+              {/* Consolation Prizes for 4th, 5th, 6th */}
+              <div className="p-4 sm:p-5 bg-[#FFF8EC] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 bg-white border border-[#111111] text-[#111111]">
+                      4TH, 5TH &amp; 6TH PLACE
+                    </span>
+                    <span className="font-display font-black text-xs uppercase tracking-wider text-[#FF6B1A]">
+                      Consolation Awards
+                    </span>
+                  </div>
+                  <h4 className="font-display font-black text-xl sm:text-2xl text-[#111111]">
+                    Consolation prize worth Rs 20,000 each
+                  </h4>
+                </div>
+                <div className="text-xs font-mono font-bold text-[#111111]/80 sm:text-right">
+                  Awarded to Fourth, Fifth and Sixth ranked teams
+                </div>
+              </div>
+
+              {/* Footnote */}
+              <p className="font-mono text-xs text-[#111111]/75 font-bold pt-1">
+                * Prize package details will be announced.
+              </p>
+            </div>
+
+            {/* Opportunities Being Arranged (Muted block, controlled by CONFIG.showOpportunities) */}
+            {Boolean(CONFIG.showOpportunities) && (
+              <div className="p-5 sm:p-6 lg:p-7 bg-[#FFF8EC] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] text-left space-y-4">
+                <div className="border-b-2 border-[#111111]/20 pb-2.5">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-white px-2 py-0.5 border border-[#111111]">
+                    Ecosystem Support
+                  </span>
+                  <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] mt-1.5">
+                    Opportunities being arranged
+                  </h3>
+                  <p className="font-sans text-xs sm:text-sm text-[#111111]/80 font-medium mt-1">
+                    Subject to partner confirmation, eligibility and terms.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-sans">
+                  {CONFIG.pitchArena.opportunities.items.map((opp, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-start gap-2.5"
+                    >
+                      <span className="font-mono text-sm font-black text-[#FF6B1A] shrink-0 mt-0.5">
+                        0{idx + 1}
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-[#111111]">
+                        {opp}
+                      </span>
                     </div>
-                    <div className="text-xs text-[#111111]/80 leading-relaxed font-medium">
-                      {perk.desc}
-                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Participant Package (Pitching Teams) */}
+            <div className="p-5 sm:p-6 lg:p-7 bg-white border-2 border-[#111111] shadow-[4px_4px_0px_#111111] space-y-4 text-left">
+              <div className="border-b-2 border-[#111111] pb-2.5">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2 py-0.5 border border-[#111111]">
+                  Team Inclusions
+                </span>
+                <h3 className="font-display font-black text-xl sm:text-2xl text-[#111111] mt-1.5">
+                  Participant package (pitching teams)
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 font-sans">
+                {CONFIG.pitchArena.participantPackage.map((perk, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 bg-[#FFF8EC] border-2 border-[#111111] shadow-[2px_2px_0px_#111111] flex items-start gap-2.5"
+                  >
+                    <Check className="w-4 h-4 text-[#FF6B1A] stroke-[3] shrink-0 mt-0.5" />
+                    <span className="text-xs sm:text-sm font-bold text-[#111111]">
+                      {perk}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Key Facts Strip */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 font-mono text-xs sm:text-sm font-bold text-[#111111]">
-                {CONFIG.pitchArena.facts.map((fact) => (
-                  <span key={fact.label} className="bg-white px-3.5 py-1.5 border-2 border-[#111111] shadow-[2px_2px_0px_#111111]">
-                    <strong>{fact.label}:</strong> {fact.value}
-                  </span>
-                ))}
-              </div>
-
-              <button
-                onClick={() => {
-                  setTicket('pitch');
-                  setWantsToPitch(true);
-                  handleNavClick('register');
-                }}
-                className="brutal-btn bg-[#FFD400] text-[#111111] px-6 py-3.5 font-display font-extrabold text-base uppercase tracking-wider rounded-[2px] cursor-pointer self-start sm:self-auto shrink-0 min-h-[46px]"
-              >
-                Apply to Pitch →
-              </button>
             </div>
-
-          </div>
         </section>
 
         {/* =================================================================== */}
@@ -2814,7 +2862,7 @@ export const SinglePage: React.FC = () => {
           </div>
 
           {(() => {
-            const confirmedGuests = (CONFIG.guests || []).filter((g) => g.confirmed);
+            const confirmedGuests = (CONFIG.guests || []).filter((g) => g.visible && g.confirmed);
             if (confirmedGuests.length === 0) return null;
 
             // Order of guest types: chief-guest, speaker, jury, investor, mentor
@@ -3019,12 +3067,6 @@ export const SinglePage: React.FC = () => {
                 <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-[clamp(2rem,2.8vw,3rem)] tracking-tight text-[#111111]">
                   Behind the event
                 </h2>
-
-                {showPlaceholdersNote && (
-                  <p className="font-mono text-sm sm:text-base font-bold text-[#111111]/80 mt-2 sm:mt-3">
-                    Faculty and student leadership will be announced soon.
-                  </p>
-                )}
               </div>
 
               {/* 1. STUDENT LEADERSHIP */}
@@ -3198,7 +3240,7 @@ export const SinglePage: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-5 lg:mb-5">
               <div className="flex items-center gap-3">
                 <span className="font-mono font-black text-2xl sm:text-3xl text-[#FF6B1A]">
-                  07
+                  06
                 </span>
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#111111] bg-[#FFD400] px-2.5 py-1 border border-[#111111]">
                 Registration
@@ -3767,11 +3809,11 @@ export const SinglePage: React.FC = () => {
                       Select Participation Track *
                     </label>
                     <span className="font-mono text-[11px] text-[#111111]/70">
-                      3 tracks available
+                      2 tracks available
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* 1. General Attendee — Free */}
                     <button
                       type="button"
@@ -3803,7 +3845,7 @@ export const SinglePage: React.FC = () => {
                       </div>
                     </button>
 
-                    {/* 2. Hall Pitch — ₹999 */}
+                    {/* 2. Startup Pitch — Rs 999 per team */}
                     <button
                       type="button"
                       onClick={() => {
@@ -3833,57 +3875,15 @@ export const SinglePage: React.FC = () => {
                             {CONFIG.tickets.pitch.label}
                           </span>
                           <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FFD400] text-[#111111] shrink-0">
-                            {!isPitchOpen ? 'SOON' : `₹${CONFIG.tickets.pitch.fee}`}
+                            {!isPitchOpen ? 'SOON' : 'Rs 999 per team'}
                           </span>
                         </div>
                         <p className={`text-xs mt-1.5 leading-snug ${ticket === 'pitch' && isPitchOpen ? 'text-[#111111]/90 font-medium' : 'text-[#111111]/80'}`}>
-                          5m pitch + 5m Q&A, event kit, goodies & lunch.
+                          Event kit, certificate, networking & pitch before jury.
                         </p>
                       </div>
                       <div className="mt-3 pt-2 border-t border-[#111111]/15 font-mono text-[11px] text-[#111111]/70">
-                        Live stage pitch slot
-                      </div>
-                    </button>
-
-                    {/* 3. Startup Stall — ₹1,299 */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!isPitchOpen) {
-                          setErrors((prev) => ({ ...prev, form: 'Stall bookings open soon.' }));
-                          return;
-                        }
-                        setErrors((prev) => {
-                          const next = { ...prev };
-                          delete next.form;
-                          return next;
-                        });
-                        setTicket('stall');
-                        setWantsToPitch(false);
-                      }}
-                      className={`p-3.5 border-2 border-[#111111] text-left transition-all flex flex-col justify-between ${
-                        !isPitchOpen
-                          ? 'opacity-80 bg-[#F4EFE6] cursor-not-allowed shadow-[1px_1px_0px_#111111]'
-                          : ticket === 'stall'
-                            ? 'bg-[#FFD400] text-[#111111] shadow-[3px_3px_0px_#111111] cursor-pointer'
-                            : 'bg-white hover:bg-[#FFF8EC] text-[#111111] shadow-[1px_1px_0px_#111111] cursor-pointer'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="font-bold text-sm sm:text-base">
-                            {CONFIG.tickets.stall.label}
-                          </span>
-                          <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 border border-[#111111] bg-[#FF6B1A] text-[#111111] shrink-0">
-                            {!isPitchOpen ? 'SOON' : `₹${CONFIG.tickets.stall.fee}`}
-                          </span>
-                        </div>
-                        <p className={`text-xs mt-1.5 leading-snug ${ticket === 'stall' && isPitchOpen ? 'text-[#111111]/90 font-medium' : 'text-[#111111]/80'}`}>
-                          Product showcase & demo exhibition stall space.
-                        </p>
-                      </div>
-                      <div className="mt-3 pt-2 border-t border-[#111111]/15 font-mono text-[11px] text-[#111111]/70">
-                        Dedicated showcase space
+                        Live stage pitch slot · 2 to 3 members
                       </div>
                     </button>
                   </div>
@@ -4442,173 +4442,6 @@ export const SinglePage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* 5a. Startup Stall Showcase Section */}
-                  {ticket === 'stall' && (
-                    <div className="p-4 bg-[#FFF2D6] border-2 border-[#111111] space-y-3.5 animate-in fade-in">
-                      <div className="flex items-center justify-between border-b border-[#111111]/20 pb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-base">🏪</span>
-                          <span className="font-bold text-[#111111] uppercase tracking-wide text-xs sm:text-sm">
-                            Startup Stall Showcase Details
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setTicket('participant');
-                            setWantsToPitch(false);
-                          }}
-                          className="text-[11px] font-mono underline text-[#111111]/70 hover:text-[#FF6B1A] cursor-pointer"
-                        >
-                          Switch to Attendee pass
-                        </button>
-                      </div>
-
-                      {/* 1. Startup / Product Name */}
-                      <div className="space-y-1.5">
-                        <label htmlFor="reg-startupName" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                          Startup / Product Name *
-                        </label>
-                        <input
-                          id="reg-startupName"
-                          type="text"
-                          autoComplete="organization"
-                          required
-                          value={startupName}
-                          onChange={(e) => {
-                            setStartupName(e.target.value);
-                            if (errors.startupName) setErrors((prev) => ({ ...prev, startupName: '' }));
-                          }}
-                          placeholder="e.g. KisanAI or RoboClean"
-                          aria-invalid={Boolean(errors.startupName)}
-                          aria-describedby={errors.startupName ? 'reg-startupName-error' : undefined}
-                          className={`w-full p-2.5 bg-white border-2 ${errors.startupName ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base`}
-                        />
-                        {errors.startupName && (
-                          <p id="reg-startupName-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.startupName}</p>
-                        )}
-                      </div>
-
-                      {/* 2. Sector & Stage */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {/* Sector Dropdown */}
-                        <div className="space-y-1.5">
-                          <label htmlFor="reg-pitchSector" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                            Sector *
-                          </label>
-                          <select
-                            id="reg-pitchSector"
-                            value={pitchSector}
-                            onChange={(e) => {
-                              setPitchSector(e.target.value);
-                              if (errors.pitchSector) setErrors((prev) => ({ ...prev, pitchSector: '' }));
-                            }}
-                            aria-invalid={Boolean(errors.pitchSector)}
-                            aria-describedby={errors.pitchSector ? 'reg-pitchSector-error' : undefined}
-                            className={`w-full p-2.5 bg-white border-2 ${errors.pitchSector ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
-                          >
-                            <option value="">Select Sector</option>
-                            <option value="Agritech">Agritech</option>
-                            <option value="AI / ML">AI / ML</option>
-                            <option value="Cleantech & Energy">Cleantech & Energy</option>
-                            <option value="D2C & Consumer">D2C & Consumer</option>
-                            <option value="Edtech">Edtech</option>
-                            <option value="Fintech">Fintech</option>
-                            <option value="Healthcare & Biotech">Healthcare & Biotech</option>
-                            <option value="Robotics & Hardware">Robotics & Hardware</option>
-                            <option value="SaaS & Enterprise">SaaS & Enterprise</option>
-                            <option value="Other">Other</option>
-                          </select>
-                          {errors.pitchSector && (
-                            <p id="reg-pitchSector-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchSector}</p>
-                          )}
-                        </div>
-
-                        {/* Stage Dropdown */}
-                        <div className="space-y-1.5">
-                          <label htmlFor="reg-pitchStage" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                            Stage *
-                          </label>
-                          <select
-                            id="reg-pitchStage"
-                            value={pitchStage}
-                            onChange={(e) => {
-                              setPitchStage(e.target.value as any);
-                              if (errors.pitchStage) setErrors((prev) => ({ ...prev, pitchStage: '' }));
-                            }}
-                            aria-invalid={Boolean(errors.pitchStage)}
-                            aria-describedby={errors.pitchStage ? 'reg-pitchStage-error' : undefined}
-                            className={`w-full p-2.5 bg-white border-2 ${errors.pitchStage ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer`}
-                          >
-                            <option value="">Select Stage</option>
-                            <option value="Idea">Idea</option>
-                            <option value="Prototype">Prototype (Working Demo)</option>
-                            <option value="Launched">Launched (Early Users)</option>
-                            <option value="Revenue">Revenue Generating</option>
-                          </select>
-                          {errors.pitchStage && (
-                            <p id="reg-pitchStage-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchStage}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 3. Product / Showcase Description */}
-                      <div className="space-y-1.5">
-                        <label htmlFor="reg-startupPitch" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                          Product / Showcase Description *
-                        </label>
-                        <textarea
-                          id="reg-startupPitch"
-                          required
-                          maxLength={300}
-                          value={startupPitch}
-                          onChange={(e) => {
-                            setStartupPitch(e.target.value.slice(0, 300));
-                            if (errors.startupPitch) setErrors((prev) => ({ ...prev, startupPitch: '' }));
-                          }}
-                          placeholder="Briefly describe what product or prototype you will display at your stall (max 300 characters)..."
-                          aria-invalid={Boolean(errors.startupPitch)}
-                          aria-describedby={errors.startupPitch ? 'reg-startupPitch-error' : undefined}
-                          className={`w-full p-2.5 bg-white border-2 ${errors.startupPitch ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[76px] text-sm resize-none`}
-                        />
-                        <div className="flex items-center justify-between text-[11px] font-mono text-[#111111]/60">
-                          <span>{300 - startupPitch.length} characters remaining</span>
-                        </div>
-                        {errors.startupPitch && (
-                          <p id="reg-startupPitch-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.startupPitch}</p>
-                        )}
-                      </div>
-
-                      {/* 4. Team Size / Booth Representatives (strictly 2 or 3) */}
-                      <div className="space-y-1.5">
-                        <label htmlFor="reg-pitchTeamSize" className="font-bold text-[#111111] block text-xs sm:text-sm cursor-pointer">
-                          Team Size / Booth Representatives * <span className="font-mono text-xs font-normal text-[#111111]/70">(2 to 3 members)</span>
-                        </label>
-                        <select
-                          id="reg-pitchTeamSize"
-                          value={pitchTeamSize}
-                          onChange={(e) => handleTeamSizeChange(e.target.value as '2' | '3' | '')}
-                          aria-invalid={Boolean(errors.pitchTeamSize)}
-                          aria-describedby={errors.pitchTeamSize ? 'reg-pitchTeamSize-error' : undefined}
-                          className={`w-full p-2.5 bg-white border-2 ${errors.pitchTeamSize ? 'border-red-600' : 'border-[#111111]'} font-sans min-h-[46px] text-base cursor-pointer font-bold`}
-                        >
-                          <option value="2">2 Members</option>
-                          <option value="3">3 Members</option>
-                        </select>
-                        {errors.pitchTeamSize && (
-                          <p id="reg-pitchTeamSize-error" role="alert" className="text-xs text-red-600 font-bold mt-1">{errors.pitchTeamSize}</p>
-                        )}
-                      </div>
-
-                      {/* Team Member Details Groups (2 or 3 groups) */}
-                      {renderTeamMemberFields()}
-
-                      <div className="p-2.5 bg-white border border-[#111111] font-mono text-[11px] text-[#111111]/80">
-                        <strong>Notice:</strong> Stall availability, setup details, dimensions, included facilities and timings will be communicated after registration.
-                      </div>
-                    </div>
-                  )}
-
                   {/* Free General Attendee Checkout Summary */}
                   {ticket === 'participant' && (
                     <div className="p-4 sm:p-5 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-2.5">
@@ -4629,22 +4462,22 @@ export const SinglePage: React.FC = () => {
                         Registration as a General Attendee is completely free. You will receive an official entry pass with a unique gate security QR immediately upon submitting.
                       </p>
                       <p className="text-[11px] font-mono text-[#111111]/65 italic border-t border-[#111111]/15 pt-1.5">
-                        Notice: General Attendee pass does not include pitch slots, startup stalls, event kits, goodies or lunch.
+                        Notice: General Attendee pass does not include a pitch slot or pitching team participant package.
                       </p>
                     </div>
                   )}
 
-                  {/* 5.5 UPI Fee Payment Block (Rendered for Pitch and Stall passes) */}
-                  {(ticket === 'pitch' || ticket === 'stall') && (
+                  {/* 5.5 UPI Fee Payment Block (Rendered for Startup Pitch pass) */}
+                  {ticket === 'pitch' && (
                     !isPitchOpen ? (
                       <div className="p-4 sm:p-5 bg-[#FFF2D6] border-2 border-[#111111] shadow-[3px_3px_0px_#111111] space-y-3">
                         <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
                           <div>
                             <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-[#111111] px-2 py-0.5 border border-[#111111]">
-                              {CONFIG.tickets[ticket].label.toUpperCase()}
+                              STARTUP PITCH
                             </span>
                             <h3 className="font-display font-black text-xl text-[#111111] mt-1">
-                              ₹{CONFIG.tickets[ticket].fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ {CONFIG.tickets[ticket].label}</span>
+                              Rs 999 per team <span className="text-xs font-mono font-normal text-[#111111]/70">/ Team Pass</span>
                             </h3>
                           </div>
                           <span className="font-mono text-xs font-bold uppercase px-2 py-1 bg-[#FFD400] text-[#111111] border border-[#111111]">
@@ -4673,10 +4506,10 @@ export const SinglePage: React.FC = () => {
                         <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5">
                           <div>
                             <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#FF6B1A] text-[#111111] px-2 py-0.5 border border-[#111111]">
-                              {CONFIG.tickets[ticket].label.toUpperCase()} CHECKOUT
+                              STARTUP PITCH CHECKOUT
                             </span>
                             <h3 className="font-display font-black text-xl text-[#111111] mt-1">
-                              ₹{CONFIG.tickets[ticket].fee} <span className="text-xs font-mono font-normal text-[#111111]/70">/ {CONFIG.tickets[ticket].label} Pass</span>
+                              Rs 999 per team <span className="text-xs font-mono font-normal text-[#111111]/70">/ Team Pass</span>
                             </h3>
                           </div>
                           <div className="text-right">
@@ -4727,7 +4560,7 @@ export const SinglePage: React.FC = () => {
                             <div className="space-y-3 text-center sm:text-left flex-1">
                               <div>
                                 <span className="font-bold text-sm text-[#111111] block">
-                                  Scan QR Code to Pay ₹{CONFIG.tickets[ticket].fee}
+                                  Scan QR Code to Pay Rs 999 per team
                                 </span>
                                 <p className="text-xs text-[#111111]/70 mt-0.5">
                                   Scan with Google Pay, PhonePe, Paytm, BHIM, or any UPI app.
@@ -5044,16 +4877,16 @@ export const SinglePage: React.FC = () => {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      disabled={isSubmitting || isUploadingScreenshot || ((ticket === 'pitch' || ticket === 'stall') && !isPitchOpen)}
+                      disabled={isSubmitting || isUploadingScreenshot || (ticket === 'pitch' && !isPitchOpen)}
                       className={`w-full brutal-btn text-[#111111] p-4 font-display font-black text-base sm:text-lg uppercase tracking-wider rounded-[2px] flex items-center justify-center gap-2 min-h-[50px] ${
-                        (ticket === 'pitch' || ticket === 'stall') && !isPitchOpen
+                        ticket === 'pitch' && !isPitchOpen
                           ? 'bg-neutral-400 text-neutral-800 opacity-70 cursor-not-allowed shadow-none border-2 border-[#111111]'
                           : isSubmitting || isUploadingScreenshot
                             ? 'bg-[#FF6B1A] opacity-60 cursor-not-allowed pointer-events-none'
                             : 'bg-[#FF6B1A] cursor-pointer hover:bg-[#E05307]'
                       }`}
                     >
-                      {(ticket === 'pitch' || ticket === 'stall') && !isPitchOpen ? (
+                      {ticket === 'pitch' && !isPitchOpen ? (
                         <span>Registrations open soon</span>
                       ) : isUploadingScreenshot ? (
                         <span className="flex items-center gap-2">
@@ -5068,13 +4901,11 @@ export const SinglePage: React.FC = () => {
                       ) : (
                         <>
                           <span>
-                            {ticket === 'stall'
-                              ? 'Book a Startup Stall — ₹1,299'
-                              : ticket === 'pitch'
-                                ? 'Register for Hall Pitch — ₹999'
-                                : 'Register as an Attendee — Free'}
+                            {ticket === 'pitch'
+                              ? 'Register for Startup Pitch — Rs 999 per team'
+                              : 'Register as an Attendee — Free'}
                           </span>
-                          <ArrowRight className="w-5 h-5" />
+                          <ArrowRight className="w-4 h-4" />
                         </>
                       )}
                     </button>
@@ -5242,20 +5073,6 @@ export const SinglePage: React.FC = () => {
 
         </div>
 
-        {CONFIG.organisers.some((o) => o.confirmed) && (
-          <div className="py-6 border-b-2 border-[#111111] flex flex-wrap items-center gap-3">
-            <span className="font-mono text-xs font-bold uppercase tracking-widest text-[#111111]/70 mr-1">
-              Organised by
-            </span>
-            <div className="flex flex-wrap items-center gap-3">
-              {CONFIG.organisers
-                .filter((o) => o.confirmed)
-                .map((o) => (
-                  <LogoTile key={o.name} item={o} heightClass="h-7 sm:h-8" tileClass="h-11 px-3.5" />
-                ))}
-            </div>
-          </div>
-        )}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm font-mono text-[#111111]/70">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>© {new Date().getFullYear()} Startup Conclave 1.0. All rights reserved.</span>
@@ -5343,7 +5160,7 @@ export const SinglePage: React.FC = () => {
                   Attendee Privacy & Data Usage
                 </h2>
                 <p className="font-sans text-xs sm:text-sm text-[#111111]/80 font-medium">
-                  Startup Conclave 1.0 · Dewan V.S. Institute of Engineering & Technology, Meerut
+                  Startup Conclave 1.0 · Dewan VS Group of Institutions, Meerut
                 </p>
               </div>
 

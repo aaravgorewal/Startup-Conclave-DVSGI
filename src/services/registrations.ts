@@ -353,37 +353,42 @@ export const createRegistration = async (
     };
   }
 
-  // 3b. Determine ticket type and validate pitch / stall requirements
-  const ticket: 'participant' | 'pitch' | 'stall' =
-    input.ticket === 'stall'
-      ? 'stall'
-      : input.ticket === 'pitch' || input.wantsToPitch
-        ? 'pitch'
-        : 'participant';
-  const isPitch = ticket === 'pitch';
-  const isStall = ticket === 'stall';
-  const isPaid = isPitch || isStall;
+  // 3b. Determine ticket type and validate pitch requirements
+  if (input.ticket === 'stall') {
+    return {
+      success: false,
+      isNetworkError: false,
+      error: 'The Startup Stall track is no longer available. Please register for Startup Pitch.',
+    };
+  }
 
-  if (isPaid) {
+  const ticket: 'participant' | 'pitch' =
+    input.ticket === 'pitch' || input.wantsToPitch
+      ? 'pitch'
+      : 'participant';
+  const isPitch = ticket === 'pitch';
+  const isPaid = isPitch;
+
+  if (isPitch) {
     if (!CONFIG.payment.upiId?.trim() || !CONFIG.payment.payeeName?.trim()) {
       return {
         success: false,
         isNetworkError: false,
-        error: isStall ? 'Stall bookings open soon.' : 'Pitch registrations open soon.',
+        error: 'Pitch registrations open soon.',
       };
     }
     if (!input.startupName?.trim()) {
       return {
         success: false,
         isNetworkError: false,
-        error: isStall ? 'Startup / product name is required for stall bookings.' : 'Startup name is required for pitch registrations.',
+        error: 'Startup name is required for pitch registrations.',
       };
     }
     if (!input.startupPitch?.trim()) {
       return {
         success: false,
         isNetworkError: false,
-        error: isStall ? 'Product / showcase description is required for stall bookings.' : 'Startup pitch description is required for pitch registrations.',
+        error: 'Startup pitch description is required for pitch registrations.',
       };
     }
     if (!input.sector?.trim()) {
@@ -393,13 +398,13 @@ export const createRegistration = async (
       return { success: false, isNetworkError: false, error: 'Stage is required.' };
     }
 
-    // Team Size Validation: minimum 2, maximum 3 members for paid registrations
+    // Team Size Validation: minimum 2, maximum 3 members for pitch registrations
     const numTeamSize = Number(input.teamSize);
     if (!input.teamSize || (numTeamSize !== 2 && numTeamSize !== 3)) {
       return {
         success: false,
         isNetworkError: false,
-        error: 'Team size must be exactly 2 or 3 members for paid registrations.',
+        error: 'A team needs 2 to 3 members',
       };
     }
 
@@ -437,9 +442,7 @@ export const createRegistration = async (
         };
       }
     }
-  }
 
-  if (isPitch) {
     if (!input.pitchDeckLink?.trim()) {
       return { success: false, isNetworkError: false, error: 'Pitch deck link is required for pitch registrations.' };
     }
@@ -452,7 +455,7 @@ export const createRegistration = async (
   const cleanUtr = input.paymentUtr ? input.paymentUtr.trim() : '';
   let paymentInfo: PaymentInfo;
 
-  if (isPaid) {
+  if (isPitch) {
     if (!isValidUtr(cleanUtr)) {
       return {
         success: false,
@@ -467,7 +470,7 @@ export const createRegistration = async (
         error: 'This UPI Reference Number (UTR) has already been submitted on this device. If you are sure you have not registered, contact the organisers.',
       };
     }
-    const amountPaise = isStall ? 129900 : 99900;
+    const amountPaise = CONFIG.tickets.pitch.fee * 100;
     const proofId = (input.paymentProofId || '').trim();
     const proofStatus: 'uploaded' | 'pending' = input.paymentProofStatus || (proofId ? 'uploaded' : 'pending');
 

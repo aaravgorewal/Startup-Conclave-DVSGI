@@ -128,9 +128,9 @@ export async function checkInByCode(raw: string, uid: string): Promise<CheckInRe
     return { kind: 'waitlist' };
   }
 
-  // If ticket==='pitch' and payment.status !== 'verified' (only when these fields exist) -> {kind:'payment_pending'}
+  // If ticket==='pitch' or legacy 'stall' and payment.status !== 'verified' (only when these fields exist) -> {kind:'payment_pending'}
   if (
-    data.ticket === 'pitch' &&
+    (data.ticket === 'pitch' || data.ticket === 'stall') &&
     data.payment &&
     typeof data.payment === 'object' &&
     data.payment.status !== undefined &&
@@ -176,7 +176,7 @@ export async function checkInByCode(raw: string, uid: string): Promise<CheckInRe
       }
 
       if (
-        freshData.ticket === 'pitch' &&
+        (freshData.ticket === 'pitch' || freshData.ticket === 'stall') &&
         freshData.payment &&
         typeof freshData.payment === 'object' &&
         freshData.payment.status !== undefined &&

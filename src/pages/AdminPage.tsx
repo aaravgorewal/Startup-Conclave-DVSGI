@@ -1283,7 +1283,7 @@ export const AdminPage: React.FC = () => {
       return {
         'Registration ID': r.id,
         'Ticket Code': r.ticketCode || '',
-        Ticket: r.ticket || (r.wantsToPitch ? 'pitch' : 'participant'),
+        Ticket: r.ticket === 'stall' ? 'Startup Stall (legacy)' : r.ticket === 'pitch' || r.wantsToPitch ? 'Startup Pitch' : 'General Attendee',
         Name: r.name,
         Email: r.email,
         'Email Verified': r.emailVerified ? 'Yes' : 'No',
@@ -2011,8 +2011,8 @@ export const AdminPage: React.FC = () => {
                   <div className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
                     ₹{stats.expectedRevenue.toLocaleString('en-IN')}
                   </div>
-                  <div className="text-[10px] font-mono font-bold text-[#FF6B1A] truncate" title={`Pitch: ${stats.pitchVerified} × ₹${stats.pitchFee} | Stall: ${stats.stallVerified} × ₹${stats.stallFee}`}>
-                    {stats.pitchVerified} pitch + {stats.stallVerified} stall verified
+                  <div className="text-[10px] font-mono font-bold text-[#FF6B1A] truncate" title={`Pitch: ${stats.pitchVerified} × ₹${stats.pitchFee}${stats.stallVerified > 0 ? ` | Stall (legacy): ${stats.stallVerified} × ₹${stats.stallFee}` : ''}`}>
+                    {stats.pitchVerified} pitch verified{stats.stallVerified > 0 ? ` + ${stats.stallVerified} stall (legacy)` : ''}
                   </div>
                 </div>
 
@@ -2201,8 +2201,8 @@ export const AdminPage: React.FC = () => {
                   >
                     <option value="All">All Tickets</option>
                     <option value="participant">General Attendee (Free)</option>
-                    <option value="pitch">Hall Pitch (₹999)</option>
-                    <option value="stall">Startup Stall (₹1,299)</option>
+                    <option value="pitch">Startup Pitch (Rs 999 per team)</option>
+                    <option value="stall">Startup Stall (legacy)</option>
                   </select>
 
                   {/* Payment Status Filter */}
@@ -2417,8 +2417,8 @@ export const AdminPage: React.FC = () => {
                       </td>
                       <td className="p-3 text-center">
                         {reg.ticket === 'stall' ? (
-                          <span className="font-mono text-[10px] font-bold text-[#111111] bg-[#FFD400] px-1.5 py-0.5 border border-[#111111]">
-                            STALL
+                          <span className="font-mono text-[10px] font-bold text-[#111111] bg-[#FFD400] px-1.5 py-0.5 border border-[#111111]" title="Legacy Registration">
+                            STALL (LEGACY)
                           </span>
                         ) : reg.ticket === 'pitch' || reg.wantsToPitch ? (
                           <span className="font-mono text-[10px] font-bold text-white bg-[#FF6B1A] px-1.5 py-0.5 border border-[#111111]">
@@ -3801,7 +3801,7 @@ export const AdminPage: React.FC = () => {
                   <div>Type: {activeDetailItem.college.type || '—'} {activeDetailItem.college.listed ? '(Listed)' : ''}</div>
                 </div>
               )}
-              <div>Ticket: <strong>{activeDetailItem.ticket === 'stall' ? 'Startup Stall (₹1,299)' : activeDetailItem.ticket === 'pitch' || activeDetailItem.wantsToPitch ? 'Hall Pitch (₹999)' : 'General Attendee (Free)'}</strong></div>
+              <div>Ticket: <strong>{activeDetailItem.ticket === 'stall' ? 'Startup Stall (legacy)' : activeDetailItem.ticket === 'pitch' || activeDetailItem.wantsToPitch ? 'Startup Pitch (Rs 999 per team)' : 'General Attendee (Free)'}</strong></div>
               <div>Email Verified: <strong>{activeDetailItem.emailVerified ? 'Yes' : 'No'}</strong></div>
               <div>Course: {activeDetailItem.course || '—'} ({activeDetailItem.year || '—'})</div>
               <div>Role: <strong>{activeDetailItem.role}</strong></div>
@@ -3813,7 +3813,7 @@ export const AdminPage: React.FC = () => {
               <div className="p-4 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] space-y-2 text-xs font-mono">
                 <div className="flex items-center justify-between border-b border-[#111111]/20 pb-1">
                   <span className="font-bold uppercase tracking-wider text-[#111111]">
-                    {activeDetailItem.ticket === 'stall' ? 'Showcase Stall Details' : 'Pitch Deck & Venture Details'}
+                    {activeDetailItem.ticket === 'stall' ? 'Showcase Stall Details (legacy)' : 'Pitch Deck & Venture Details'}
                   </span>
                   {activeDetailItem.teamSize && (
                     <span className="bg-[#FFD400] text-[#111111] font-bold px-1.5 py-0.5 border border-[#111111] text-[10px]">

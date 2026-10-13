@@ -35,6 +35,23 @@ export interface Guest {
   linkedin?: string;
   type: 'speaker' | 'investor' | 'jury' | 'mentor' | 'chief-guest';
   confirmed: boolean;
+  visible: boolean;
+}
+
+export interface ScheduleItem {
+  time: string;
+  title: string;
+}
+
+export interface PartnerCategoryItem {
+  category: string;
+  description: string;
+}
+
+export interface PartnerBenefitItem {
+  title: string;
+  description: string;
+  note?: string;
 }
 
 export interface TeamMember {
@@ -89,6 +106,7 @@ export interface StatItem {
 }
 
 export const CONFIG = {
+  showOpportunities: false,
   tickets: {
     participant: {
       label: 'General Attendee',
@@ -103,44 +121,38 @@ export const CONFIG = {
         'Official attendee digital entry pass',
       ],
       ctaText: 'Register as an Attendee — Free',
-      notice: 'General Attendee pass does not include a pitch slot, startup stall, event kit, goodies, or lunch.',
+      notice: 'General Attendee pass does not include a pitch slot or pitching team participant package.',
     },
     pitch: {
-      label: 'Hall Pitch',
-      name: 'Hall Pitch Pass',
+      label: 'Startup Pitch',
+      name: 'Startup Pitch Pass',
       fee: 999,
-      badge: '₹999',
-      description: 'Present your startup live on stage with a dedicated 5-minute pitch followed by 5-minute Q&A.',
+      badge: 'Rs 999 per team, 2 to 3 members',
+      description: 'Present your startup live on stage directly before the jury. Teams pitch before the jury.',
       features: [
-        '5-minute live pitch + 5-minute jury & attendee Q&A',
-        'Official conclave event kit & goodies included',
-        'Complimentary lunch for delegate',
-        'Actionable jury feedback on validation & presentation',
+        'Opportunity to pitch before the jury (eligible teams)',
+        'Team registration (minimum 2, maximum 3 members)',
+        'Access to relevant conclave sessions & activities',
       ],
-      ctaText: 'Register for Hall Pitch — ₹999',
+      ctaText: 'Register for Startup Pitch — Rs 999 per team',
       notice: 'Pitch slots are subject to published venue capacity and eligibility verification.',
     },
     stall: {
-      label: 'Startup Stall',
-      name: 'Startup Showcase Stall',
+      label: 'Startup Stall (legacy)',
+      name: 'Startup Showcase Stall (legacy)',
       fee: 1299,
-      badge: '₹1,299',
-      description: 'Dedicated exhibition stall to showcase your startup, demo prototypes, and engage attendees.',
-      features: [
-        'Dedicated startup / product showcase stall space',
-        'Display prototypes, software demos & products',
-        'Direct footfall from attendees, mentors & guests',
-        'Founder showcase passes for team entry',
-      ],
-      ctaText: 'Book a Startup Stall — ₹1,299',
-      notice: 'Stall availability, setup details, dimensions, included facilities and timings will be communicated after registration.',
+      badge: 'Legacy',
+      description: 'Legacy ticket type kept for backward-compatibility with past registrations.',
+      features: [],
+      ctaText: 'Legacy',
+      notice: 'This ticket type is no longer available for new registrations.',
     },
   } as Record<ParticipationCategory, TicketConfig>,
 
   payment: {
-    upiId: '9286153090@upi',
-    payeeName: 'Aarav Saini',
-    refundPolicyText: 'Registration fees for Hall Pitch (₹999) and Startup Stall (₹1,299) are non-refundable once slot allocation is confirmed. If a submission cannot be accommodated due to capacity limits, cancellation terms will apply.',
+    upiId: '',
+    payeeName: 'Dewan',
+    refundPolicyText: 'Registration fees for Startup Pitch (Rs 999 per team) are non-refundable once slot allocation is confirmed. If a submission cannot be accommodated due to capacity limits, cancellation terms will apply.',
   } as PaymentConfig,
 
   // Stats strip: render only when non-empty, labelled "Targets"
@@ -206,7 +218,7 @@ export const CONFIG = {
   // Organisers: the college's own units.
   organisers: [
     { name: 'Dewan VS Group of Institutions, Meerut', logo: dewanVsLogo, confirmed: true, width: 241, height: 303 },
-    { name: 'Dewan Innovation & Incubation Forum', logo: diifLogo, confirmed: true, width: 200, height: 200 },
+    { name: 'Dewan Innovation and Incubation Forum', logo: diifLogo, confirmed: true, width: 200, height: 200 },
     { name: "Institution's Innovation Council", logo: iicLogo, confirmed: true, width: 400, height: 173 },
   ] as LogoItem[],
 
@@ -245,7 +257,7 @@ export const CONFIG = {
     endDate: "2026-10-31",
     duration: "2 Days",
     mode: "In-Person",
-    badgeSticker: "2 DAYS • 1 STAGE",
+    badgeSticker: "2 DAYS",
     marqueeText: "BUILD • CONNECT • PITCH • SCALE • ",
   },
 
@@ -253,7 +265,7 @@ export const CONFIG = {
     sectionNum: "01",
     headline: "A 2-day startup conclave at Dewan VS Group of Institutions, Meerut.",
     introText:
-      "Bringing together students, early-stage founders, and mentors on one campus.",
+      "500+ attendees expected. Organised by Dewan Innovation and Incubation Forum, under the guidance of Dewan V.S. Institute of Engineering and Technology, Meerut.",
     pillars: [
       {
         tag: "BUILD",
@@ -276,19 +288,16 @@ export const CONFIG = {
 
   whatsInside: {
     sectionNum: "02",
-    headline: "Ten formats across two days.",
+    headline: "Activity formats across two days.",
     introText: "Everything happening on campus during the conclave.",
     items: [
-      { title: "Keynotes", note: "Founder and operator talks" },
-      { title: "Founder Firesides", note: "Real campus startup journeys" },
-      { title: "Panels", note: "Debates on startup building" },
-      { title: "Building & Scale Sessions", note: "Practical discussions on early-stage building" },
-      { title: "Startup Pitch Arena", note: "Live competition for finalists" },
-      { title: "Workshops", note: "Hands-on MVP building sessions" },
-      { title: "Mentorship", note: "1-on-1 pitch deck feedback" },
-      { title: "Startup Exhibition", note: "Demo tables for prototypes" },
-      { title: "Networking", note: "Mixers for student builders" },
-      { title: "Awards", note: "Recognition for standout teams" },
+      { title: "Keynote Sessions", note: "Entrepreneurial awareness and inspiration" },
+      { title: "Expert Talks", note: "Government schemes and startup funding support" },
+      { title: "Panel Discussions", note: "Industry experts and startup founders share real journeys" },
+      { title: "Startup Pitching", note: "Competition before the jury" },
+      { title: "Investor Meetings", note: "Networking sessions specifically for startup participants" },
+      { title: "Awards & Recognition", note: "Jury evaluation, certificates and awards" },
+      { title: "Closing Ceremonies", note: "Guest interaction and valedictory" },
     ],
   },
 
@@ -297,26 +306,31 @@ export const CONFIG = {
     headline: "Schedule overview.",
     introText: "Two focused days of learning, building, and pitching.",
     note: "30-31 October 2026. All sessions in-person at Dewan VS Group of Institutions, Meerut.",
+    subnote: "Two panel discussions run each day. Final speakers and timings will be announced.",
     day1: {
-      title: 'Day 1: "Build & Connect"',
-      bullets: [
-        "Inauguration Ceremony",
-        "Opening Keynote",
-        "Founder Fireside Chat",
-        "Startup Ecosystem Panel",
-        "MVP Workshop",
-        "Startup Showcase & Networking",
+      title: 'Day 1: "Entrepreneurial Awareness & Inspiration"',
+      date: '30 October 2026',
+      items: [
+        { time: '9:30-10:30 AM', title: 'Registration, welcome and networking' },
+        { time: '10:30-11:00 AM', title: 'Inaugural ceremony' },
+        { time: '11:00 AM-12:00 PM', title: 'Keynote: Startup ecosystem in India, opportunities and challenges' },
+        { time: '12:00-1:00 PM', title: 'Expert talk: Government schemes and startup funding support' },
+        { time: '1:00-2:00 PM', title: 'Lunch break' },
+        { time: '2:00-3:30 PM', title: 'Panel discussion: startup founders share real-life journeys' },
+        { time: '3:30-4:00 PM', title: 'Interactive Q&A with speakers' },
+        { time: '4:00-4:30 PM', title: 'Networking, feedback and day closing' },
       ],
     },
     day2: {
-      title: 'Day 2: "Pitch & Scale"',
-      bullets: [
-        "Keynote Session",
-        "Funding & Capital Discussion",
-        "Building an Investable Business",
-        "Startup Mentorship",
-        "Startup Pitch Arena",
-        "Awards and Closing",
+      title: 'Day 2: "Pitching & Recognition"',
+      date: '31 October 2026',
+      items: [
+        { time: '10:00-11:00 AM', title: 'Final pitch preparation' },
+        { time: '11:00 AM-1:30 PM', title: 'Startup pitching competition' },
+        { time: '1:30-2:30 PM', title: 'Lunch break' },
+        { time: '2:30-3:30 PM', title: 'Jury deliberation and special talk: investor perspective' },
+        { time: '3:30-4:30 PM', title: 'Valedictory ceremony, awards and certificates' },
+        { time: '4:30 PM', title: 'Closing remarks and vote of thanks' },
       ],
     },
   },
@@ -326,27 +340,35 @@ export const CONFIG = {
     headline: "Startup Pitch Arena",
     tagline: "Where Ideas Meet Capital.",
     description:
-      "Pitch your startup live in front of the jury and audience. Pitch format: 5-minute pitch followed by 5-minute Q&A.",
-    facts: [
-      { label: "Pitch Format", value: "5 min pitch + 5 min Q&A" },
-      { label: "Hall Pitch Fee", value: "₹999 (Includes kit, goodies & lunch)" },
-      { label: "Startup Stall Fee", value: "₹1,299 (Showcase stall space)" },
-      { label: "General Attendee", value: "Free (Audience access)" },
-    ],
-    // Core benefits for participating startups
-    whatStartupsGet: [
-      {
-        title: "5m Pitch + 5m Q&A",
-        desc: "Strict 5-minute pitch followed by 5 minutes of focused jury and attendee Q&A.",
-      },
-      {
-        title: "Kit, Goodies & Lunch",
-        desc: "All Hall Pitch registrations receive the complete conclave delegate kit, event goodies, and lunch.",
-      },
-      {
-        title: "Ecosystem Visibility",
-        desc: "Spotlight your product in front of regional founders, operators, and engineering talent.",
-      },
+      "Pitch your startup live on stage directly before the jury. Teams pitch before the jury.",
+    prizes: {
+      headline: "Prizes",
+      footnote: "Prize package details will be announced.",
+      items: [
+        { rank: "1st Prize", amount: "Rs 1,00,000 worth", label: "First Place", highlight: true },
+        { rank: "2nd Prize", amount: "Rs 75,000 worth", label: "Second Place" },
+        { rank: "3rd Prize", amount: "Rs 50,000 worth", label: "Third Place" },
+        { rank: "4th, 5th & 6th", amount: "Consolation prize worth Rs 20,000 each", label: "Consolation" },
+      ],
+    },
+    opportunities: {
+      title: "Opportunities being arranged",
+      disclaimer: "Subject to partner confirmation, eligibility and terms.",
+      items: [
+        "Startup incubation opportunities",
+        "Grant opportunities of up to Rs 15 lakh",
+        "Incubation support worth up to Rs 1 lakh",
+        "Patent-related support worth Rs 1 lakh",
+      ],
+    },
+    participantPackage: [
+      "Event kit",
+      "Certificate",
+      "Networking opportunities",
+      "Investor meeting and networking session for startups",
+      "Opportunity to pitch before the jury (eligible teams)",
+      "Access to relevant sessions and programme activities",
+      "Eligibility for announced prizes under final competition rules",
     ],
     // Confirmation flags for Pitch Arena (unconfirmed items remain hidden)
     juryConfirmed: false,
@@ -364,28 +386,49 @@ export const CONFIG = {
 
   guests: [
     {
-      name: "Mr. Mahip Singh",
-      designation: "CEO",
-      organisation: "Innovation Hub, AKTU",
-      photo: "mahip-singh.jpg",
-      type: "chief-guest",
-      confirmed: true,
-    },
-    {
       name: "Sumit Rajesh Mahajan, IAS",
       designation: "CEO",
       organisation: "Uttar Pradesh Startup Mission",
       photo: "sumit-rajesh-mahajan.jpg",
       type: "chief-guest",
       confirmed: true,
+      visible: true,
     },
     {
-      name: "Mr. Vivek Kumar",
-      designation: "Operations Head",
+      name: "Mahip Singh",
+      designation: "CEO",
+      organisation: "Incubation Hub, AKTU",
+      photo: "mahip-singh.jpg",
+      type: "chief-guest",
+      confirmed: true,
+      visible: true,
+    },
+    {
+      name: "Vivek Kumar",
+      designation: "Head of Operations",
       organisation: "Country Delight",
       photo: "",
       type: "chief-guest",
       confirmed: true,
+      visible: true,
+    },
+    {
+      name: "Prof. Sangeeta Shukla",
+      designation: "Vice Chancellor",
+      organisation: "CCSU",
+      photo: "",
+      type: "chief-guest",
+      confirmed: true,
+      visible: false,
+    },
+    {
+      name: "Sunil Kumar Sharma",
+      designation: "Minister of IT & Electronics",
+      organisation: "Uttar Pradesh",
+      photo: "",
+      type: "chief-guest",
+      confirmed: true,
+      visible: false,
     },
   ] as Guest[],
 
@@ -394,38 +437,90 @@ export const CONFIG = {
     headline: "For Partners",
     tagline: "Partner with Western UP's premier campus entrepreneurship conclave.",
     subline:
-      "Support student entrepreneurs, engage top regional engineering talent, and establish leadership at Dewan VS Group of Institutions, Meerut.",
+      "Support student entrepreneurs and early-stage founders at Dewan VS Group of Institutions, Meerut.",
     badge: "PARTNERSHIPS OPEN",
     tiersPreview: [
-      "Title Partner",
-      "Innovation Partner",
-      "Gold Partner",
-      "Supporting Partner",
+      "Academic Partner",
+      "Media Partner",
+      "Program Partner",
+      "Logistics Partner",
+      "Food & Beverage Partner",
+      "Community Partner",
+      "Branding & Printing Partner",
+      "IT Partner",
+      "Other",
     ],
+    categories: [
+      { category: 'Academic Partner', description: 'Financial support or agreed academic ecosystem resources.' },
+      { category: 'Media Partner', description: 'Event coverage, interviews, press releases, media outreach and agreed publicity.' },
+      { category: 'Program Partner', description: 'Financial or programme support such as sessions, competition or startup ecosystem resources.' },
+      { category: 'Logistics Partner', description: 'Cars, taxis, guest transport or other approved logistics services.' },
+      { category: 'Food & Beverage Partner', description: 'Meals, refreshments, drinking water or other agreed support.' },
+      { category: 'Community Partner', description: 'Products, gifts, merchandise, vouchers or other in-kind resources.' },
+      { category: 'Branding & Printing Partner', description: 'Banners, standees, posters, certificates, signage or other agreed materials.' },
+      { category: 'IT Partner', description: 'Internet, AV equipment, technical support, registration technology or other approved IT resources.' },
+    ] as PartnerCategoryItem[],
+    categoryOptions: [
+      'Academic Partner',
+      'Media Partner',
+      'Program Partner',
+      'Logistics Partner',
+      'Food & Beverage Partner',
+      'Community Partner',
+      'Branding & Printing Partner',
+      'IT Partner',
+      'Other',
+    ] as string[],
+    contributionTypes: ['Cash', 'In-kind', 'Both'] as const,
+    benefits: [
+      { title: 'Stage & Venue Branding', description: 'Branding on stage backdrops, banners, entry areas and standees.' },
+      { title: 'Official Website Presence', description: 'Logo on the official website.' },
+      { title: 'Social Media Promotion', description: 'Social media promotion and publicity.' },
+      { title: 'Event Materials & Certificates', description: 'Logo on approved event materials and certificates.' },
+      { title: 'Announcements & Acknowledgements', description: 'Event announcements and sponsor acknowledgements.' },
+      { title: 'Two-Day Exhibition Stall', description: 'A stall for two days.', note: 'Organisers provide a basic stall setup. Exact inclusions are agreed in the final partnership terms.' },
+      { title: 'Representative Hospitality', description: 'Meals for up to three sponsor representatives.' },
+      { title: 'Networking Opportunities', description: 'Networking and promotional opportunities.' },
+      { title: 'Engagement Access', description: 'Access to relevant startup and attendee engagement opportunities, subject to event rules.' },
+    ] as PartnerBenefitItem[],
+    footnote: 'Benefits depend on the partnership category, contribution and final agreement, and are subject to institutional approval.',
+    stallNote: 'Organisers provide a basic stall setup. Exact inclusions are agreed in the final partnership terms.',
     whyPartner: [
       {
-        title: "Brand visibility",
-        desc: "Brand visibility at the venue, on the website and on social media.",
+        title: "Stage & Venue Branding",
+        desc: "Branding on stage backdrops, banners, entry areas and standees.",
       },
       {
-        title: "Talent access",
-        desc: "Direct access to ambitious student engineers, designers, and innovators across regional campuses.",
+        title: "Official Website Presence",
+        desc: "Logo on the official website.",
       },
       {
-        title: "Startup ecosystem",
-        desc: "Meaningful engagement with high-potential campus founders, student ventures, and incubation leadership.",
+        title: "Social Media Promotion",
+        desc: "Social media promotion and publicity.",
       },
       {
-        title: "Thought leadership",
-        desc: "Main-stage panel discussions and workshop hosting opportunities.",
+        title: "Event Materials & Certificates",
+        desc: "Logo on approved event materials and certificates.",
       },
       {
-        title: "On-ground activation",
-        desc: "Dedicated physical footprint for product demonstrations, hands-on kiosks, and attendee interaction.",
+        title: "Announcements & Acknowledgements",
+        desc: "Event announcements and sponsor acknowledgements.",
       },
       {
-        title: "Recruitment",
-        desc: "Opportunities to meet student talent, review projects and explore hiring.",
+        title: "Two-Day Exhibition Stall",
+        desc: "A stall for two days. Basic stall setup provided by organisers; exact inclusions agreed in final terms.",
+      },
+      {
+        title: "Representative Hospitality",
+        desc: "Meals for up to three sponsor representatives.",
+      },
+      {
+        title: "Networking Opportunities",
+        desc: "Networking and promotional opportunities with participants and guests.",
+      },
+      {
+        title: "Engagement Access",
+        desc: "Access to relevant startup and attendee engagement opportunities, subject to event rules.",
       },
     ],
   },
@@ -435,35 +530,35 @@ export const CONFIG = {
   students: [
     {
       name: "Aarav Saini",
-      roles: ["Student Convenor", "Head of Sponsorship"],
+      roles: ["Overall Student Head & Sponsorships"],
       linkedin: "https://www.linkedin.com/in/aaravgorewal/",
       confirmed: true,
       tier: "core",
     },
     {
       name: "Mayank Sharma",
-      roles: ["Head of Technology", "Operations"],
+      roles: ["Operations"],
       linkedin: "https://www.linkedin.com/in/mayank-sharma-878516311/",
       confirmed: true,
       tier: "core",
     },
     {
       name: "Vani Sharma",
-      roles: ["Head of Media & PR", "Social Media"],
+      roles: ["Social Media"],
       linkedin: "https://www.linkedin.com/in/vani-sharma-798273404",
       confirmed: true,
       tier: "core",
     },
     {
       name: "Kartik Gupta",
-      roles: ["Head of Pitch Arena", "Speaker Relations"],
+      roles: ["Speaker & Guest Relations, and Pitching & Competition"],
       linkedin: "https://www.linkedin.com/in/kartik-gupta-553859366/",
       confirmed: true,
       tier: "core",
     },
     {
       name: "Gagan Kumar",
-      roles: ["Marketing & PR Lead"],
+      roles: ["Marketing & PR"],
       photo: "gagan-kumar.jpeg",
       linkedin: "",
       confirmed: true,
@@ -471,7 +566,7 @@ export const CONFIG = {
     },
     {
       name: "Yash Mishra",
-      roles: ["Marketing & Outreach Lead"],
+      roles: ["Marketing & PR"],
       photo: "yash-mishra.png",
       linkedin: "https://www.linkedin.com/in/yash-mishra-650b20267/",
       confirmed: true,
@@ -479,7 +574,7 @@ export const CONFIG = {
     },
     {
       name: "Hetisha Bhardwaj",
-      roles: ["Branding & Creative Lead"],
+      roles: ["Branding & Creative"],
       photo: "hetisha-bhardwaj.jpeg",
       linkedin: "https://www.linkedin.com/in/hetisha-bhardwaj-64a286384/",
       confirmed: true,
@@ -487,7 +582,7 @@ export const CONFIG = {
     },
     {
       name: "Mahima Chaudhary",
-      roles: ["Hospitality & Protocol Lead"],
+      roles: ["Hospitality"],
       photo: "mahima-chaudhary.png",
       linkedin: "https://www.linkedin.com/in/mahima-chaudhary-981b43340/",
       confirmed: true,
@@ -495,7 +590,7 @@ export const CONFIG = {
     },
     {
       name: "Kunal Dhama",
-      roles: ["Finance & Budgeting Lead"],
+      roles: ["Finance & Procurement"],
       photo: "kunal-dhama.jpeg",
       linkedin: "https://www.linkedin.com/in/kunal-dhama-325755319/",
       confirmed: true,
@@ -503,7 +598,7 @@ export const CONFIG = {
     },
     {
       name: "Aaditya Chaudhary",
-      roles: ["Technical & Operations Lead"],
+      roles: ["Technical & AV"],
       photo: "aaditya-chaudhary.png",
       linkedin: "https://www.linkedin.com/in/aaditya-chaudhary-/",
       confirmed: true,
@@ -511,15 +606,15 @@ export const CONFIG = {
     },
     {
       name: "Arpita Rajput",
-      roles: ["Stage & Anchoring Lead"],
+      roles: ["Anchoring & Stage Host"],
       photo: "arpita-rajput.jpeg",
       linkedin: "https://www.linkedin.com/in/arpita-rajput-8477b2434/",
       confirmed: true,
       tier: "lead",
     },
     {
-      name: "Nitika",
-      roles: ["Startup & Investor Relations Lead"],
+      name: "Nitika Ruhela",
+      roles: ["Startup & Investor Relations"],
       photo: "nitika.jpeg",
       linkedin: "https://www.linkedin.com/in/nitika-ruhela-29078b3a9/",
       confirmed: true,
@@ -527,7 +622,7 @@ export const CONFIG = {
     },
     {
       name: "Shiva Maitray",
-      roles: ["Security & Logistics Lead"],
+      roles: ["Security & Safety"],
       photo: "shiva-maitray.png",
       linkedin: "https://www.linkedin.com/in/shiva-maitray-581558325/",
       confirmed: true,
@@ -539,40 +634,39 @@ export const CONFIG = {
   // linkedin: URL starting with https://www.linkedin.com/ to display profile icon, or left empty/omitted.
   team: {
     headline: "Behind the event",
-    note: "Faculty and student leadership will be announced soon.",
     faculty: [] as TeamMember[],
     students: [
       {
         name: "Aarav Saini",
-        roles: ["Student Convenor", "Head of Sponsorship"],
+        roles: ["Overall Student Head & Sponsorships"],
         linkedin: "https://www.linkedin.com/in/aaravgorewal/",
         confirmed: true,
         tier: "core",
       },
       {
         name: "Mayank Sharma",
-        roles: ["Head of Technology", "Operations"],
+        roles: ["Operations"],
         linkedin: "https://www.linkedin.com/in/mayank-sharma-878516311/",
         confirmed: true,
         tier: "core",
       },
       {
         name: "Vani Sharma",
-        roles: ["Head of Media & PR", "Social Media"],
+        roles: ["Social Media"],
         linkedin: "https://www.linkedin.com/in/vani-sharma-798273404",
         confirmed: true,
         tier: "core",
       },
       {
         name: "Kartik Gupta",
-        roles: ["Head of Pitch Arena", "Speaker Relations"],
+        roles: ["Speaker & Guest Relations, and Pitching & Competition"],
         linkedin: "https://www.linkedin.com/in/kartik-gupta-553859366/",
         confirmed: true,
         tier: "core",
       },
       {
         name: "Gagan Kumar",
-        roles: ["Marketing & PR Lead"],
+        roles: ["Marketing & PR"],
         photo: "gagan-kumar.jpeg",
         linkedin: "",
         confirmed: true,
@@ -580,7 +674,7 @@ export const CONFIG = {
       },
       {
         name: "Yash Mishra",
-        roles: ["Marketing & Outreach Lead"],
+        roles: ["Marketing & PR"],
         photo: "yash-mishra.png",
         linkedin: "https://www.linkedin.com/in/yash-mishra-650b20267/",
         confirmed: true,
@@ -588,7 +682,7 @@ export const CONFIG = {
       },
       {
         name: "Hetisha Bhardwaj",
-        roles: ["Branding & Creative Lead"],
+        roles: ["Branding & Creative"],
         photo: "hetisha-bhardwaj.jpeg",
         linkedin: "https://www.linkedin.com/in/hetisha-bhardwaj-64a286384/",
         confirmed: true,
@@ -596,23 +690,23 @@ export const CONFIG = {
       },
       {
         name: "Mahima Chaudhary",
-        roles: ["Hospitality & Protocol Lead"],
+        roles: ["Hospitality"],
         photo: "mahima-chaudhary.png",
         linkedin: "https://www.linkedin.com/in/mahima-chaudhary-981b43340/",
         confirmed: true,
         tier: "lead",
       },
       {
-        name: "Kunal Dhama",
-        roles: ["Finance & Budgeting Lead"],
-        photo: "kunal-dhama.jpeg",
+        name: "Vishesh Saini",
+        roles: ["Finance & Procurement"],
+        photo: "",
         linkedin: "https://www.linkedin.com/in/kunal-dhama-325755319/",
         confirmed: true,
         tier: "lead",
       },
       {
         name: "Aaditya Chaudhary",
-        roles: ["Technical & Operations Lead"],
+        roles: ["Technical & AV"],
         photo: "aaditya-chaudhary.png",
         linkedin: "https://www.linkedin.com/in/aaditya-chaudhary-/",
         confirmed: true,
@@ -620,7 +714,7 @@ export const CONFIG = {
       },
       {
         name: "Arpita Rajput",
-        roles: ["Stage & Anchoring Lead"],
+        roles: ["Anchoring & Stage Host"],
         photo: "arpita-rajput.jpeg",
         linkedin: "https://www.linkedin.com/in/arpita-rajput-8477b2434/",
         confirmed: true,
@@ -628,7 +722,7 @@ export const CONFIG = {
       },
       {
         name: "Nitika",
-        roles: ["Startup & Investor Relations Lead"],
+        roles: ["Startup & Investor Relations"],
         photo: "nitika.jpeg",
         linkedin: "https://www.linkedin.com/in/nitika-ruhela-29078b3a9/",
         confirmed: true,
@@ -636,7 +730,7 @@ export const CONFIG = {
       },
       {
         name: "Shiva Maitray",
-        roles: ["Security & Logistics Lead"],
+        roles: ["Security & Safety"],
         photo: "shiva-maitray.png",
         linkedin: "https://www.linkedin.com/in/shiva-maitray-581558325/",
         confirmed: true,
@@ -654,27 +748,27 @@ export const CONFIG = {
   faq: [
     {
       q: "Who can attend Startup Conclave 1.0?",
-      a: "Students, early-stage founders, and aspiring entrepreneurs from any college or stream.",
+      a: "Students, startup founders, and aspiring entrepreneurs.",
     },
     {
       q: "Is there a registration fee to attend?",
-      a: "General attendee passes are free. Startup pitch and exhibition stalls have designated registration fees as listed on the registration form.",
-    },
-    {
-      q: "Can I attend for only one day?",
-      a: "The event is planned for two days (30-31 October 2026). Single-day pass availability is to be announced.",
+      a: "General Attendee registration is free. Pitching registration is Rs 999 per team (2 to 3 members).",
     },
     {
       q: "How do I pitch my startup?",
-      a: "Apply via the registration form below by selecting the Hall Pitch track.",
+      a: "Apply via the registration form by selecting the Startup Pitch track. Eligible teams (minimum 2, maximum 3 members) get the opportunity to pitch before the jury.",
     },
     {
-      q: "Where is the venue located and how do I get there?",
-      a: "At Dewan VS Group of Institutions, Meerut, NH-58, Partapur, Meerut.",
+      q: "Where is the venue located and what are the dates?",
+      a: "Startup Conclave 1.0 will take place on 30-31 October 2026 at Dewan VS Group of Institutions, Meerut, UP.",
     },
     {
       q: "What happens after I register?",
-      a: "Your registration is saved immediately. Event date is 30-31 October 2026 at Dewan VS Group of Institutions, Meerut. Entry details will be shared on your email and WhatsApp.",
+      a: "Your registration is saved immediately. You will receive your official pass with an entry QR code to present at campus check-in. Detailed schedule updates and instructions will follow via email.",
+    },
+    {
+      q: "Will investors attend the event?",
+      a: "Investor meetings and networking are planned for startup participants.",
     },
   ],
 

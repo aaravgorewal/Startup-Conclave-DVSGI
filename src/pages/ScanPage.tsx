@@ -627,7 +627,7 @@ export default function ScanPage() {
                       Ticket
                     </span>
                     <span className="inline-block px-2.5 py-0.5 bg-[#FFD400] border border-[#111111] font-mono text-xs font-black uppercase text-[#111111]">
-                      {checkinResult.ticket}
+                      {checkinResult.ticket === 'stall' ? 'Startup Stall (legacy)' : checkinResult.ticket === 'pitch' ? 'Startup Pitch' : checkinResult.ticket === 'participant' ? 'General Attendee' : checkinResult.ticket}
                     </span>
                   </div>
                 </div>

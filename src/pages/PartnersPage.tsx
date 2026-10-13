@@ -91,12 +91,14 @@ export default function PartnersPage() {
   }, []);
 
   // Form state
+  const [partnerCategory, setPartnerCategory] = useState<string>('Academic Partner');
+  const [contributionType, setContributionType] = useState<string>('Cash');
   const [formData, setFormData] = useState<PartnerEnquiryInput>({
     company: '',
     contactName: '',
     email: '',
     phone: '',
-    partnershipType: 'Cash',
+    partnershipType: 'Academic Partner (Cash)',
     contributionRange: '',
     message: '',
   });
@@ -176,6 +178,7 @@ export default function PartnersPage() {
       contactName: contactNameTrimmed,
       email: emailTrimmed,
       phone: phoneTrimmed,
+      partnershipType: `${partnerCategory} (${contributionType})`,
       message: (formData.message || '').trim(),
     };
 
@@ -187,12 +190,14 @@ export default function PartnersPage() {
       setError('');
       recordBrowserSubmission('partner');
       setSuccess(true);
+      setPartnerCategory('Academic Partner');
+      setContributionType('Cash');
       setFormData({
         company: '',
         contactName: '',
         email: '',
         phone: '',
-        partnershipType: 'Cash',
+        partnershipType: 'Academic Partner (Cash)',
         contributionRange: '',
         message: '',
       });
@@ -203,9 +208,9 @@ export default function PartnersPage() {
     }
   };
 
-  // Chief guests filter (confirmed only, type 'chief-guest')
+  // Chief guests filter (confirmed only, visible true, type 'chief-guest')
   const chiefGuests = (CONFIG.guests || []).filter(
-    (g) => g.confirmed && g.type === 'chief-guest'
+    (g) => g.confirmed && g.visible !== false && g.type === 'chief-guest'
   );
 
   const getGuestInitials = (name: string): string => {
@@ -389,32 +394,37 @@ export default function PartnersPage() {
           </div>
         </section>
 
-        {/* Why Partner With Us: 6 benefit cards */}
+        {/* What We Look For */}
         <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-6 lg:space-y-7">
-          <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5 sm:pb-3">
-            <h2 className="font-display font-black text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] text-[#111111] uppercase tracking-tight">
-              Why partner with us
-            </h2>
-            <span className="font-mono text-xs text-[#111111]/70 font-bold uppercase tracking-wider">
-              6 Core Advantages
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-[#111111] pb-2.5 sm:pb-3 gap-2">
+            <div>
+              <h2 className="font-display font-black text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] text-[#111111] uppercase tracking-tight">
+                What we look for
+              </h2>
+              <p className="text-xs sm:text-sm font-mono text-[#111111]/70 mt-1">
+                Cash and in-kind partnerships are both accepted.
+              </p>
+            </div>
+            <span className="font-mono text-xs text-[#111111]/70 font-bold uppercase tracking-wider shrink-0">
+              Partner Categories ({CONFIG.partners.categories.length})
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-            {CONFIG.partners.whyPartner.map((benefit) => (
+            {CONFIG.partners.categories.map((cat, idx) => (
               <div
-                key={benefit.title}
+                key={cat.category}
                 className="p-5 sm:p-6 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-3"
               >
                 <div>
                   <div className="font-mono text-[11px] font-bold text-[#FF6B1A] uppercase tracking-wider mb-1">
-                    Advantage
+                    Category 0{idx + 1}
                   </div>
                   <h3 className="font-display font-black text-lg sm:text-xl text-[#111111]">
-                    {benefit.title}
+                    {cat.category}
                   </h3>
                   <p className="text-sm font-sans text-[#111111]/80 leading-relaxed font-medium mt-1">
-                    {benefit.desc}
+                    {cat.description}
                   </p>
                 </div>
               </div>
@@ -422,67 +432,47 @@ export default function PartnersPage() {
           </div>
         </section>
 
-        {/* What We Are Looking For */}
+        {/* What Partners May Receive */}
         <section className="px-4 md:px-6 lg:px-10 py-12 md:py-14 lg:py-16 max-w-6xl xl:max-w-7xl mx-auto border-b-2 border-[#111111] text-left space-y-6 lg:space-y-7">
           <div className="flex items-center justify-between border-b-2 border-[#111111] pb-2.5 sm:pb-3">
             <h2 className="font-display font-black text-2xl sm:text-3xl lg:text-[clamp(1.75rem,2.5vw,2.5rem)] text-[#111111] uppercase tracking-tight">
-              What we are looking for
+              What partners may receive
             </h2>
             <span className="font-mono text-xs text-[#111111]/70 font-bold uppercase tracking-wider">
-              Sponsorship Needs
+              Opportunities &amp; Inclusions
             </span>
           </div>
 
-          {confirmedNeeds.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-              {confirmedNeeds.map((need, idx) => (
-                <div
-                  key={`${need.title}-${idx}`}
-                  className="p-4 sm:p-5 lg:p-6 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-3"
-                >
-                  <div className="space-y-2">
-                    <h3 className="font-display font-black text-lg sm:text-xl text-[#111111]">
-                      {need.title}
-                    </h3>
-                    <p className="text-sm font-sans text-[#111111]/85 leading-relaxed font-medium">
-                      {need.description}
-                    </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+            {CONFIG.partners.benefits.map((benefit, idx) => (
+              <div
+                key={benefit.title}
+                className="p-5 sm:p-6 bg-white border-2 border-[#111111] shadow-[3px_3px_0px_#111111] flex flex-col justify-between space-y-3"
+              >
+                <div>
+                  <div className="font-mono text-[11px] font-bold text-[#FF6B1A] uppercase tracking-wider mb-1">
+                    Benefit 0{idx + 1}
                   </div>
-                  {Boolean(need.amount && need.amount.trim()) && (
-                    <div className="pt-2 border-t border-[#111111]/20">
-                      <span className="font-mono text-xs sm:text-sm font-black text-[#FF6B1A]">
-                        {need.amount?.trim()}
-                      </span>
-                    </div>
-                  )}
+                  <h3 className="font-display font-black text-lg sm:text-xl text-[#111111]">
+                    {benefit.title}
+                  </h3>
+                  <p className="text-sm font-sans text-[#111111]/80 leading-relaxed font-medium mt-1">
+                    {benefit.description}
+                  </p>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="font-mono text-xs uppercase tracking-wider text-[#111111]/70 font-bold">
-                Ways to partner
-              </p>
-              <div className="flex flex-wrap gap-2.5 sm:gap-3">
-                {[
-                  'Cash sponsorship',
-                  'Technology credits',
-                  'Food & beverage',
-                  'Merchandise',
-                  'Media partnership',
-                  'Travel & hospitality',
-                  'Other',
-                ].map((chip) => (
-                  <span
-                    key={chip}
-                    className="px-4 py-2.5 bg-white border-2 border-[#111111] shadow-[2px_2px_0px_#111111] font-mono text-xs sm:text-sm font-bold text-[#111111]"
-                  >
-                    {chip}
-                  </span>
-                ))}
               </div>
+            ))}
+          </div>
+
+          {/* Stall note and footnote */}
+          <div className="space-y-2.5 pt-2">
+            <div className="p-3.5 bg-[#FFF2D6] border-2 border-[#111111] font-mono text-xs text-[#111111] shadow-[2px_2px_0px_#111111]">
+              <strong>Stall note:</strong> {CONFIG.partners.stallNote}
             </div>
-          )}
+            <p className="font-mono text-xs text-[#111111]/75 italic">
+              * {CONFIG.partners.footnote}
+            </p>
+          </div>
         </section>
 
         {/* Organised by and Supported by logos (Confirmed units label removed) */}
@@ -745,25 +735,41 @@ export default function PartnersPage() {
                   )}
                 </div>
 
-                {/* Partnership Type & Contribution Range */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Partnership Category, Contribution Type & Contribution Range */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div>
-                    <label htmlFor="partner_type" className="font-bold text-[#111111] block mb-1">
-                      Partnership Type *
+                    <label htmlFor="partner_category" className="font-bold text-[#111111] block mb-1">
+                      Partnership Category *
                     </label>
                     <select
-                      id="partner_type"
-                      value={formData.partnershipType}
-                      onChange={(e) => setFormData({ ...formData, partnershipType: e.target.value })}
-                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base focus:outline-none"
+                      id="partner_category"
+                      value={partnerCategory}
+                      onChange={(e) => setPartnerCategory(e.target.value)}
+                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base focus:outline-none cursor-pointer"
                     >
-                      <option value="Cash">Cash Sponsorship</option>
-                      <option value="Technology credits">Technology credits</option>
-                      <option value="Food & beverage">Food &amp; beverage</option>
-                      <option value="Merchandise">Merchandise</option>
-                      <option value="Media">Media</option>
-                      <option value="Travel/hospitality">Travel/hospitality</option>
-                      <option value="Other">Other</option>
+                      {CONFIG.partners.categories.map((cat) => (
+                        <option key={cat.category} value={cat.category}>
+                          {cat.category}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="contribution_type" className="font-bold text-[#111111] block mb-1">
+                      Contribution Type *
+                    </label>
+                    <select
+                      id="contribution_type"
+                      value={contributionType}
+                      onChange={(e) => setContributionType(e.target.value)}
+                      className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base focus:outline-none cursor-pointer"
+                    >
+                      {CONFIG.partners.contributionTypes.map((ct) => (
+                        <option key={ct} value={ct}>
+                          {ct}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -776,7 +782,7 @@ export default function PartnersPage() {
                         id="partner_range"
                         value={formData.contributionRange}
                         onChange={(e) => setFormData({ ...formData, contributionRange: e.target.value })}
-                        className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base focus:outline-none"
+                        className="w-full p-2.5 bg-white border-2 border-[#111111] min-h-[46px] text-base focus:outline-none cursor-pointer"
                       >
                         <option value="">Select range (optional)</option>
                         {CONFIG.partnerRanges.map((range) => (
