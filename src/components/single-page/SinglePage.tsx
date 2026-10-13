@@ -2863,7 +2863,23 @@ export const SinglePage: React.FC = () => {
 
           {(() => {
             const confirmedGuests = (CONFIG.guests || []).filter((g) => g.visible && g.confirmed);
-            if (confirmedGuests.length === 0) return null;
+            if (confirmedGuests.length === 0) {
+              return (
+                <div className="p-6 sm:p-8 bg-white brutal-border brutal-shadow space-y-3 text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-black uppercase px-2.5 py-1 bg-[#FFD400] text-[#111111] border border-[#111111]">
+                      ANNOUNCING SOON
+                    </span>
+                  </div>
+                  <h3 className="font-display font-black text-2xl sm:text-3xl text-[#111111]">
+                    To be announced
+                  </h3>
+                  <p className="font-sans text-sm sm:text-base text-[#111111]/80 max-w-xl font-medium leading-relaxed">
+                    Guest speakers, dignitaries, and jury lineup will be announced once confirmations are finalised.
+                  </p>
+                </div>
+              );
+            }
 
             // Order of guest types: chief-guest, speaker, jury, investor, mentor
             const guestTypeGroups: { type: Guest['type']; label: string }[] = [

@@ -384,53 +384,14 @@ export const CONFIG = {
     speakers: [] as SpeakerItem[],
   },
 
-  guests: [
-    {
-      name: "Sumit Rajesh Mahajan, IAS",
-      designation: "CEO",
-      organisation: "Uttar Pradesh Startup Mission",
-      photo: "sumit-rajesh-mahajan.jpg",
-      type: "chief-guest",
-      confirmed: true,
-      visible: true,
-    },
-    {
-      name: "Mahip Singh",
-      designation: "CEO",
-      organisation: "Incubation Hub, AKTU",
-      photo: "mahip-singh.jpg",
-      type: "chief-guest",
-      confirmed: true,
-      visible: true,
-    },
-    {
-      name: "Vivek Kumar",
-      designation: "Head of Operations",
-      organisation: "Country Delight",
-      photo: "",
-      type: "chief-guest",
-      confirmed: true,
-      visible: true,
-    },
-    {
-      name: "Prof. Sangeeta Shukla",
-      designation: "Vice Chancellor",
-      organisation: "CCSU",
-      photo: "",
-      type: "chief-guest",
-      confirmed: true,
-      visible: false,
-    },
-    {
-      name: "Sunil Kumar Sharma",
-      designation: "Minister of IT & Electronics",
-      organisation: "Uttar Pradesh",
-      photo: "",
-      type: "chief-guest",
-      confirmed: true,
-      visible: false,
-    },
-  ] as Guest[],
+  // Guests: Cleared per project rules ("To be announced").
+  // Retained in comment for reference when written confirmations are received:
+  // - Sumit Rajesh Mahajan, IAS (CEO, UP Startup Mission)
+  // - Mahip Singh (CEO, Incubation Hub, AKTU)
+  // - Vivek Kumar (Head of Operations, Country Delight)
+  // - Prof. Sangeeta Shukla (Vice Chancellor, CCSU)
+  // - Sunil Kumar Sharma (Minister of IT & Electronics, UP)
+  guests: [] as Guest[],
 
   partners: {
     sectionNum: "06",
@@ -530,7 +491,7 @@ export const CONFIG = {
   students: [
     {
       name: "Aarav Saini",
-      roles: ["Overall Student Head & Sponsorships"],
+      roles: ["Overall Student Head"],
       linkedin: "https://www.linkedin.com/in/aaravgorewal/",
       confirmed: true,
       tier: "core",
@@ -589,10 +550,10 @@ export const CONFIG = {
       tier: "lead",
     },
     {
-      name: "Kunal Dhama",
+      name: "Vishesh Saini",
       roles: ["Finance & Procurement"],
-      photo: "kunal-dhama.jpeg",
-      linkedin: "https://www.linkedin.com/in/kunal-dhama-325755319/",
+      photo: "",
+      linkedin: "",
       confirmed: true,
       tier: "lead",
     },
@@ -613,7 +574,15 @@ export const CONFIG = {
       tier: "lead",
     },
     {
-      name: "Nitika Ruhela",
+      name: "Devarjun Bhardwaj",
+      roles: ["Sponsorship"],
+      photo: "",
+      linkedin: "",
+      confirmed: true,
+      tier: "lead",
+    },
+    {
+      name: "Nitika",
       roles: ["Startup & Investor Relations"],
       photo: "nitika.jpeg",
       linkedin: "https://www.linkedin.com/in/nitika-ruhela-29078b3a9/",
@@ -638,7 +607,7 @@ export const CONFIG = {
     students: [
       {
         name: "Aarav Saini",
-        roles: ["Overall Student Head & Sponsorships"],
+        roles: ["Overall Student Head"],
         linkedin: "https://www.linkedin.com/in/aaravgorewal/",
         confirmed: true,
         tier: "core",
@@ -717,6 +686,14 @@ export const CONFIG = {
         roles: ["Anchoring & Stage Host"],
         photo: "arpita-rajput.jpeg",
         linkedin: "https://www.linkedin.com/in/arpita-rajput-8477b2434/",
+        confirmed: true,
+        tier: "lead",
+      },
+      {
+        name: "Devarjun Bhardwaj",
+        roles: ["Sponsorship Head"],
+        photo: "",
+        linkedin: "",
         confirmed: true,
         tier: "lead",
       },
